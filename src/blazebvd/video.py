@@ -305,7 +305,7 @@ def ste_correct_video(
         kl_values: list[float] = []
         exposed_ratios: list[float] = []
         buffered: dict[int, tuple[Tensor, Tensor, Tensor, Tensor]] = {}
-        correction_buffer: list[Tensor] = []
+        correction_buffer: list[tuple[Tensor, Tensor, Tensor]] = []
         frame_index = 0
         next_center = 0
 
@@ -316,7 +316,15 @@ def ste_correct_video(
         def flush_correction_buffer() -> None:
             if not correction_buffer:
                 return
-            corrected_frames = torch.stack(correction_buffer)
+            corrected_frames = torch.stack(
+                [corrected for corrected, _, _ in correction_buffer]
+            )
+            kl_source = torch.stack(
+                [filtered_value for _, filtered_value, _ in correction_buffer]
+            )
+            original_histograms = torch.stack(
+                [histogram for _, _, histogram in correction_buffer]
+            )
             if correction is not None:
                 # The streaming path builds STE one frame at a time, so its
                 # block flash pass is performed here before the optional red
@@ -326,10 +334,25 @@ def ste_correct_video(
                     fps,
                     correction.flash,
                 )
+                if correction.flash.enabled:
+                    # The KL statistic describes the final STE prior, which
+                    # includes flash consolidation but not red attenuation —
+                    # the same definition as the in-memory path.
+                    kl_source = rgb_value(corrected_frames[None])[0]
                 corrected_frames = attenuate_saturated_red(
                     corrected_frames,
                     correction.red,
                 )
+            filtered_histograms = normalized_histograms(kl_source[None], cfg.bins)[0]
+            eps = torch.finfo(filtered_histograms.dtype).eps
+            kl = (
+                filtered_histograms.clamp_min(eps)
+                * (
+                    filtered_histograms.clamp_min(eps).log()
+                    - original_histograms.clamp_min(eps).log()
+                )
+            ).sum(dim=-1)
+            kl_values.extend(float(value) for value in kl)
             corrected_u8 = (
                 corrected_frames.clamp(0, 1)
                 .mul(255)
@@ -353,25 +376,13 @@ def ste_correct_video(
             scale = filtered_value / value.clamp_min(1e-6)
             corrected = (frame * scale).clamp(0, 1)
 
-            filtered_histogram = normalized_histograms(
-                filtered_value[None, None], cfg.bins
-            )[0, 0]
-            eps = torch.finfo(filtered_histogram.dtype).eps
-            kl = (
-                filtered_histogram.clamp_min(eps)
-                * (
-                    filtered_histogram.clamp_min(eps).log()
-                    - original_histogram.clamp_min(eps).log()
-                )
-            ).sum()
             exposed = (
                 (value < cfg.dark_threshold)
                 | (value > cfg.bright_threshold)
             ).float().mean()
-            kl_values.append(float(kl))
             exposed_ratios.append(float(exposed))
 
-            correction_buffer.append(corrected)
+            correction_buffer.append((corrected, filtered_value, original_histogram))
             if len(correction_buffer) >= correction_block_frames:
                 flush_correction_buffer()
 
@@ -462,7 +473,15 @@ def infer_clips(
     step = max(1, clip_length - overlap)
     accumulator = torch.zeros_like(frames, dtype=torch.float32)
     weights = torch.zeros(t, 1, 1, 1)
-    singular: set[int] = set()
+    # STE is histogram-domain and cheap, so run it once over the full video.
+    # Sliced priors then feed every clip, keeping temporal histogram windows,
+    # flash blocks, and the singular moving average identical to whole-video
+    # processing instead of truncating them at clip boundaries.
+    full_priors = model.ste(
+        frames.unsqueeze(0),
+        fps=fps,
+        flash_config=model.config.correction.flash,
+    )
     for start in range(0, t, step):
         end = min(t, start + clip_length)
         clip = frames[start:end].unsqueeze(0).to(device)
@@ -470,7 +489,7 @@ def infer_clips(
             clip,
             run_tcm=run_tcm,
             fps=fps,
-            frame_offset=start,
+            priors=full_priors.slice_time(start, end).to(device),
         )
         output = result.output[0].cpu()
         local_weights = torch.ones(end - start, 1, 1, 1)
@@ -484,15 +503,15 @@ def infer_clips(
             )
         accumulator[start:end] += output * local_weights
         weights[start:end] += local_weights
-        indices = torch.where(result.priors.singular_frames[0])[0].cpu().tolist()
-        singular.update(start + int(index) for index in indices)
         if end == t:
             break
+    singular = torch.where(full_priors.singular_frames[0])[0].cpu().tolist()
     return accumulator / weights.clamp_min(1e-6), {
         "frame_count": t,
         "clip_length": clip_length,
         "overlap": overlap,
-        "singular_frames": sorted(singular),
+        "ste_scope": "full_video",
+        "singular_frames": [int(index) for index in singular],
     }
 
 

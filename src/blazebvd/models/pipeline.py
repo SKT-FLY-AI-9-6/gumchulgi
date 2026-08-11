@@ -59,16 +59,26 @@ class BlazeBVD(nn.Module):
         run_tcm: bool = True,
         fps: float = 30.0,
         frame_offset: int = 0,
+        priors: DeflickerPriors | None = None,
     ) -> BlazeBVDOutput:
+        """Run the pipeline.
+
+        ``priors`` may be precomputed over a longer video and sliced to exactly
+        this clip's time range; STE is then skipped so clip windows never
+        truncate the temporal histogram context.
+        """
         if frames.ndim != 5 or frames.shape[2] != 3:
             raise ValueError("frames must be [B,T,3,H,W]")
         frames = frames.float().clamp(0, 1)
-        priors = self.ste(
-            frames,
-            fps=fps,
-            flash_config=self.config.correction.flash,
-            frame_offset=frame_offset,
-        )
+        if priors is None:
+            priors = self.ste(
+                frames,
+                fps=fps,
+                flash_config=self.config.correction.flash,
+                frame_offset=frame_offset,
+            )
+        elif priors.filtered_value.shape[:2] != frames.shape[:2]:
+            raise ValueError("priors must cover exactly the frames' batch/time range")
         global_corrected = self.global_stage(frames, priors)
         flow_to_previous, flow_to_next = adjacent_flows(frames, self.flow_estimator)
         local_corrected = self.lfrm.refine_sequence(
