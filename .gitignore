@@ -80,13 +80,26 @@ peaks/
 detected*/
 
 # ─────────────────────────────────────────────────────────────
-# Kim&Moon 브랜치 추가분 — 디플리커 파이프라인이 끌어오는 외부 자산
+# Kim&Moon 브랜치 추가분 — 디플리커 저장소
 # ─────────────────────────────────────────────────────────────
-# 남의 저장소 클론(약 95GB). setup 명령이 알아서 받는다. 절대 커밋 금지.
-#   git clone https://github.com/ChenyangLEI/All-In-One-Deflicker.git
-All-In-One-Deflicker/
+# All-In-One-Deflicker 는 **코드와 가중치만** 커밋한다 (약 65MB).
+# 클론만 하면 바로 돌아가게 하려는 것 — setup 없이 run 부터 할 수 있다.
+# 반면 실행 중 생기는 것은 전부 뺀다. 이 둘이 약 46GB 다.
+# 추출 프레임 + 옵티컬 플로우 .npy (약 27GB)
+All-In-One-Deflicker/data/
+# 학습 중간물 + 결과 png (약 20GB)
+All-In-One-Deflicker/results/
+# 업스트림 데모 18.5MB, 실행에 불필요
+All-In-One-Deflicker/demo.gif
+# 업스트림 .gitignore 는 .gitignore.upstream 으로 이름을 바꿔 두었다.
+# 그 파일 2~3번째 줄이 results/ 와 pretrained_weights/ 를 막는데, 하위
+# .gitignore 가 루트보다 우선하므로 이름을 그대로 두면 여기서 뭘 하든
+# 가중치가 커밋에서 빠진다. 되살리려면 다시 .gitignore 로 바꿀 것.
+*.bak
 _weights_tmp/
-pretrained_weights/
+
+# 팀 공통 규칙의 `_*.py` 가 __init__.py 를 막는다 — 패키지가 깨지므로 되살린다
+!**/__init__.py
 
 # ensure_ffmpeg() 이 imageio-ffmpeg 번들을 복사해 두는 곳 (수십 MB 바이너리)
 bin/
