@@ -1,0 +1,1160 @@
+[
+  {
+    "tool": "psecore 2.0.0",
+    "source": "C:\\Users\\PJ07\\Desktop\\pse_gpu\\uv_out\\anime_after.mp4",
+    "profile": "strict",
+    "verdict": "PASS",
+    "failed_channels": [],
+    "video": {
+      "src_w": 1074,
+      "src_h": 598,
+      "ana_w": 431,
+      "ana_h": 240,
+      "fps": 30.0,
+      "frames": 1763,
+      "duration_ms": 58766.7
+    },
+    "params": {
+      "T_qualify_ms": 50.0,
+      "T_qualify_frames": 2,
+      "T_sync_ms": 20.0,
+      "T_sync_effective_ms": 50.0,
+      "window_frames": 30,
+      "wcag_window_px": 174,
+      "area_mode": "wcag",
+      "motion_comp": true,
+      "strict": true,
+      "modes": {
+        "LUM": "fail",
+        "RGB": "fail",
+        "RED": "fail",
+        "RG": "fail",
+        "BY": "fail",
+        "RB": "fail"
+      }
+    },
+    "violations": [],
+    "warnings": [],
+    "channel_seconds": {
+      "LUM": 0.0,
+      "RGB": 0.0,
+      "RED": 0.0,
+      "RG": 0.0,
+      "BY": 0.0,
+      "RB": 0.0
+    },
+    "summary": {
+      "total_ms": 58766.7,
+      "violating_ms": 0,
+      "violating_ratio": 0.0,
+      "segments": 0,
+      "elapsed_sec": 33.88
+    },
+    "decode_note": "",
+    "caveats": [
+      "이 도구는 콘텐츠가 안전하다고 보증하지 않는다. 상용 배포 전 Harding FPA 등 외부 검증이 필요하다.",
+      "RG/BY 임계값은 임상 근거가 없는 추정치다. RB 축만 Parra 2007 근거가 있다.",
+      "RGB 채널별 축은 표준에 없는 신규 축이다. 기본 모드는 warn 이며 FAIL 판정에 반영되지 않는다.",
+      "전환 지속시간 66ms 조항, 20ms 면적 합산 동기화, 416x416 px 면적 규칙은 미구현이다.",
+      "움직임 보상은 전역(팬) 한정이다. 국소 물체 움직임은 보상되지 않는다."
+    ]
+  },
+  {
+    "tool": "psecore 2.0.0",
+    "source": "C:\\Users\\PJ07\\Desktop\\pse_gpu\\uv_out\\game_after.mp4",
+    "profile": "strict",
+    "verdict": "FAIL",
+    "failed_channels": [
+      "LUM",
+      "RGB"
+    ],
+    "video": {
+      "src_w": 1252,
+      "src_h": 708,
+      "ana_w": 424,
+      "ana_h": 240,
+      "fps": 30.0,
+      "frames": 839,
+      "duration_ms": 27966.7
+    },
+    "params": {
+      "T_qualify_ms": 50.0,
+      "T_qualify_frames": 2,
+      "T_sync_ms": 20.0,
+      "T_sync_effective_ms": 50.0,
+      "window_frames": 30,
+      "wcag_window_px": 171,
+      "area_mode": "wcag",
+      "motion_comp": true,
+      "strict": true,
+      "modes": {
+        "LUM": "fail",
+        "RGB": "fail",
+        "RED": "fail",
+        "RG": "fail",
+        "BY": "fail",
+        "RB": "fail"
+      }
+    },
+    "violations": [
+      {
+        "channel": "LUM",
+        "label": "휘도",
+        "start": "00:00:00.800",
+        "end": "00:00:01.366",
+        "duration_ms": 566.7,
+        "measured": {
+          "flashes_per_sec": 6,
+          "area_ratio": 0.7501,
+          "delta": 0.8322,
+          "window_origin": [
+            38,
+            0
+          ]
+        },
+        "threshold": {
+          "flashes_per_sec": 3.0,
+          "area_ratio": 0.25,
+          "delta": 0.1
+        },
+        "exceedance": {
+          "rate": 2.0,
+          "area": 3.0
+        },
+        "remediation": {
+          "required_gain": 0.1081
+        }
+      },
+      {
+        "channel": "RGB",
+        "label": "RGB 채널별",
+        "start": "00:00:00.800",
+        "end": "00:00:01.366",
+        "duration_ms": 566.7,
+        "measured": {
+          "flashes_per_sec": 7,
+          "area_ratio": 0.7237,
+          "delta": 0.8885,
+          "window_origin": [
+            38,
+            0
+          ]
+        },
+        "threshold": {
+          "flashes_per_sec": 3.0,
+          "area_ratio": 0.25,
+          "delta": 0.1
+        },
+        "exceedance": {
+          "rate": 2.33,
+          "area": 2.89
+        },
+        "remediation": {
+          "required_gain": 0.1013
+        }
+      }
+    ],
+    "warnings": [],
+    "channel_seconds": {
+      "LUM": 0.57,
+      "RGB": 0.57,
+      "RED": 0.0,
+      "RG": 0.0,
+      "BY": 0.0,
+      "RB": 0.0
+    },
+    "summary": {
+      "total_ms": 27966.7,
+      "violating_ms": 566.7,
+      "violating_ratio": 0.02026,
+      "segments": 1,
+      "elapsed_sec": 24.09
+    },
+    "decode_note": "",
+    "caveats": [
+      "이 도구는 콘텐츠가 안전하다고 보증하지 않는다. 상용 배포 전 Harding FPA 등 외부 검증이 필요하다.",
+      "RG/BY 임계값은 임상 근거가 없는 추정치다. RB 축만 Parra 2007 근거가 있다.",
+      "RGB 채널별 축은 표준에 없는 신규 축이다. 기본 모드는 warn 이며 FAIL 판정에 반영되지 않는다.",
+      "전환 지속시간 66ms 조항, 20ms 면적 합산 동기화, 416x416 px 면적 규칙은 미구현이다.",
+      "움직임 보상은 전역(팬) 한정이다. 국소 물체 움직임은 보상되지 않는다."
+    ]
+  },
+  {
+    "tool": "psecore 2.0.0",
+    "source": "C:\\Users\\PJ07\\Desktop\\pse_gpu\\uv_out\\pinkvenom_after.mp4",
+    "profile": "strict",
+    "verdict": "FAIL",
+    "failed_channels": [
+      "BY",
+      "LUM",
+      "RGB"
+    ],
+    "video": {
+      "src_w": 1920,
+      "src_h": 880,
+      "ana_w": 524,
+      "ana_h": 240,
+      "fps": 28.117,
+      "frames": 291,
+      "duration_ms": 10349.4
+    },
+    "params": {
+      "T_qualify_ms": 50.0,
+      "T_qualify_frames": 1,
+      "T_sync_ms": 20.0,
+      "T_sync_effective_ms": 53.35,
+      "window_frames": 28,
+      "wcag_window_px": 211,
+      "area_mode": "wcag",
+      "motion_comp": true,
+      "strict": true,
+      "modes": {
+        "LUM": "fail",
+        "RGB": "fail",
+        "RED": "fail",
+        "RG": "fail",
+        "BY": "fail",
+        "RB": "fail"
+      }
+    },
+    "violations": [
+      {
+        "channel": "BY",
+        "label": "청황 대립",
+        "start": "00:00:02.418",
+        "end": "00:00:02.453",
+        "duration_ms": 35.6,
+        "measured": {
+          "flashes_per_sec": 6,
+          "area_ratio": 0.3906,
+          "delta": 2.4372,
+          "window_origin": [
+            270,
+            0
+          ]
+        },
+        "threshold": {
+          "flashes_per_sec": 3.0,
+          "area_ratio": 0.25,
+          "delta": 0.2
+        },
+        "exceedance": {
+          "rate": 2.0,
+          "area": 1.56
+        },
+        "remediation": {
+          "required_gain": 0.0739
+        }
+      },
+      {
+        "channel": "BY",
+        "label": "청황 대립",
+        "start": "00:00:03.200",
+        "end": "00:00:03.307",
+        "duration_ms": 106.7,
+        "measured": {
+          "flashes_per_sec": 7,
+          "area_ratio": 0.2586,
+          "delta": 6.8693,
+          "window_origin": [
+            250,
+            29
+          ]
+        },
+        "threshold": {
+          "flashes_per_sec": 3.0,
+          "area_ratio": 0.25,
+          "delta": 0.2
+        },
+        "exceedance": {
+          "rate": 2.33,
+          "area": 1.03
+        },
+        "remediation": {
+          "required_gain": 0.0262
+        }
+      },
+      {
+        "channel": "RGB",
+        "label": "RGB 채널별",
+        "start": "00:00:03.200",
+        "end": "00:00:04.374",
+        "duration_ms": 1173.6,
+        "measured": {
+          "flashes_per_sec": 7,
+          "area_ratio": 0.881,
+          "delta": 0.9737,
+          "window_origin": [
+            251,
+            0
+          ]
+        },
+        "threshold": {
+          "flashes_per_sec": 3.0,
+          "area_ratio": 0.25,
+          "delta": 0.1
+        },
+        "exceedance": {
+          "rate": 2.33,
+          "area": 3.52
+        },
+        "remediation": {
+          "required_gain": 0.0924
+        }
+      },
+      {
+        "channel": "LUM",
+        "label": "휘도",
+        "start": "00:00:03.485",
+        "end": "00:00:03.947",
+        "duration_ms": 462.3,
+        "measured": {
+          "flashes_per_sec": 7,
+          "area_ratio": 0.7055,
+          "delta": 0.7849,
+          "window_origin": [
+            254,
+            0
+          ]
+        },
+        "threshold": {
+          "flashes_per_sec": 3.0,
+          "area_ratio": 0.25,
+          "delta": 0.1
+        },
+        "exceedance": {
+          "rate": 2.33,
+          "area": 2.82
+        },
+        "remediation": {
+          "required_gain": 0.1147
+        }
+      },
+      {
+        "channel": "BY",
+        "label": "청황 대립",
+        "start": "00:00:03.769",
+        "end": "00:00:03.841",
+        "duration_ms": 71.1,
+        "measured": {
+          "flashes_per_sec": 7,
+          "area_ratio": 0.3485,
+          "delta": 2.2025,
+          "window_origin": [
+            40,
+            29
+          ]
+        },
+        "threshold": {
+          "flashes_per_sec": 3.0,
+          "area_ratio": 0.25,
+          "delta": 0.2
+        },
+        "exceedance": {
+          "rate": 2.33,
+          "area": 1.39
+        },
+        "remediation": {
+          "required_gain": 0.0817
+        }
+      },
+      {
+        "channel": "LUM",
+        "label": "휘도",
+        "start": "00:00:03.983",
+        "end": "00:00:04.374",
+        "duration_ms": 391.2,
+        "measured": {
+          "flashes_per_sec": 6,
+          "area_ratio": 0.4909,
+          "delta": 0.6584,
+          "window_origin": [
+            250,
+            0
+          ]
+        },
+        "threshold": {
+          "flashes_per_sec": 3.0,
+          "area_ratio": 0.25,
+          "delta": 0.1
+        },
+        "exceedance": {
+          "rate": 2.0,
+          "area": 1.96
+        },
+        "remediation": {
+          "required_gain": 0.1367
+        }
+      },
+      {
+        "channel": "LUM",
+        "label": "휘도",
+        "start": "00:00:06.970",
+        "end": "00:00:07.575",
+        "duration_ms": 604.6,
+        "measured": {
+          "flashes_per_sec": 7,
+          "area_ratio": 0.5124,
+          "delta": 0.7945,
+          "window_origin": [
+            0,
+            0
+          ]
+        },
+        "threshold": {
+          "flashes_per_sec": 3.0,
+          "area_ratio": 0.25,
+          "delta": 0.1
+        },
+        "exceedance": {
+          "rate": 2.33,
+          "area": 2.05
+        },
+        "remediation": {
+          "required_gain": 0.1133
+        }
+      },
+      {
+        "channel": "RGB",
+        "label": "RGB 채널별",
+        "start": "00:00:06.970",
+        "end": "00:00:07.575",
+        "duration_ms": 604.6,
+        "measured": {
+          "flashes_per_sec": 7,
+          "area_ratio": 0.5788,
+          "delta": 0.9825,
+          "window_origin": [
+            7,
+            0
+          ]
+        },
+        "threshold": {
+          "flashes_per_sec": 3.0,
+          "area_ratio": 0.25,
+          "delta": 0.1
+        },
+        "exceedance": {
+          "rate": 2.33,
+          "area": 2.32
+        },
+        "remediation": {
+          "required_gain": 0.0916
+        }
+      },
+      {
+        "channel": "BY",
+        "label": "청황 대립",
+        "start": "00:00:07.255",
+        "end": "00:00:07.361",
+        "duration_ms": 106.7,
+        "measured": {
+          "flashes_per_sec": 7,
+          "area_ratio": 0.28,
+          "delta": 6.4693,
+          "window_origin": [
+            52,
+            22
+          ]
+        },
+        "threshold": {
+          "flashes_per_sec": 3.0,
+          "area_ratio": 0.25,
+          "delta": 0.2
+        },
+        "exceedance": {
+          "rate": 2.33,
+          "area": 1.12
+        },
+        "remediation": {
+          "required_gain": 0.0278
+        }
+      }
+    ],
+    "warnings": [],
+    "channel_seconds": {
+      "LUM": 1.46,
+      "RGB": 1.78,
+      "RED": 0.0,
+      "RG": 0.0,
+      "BY": 0.32,
+      "RB": 0.0
+    },
+    "summary": {
+      "total_ms": 10349.4,
+      "violating_ms": 1813.8,
+      "violating_ratio": 0.17526,
+      "segments": 3,
+      "elapsed_sec": 10.43
+    },
+    "decode_note": "",
+    "caveats": [
+      "이 도구는 콘텐츠가 안전하다고 보증하지 않는다. 상용 배포 전 Harding FPA 등 외부 검증이 필요하다.",
+      "RG/BY 임계값은 임상 근거가 없는 추정치다. RB 축만 Parra 2007 근거가 있다.",
+      "RGB 채널별 축은 표준에 없는 신규 축이다. 기본 모드는 warn 이며 FAIL 판정에 반영되지 않는다.",
+      "전환 지속시간 66ms 조항, 20ms 면적 합산 동기화, 416x416 px 면적 규칙은 미구현이다.",
+      "움직임 보상은 전역(팬) 한정이다. 국소 물체 움직임은 보상되지 않는다."
+    ]
+  },
+  {
+    "tool": "psecore 2.0.0",
+    "source": "C:\\Users\\PJ07\\Desktop\\pse_gpu\\uv_out\\tiktok_after.mp4",
+    "profile": "strict",
+    "verdict": "FAIL",
+    "failed_channels": [
+      "BY",
+      "LUM",
+      "RGB"
+    ],
+    "video": {
+      "src_w": 480,
+      "src_h": 854,
+      "ana_w": 240,
+      "ana_h": 427,
+      "fps": 30.0,
+      "frames": 372,
+      "duration_ms": 12400.0
+    },
+    "params": {
+      "T_qualify_ms": 50.0,
+      "T_qualify_frames": 2,
+      "T_sync_ms": 20.0,
+      "T_sync_effective_ms": 50.0,
+      "window_frames": 30,
+      "wcag_window_px": 97,
+      "area_mode": "wcag",
+      "motion_comp": true,
+      "strict": true,
+      "modes": {
+        "LUM": "fail",
+        "RGB": "fail",
+        "RED": "fail",
+        "RG": "fail",
+        "BY": "fail",
+        "RB": "fail"
+      }
+    },
+    "violations": [
+      {
+        "channel": "LUM",
+        "label": "휘도",
+        "start": "00:00:00.366",
+        "end": "00:00:12.400",
+        "duration_ms": 12033.3,
+        "measured": {
+          "flashes_per_sec": 13,
+          "area_ratio": 1.0,
+          "delta": 1.0,
+          "window_origin": [
+            69,
+            133
+          ]
+        },
+        "threshold": {
+          "flashes_per_sec": 3.0,
+          "area_ratio": 0.25,
+          "delta": 0.1
+        },
+        "exceedance": {
+          "rate": 4.33,
+          "area": 4.0
+        },
+        "remediation": {
+          "required_gain": 0.09
+        }
+      },
+      {
+        "channel": "RGB",
+        "label": "RGB 채널별",
+        "start": "00:00:00.400",
+        "end": "00:00:12.400",
+        "duration_ms": 12000.0,
+        "measured": {
+          "flashes_per_sec": 13,
+          "area_ratio": 1.0,
+          "delta": 1.0,
+          "window_origin": [
+            46,
+            0
+          ]
+        },
+        "threshold": {
+          "flashes_per_sec": 3.0,
+          "area_ratio": 0.25,
+          "delta": 0.1
+        },
+        "exceedance": {
+          "rate": 4.33,
+          "area": 4.0
+        },
+        "remediation": {
+          "required_gain": 0.09
+        }
+      },
+      {
+        "channel": "BY",
+        "label": "청황 대립",
+        "start": "00:00:00.533",
+        "end": "00:00:04.666",
+        "duration_ms": 4133.3,
+        "measured": {
+          "flashes_per_sec": 11,
+          "area_ratio": 0.8806,
+          "delta": 4.8547,
+          "window_origin": [
+            68,
+            162
+          ]
+        },
+        "threshold": {
+          "flashes_per_sec": 3.0,
+          "area_ratio": 0.25,
+          "delta": 0.2
+        },
+        "exceedance": {
+          "rate": 3.67,
+          "area": 3.52
+        },
+        "remediation": {
+          "required_gain": 0.0371
+        }
+      },
+      {
+        "channel": "BY",
+        "label": "청황 대립",
+        "start": "00:00:07.033",
+        "end": "00:00:09.133",
+        "duration_ms": 2100.0,
+        "measured": {
+          "flashes_per_sec": 11,
+          "area_ratio": 0.7709,
+          "delta": 3.8165,
+          "window_origin": [
+            0,
+            167
+          ]
+        },
+        "threshold": {
+          "flashes_per_sec": 3.0,
+          "area_ratio": 0.25,
+          "delta": 0.2
+        },
+        "exceedance": {
+          "rate": 3.67,
+          "area": 3.08
+        },
+        "remediation": {
+          "required_gain": 0.0472
+        }
+      },
+      {
+        "channel": "BY",
+        "label": "청황 대립",
+        "start": "00:00:09.533",
+        "end": "00:00:11.333",
+        "duration_ms": 1800.0,
+        "measured": {
+          "flashes_per_sec": 11,
+          "area_ratio": 0.7526,
+          "delta": 3.7979,
+          "window_origin": [
+            60,
+            170
+          ]
+        },
+        "threshold": {
+          "flashes_per_sec": 3.0,
+          "area_ratio": 0.25,
+          "delta": 0.2
+        },
+        "exceedance": {
+          "rate": 3.67,
+          "area": 3.01
+        },
+        "remediation": {
+          "required_gain": 0.0474
+        }
+      }
+    ],
+    "warnings": [],
+    "channel_seconds": {
+      "LUM": 12.03,
+      "RGB": 12.0,
+      "RED": 0.0,
+      "RG": 0.0,
+      "BY": 8.03,
+      "RB": 0.0
+    },
+    "summary": {
+      "total_ms": 12400.0,
+      "violating_ms": 12033.3,
+      "violating_ratio": 0.97043,
+      "segments": 1,
+      "elapsed_sec": 10.28
+    },
+    "decode_note": "",
+    "caveats": [
+      "이 도구는 콘텐츠가 안전하다고 보증하지 않는다. 상용 배포 전 Harding FPA 등 외부 검증이 필요하다.",
+      "RG/BY 임계값은 임상 근거가 없는 추정치다. RB 축만 Parra 2007 근거가 있다.",
+      "RGB 채널별 축은 표준에 없는 신규 축이다. 기본 모드는 warn 이며 FAIL 판정에 반영되지 않는다.",
+      "전환 지속시간 66ms 조항, 20ms 면적 합산 동기화, 416x416 px 면적 규칙은 미구현이다.",
+      "움직임 보상은 전역(팬) 한정이다. 국소 물체 움직임은 보상되지 않는다."
+    ]
+  },
+  {
+    "tool": "psecore 2.0.0",
+    "source": "C:\\Users\\PJ07\\Desktop\\pse_gpu\\uv_out\\travis_fein_after.mp4",
+    "profile": "strict",
+    "verdict": "FAIL",
+    "failed_channels": [
+      "LUM",
+      "RGB"
+    ],
+    "video": {
+      "src_w": 1276,
+      "src_h": 720,
+      "ana_w": 425,
+      "ana_h": 240,
+      "fps": 24.0,
+      "frames": 931,
+      "duration_ms": 38791.7
+    },
+    "params": {
+      "T_qualify_ms": 50.0,
+      "T_qualify_frames": 1,
+      "T_sync_ms": 20.0,
+      "T_sync_effective_ms": 62.5,
+      "window_frames": 24,
+      "wcag_window_px": 171,
+      "area_mode": "wcag",
+      "motion_comp": true,
+      "strict": true,
+      "modes": {
+        "LUM": "fail",
+        "RGB": "fail",
+        "RED": "fail",
+        "RG": "fail",
+        "BY": "fail",
+        "RB": "fail"
+      }
+    },
+    "violations": [
+      {
+        "channel": "LUM",
+        "label": "휘도",
+        "start": "00:00:01.000",
+        "end": "00:00:01.250",
+        "duration_ms": 250.0,
+        "measured": {
+          "flashes_per_sec": 7,
+          "area_ratio": 0.4982,
+          "delta": 0.9948,
+          "window_origin": [
+            226,
+            0
+          ]
+        },
+        "threshold": {
+          "flashes_per_sec": 3.0,
+          "area_ratio": 0.25,
+          "delta": 0.1
+        },
+        "exceedance": {
+          "rate": 2.33,
+          "area": 1.99
+        },
+        "remediation": {
+          "required_gain": 0.0905
+        }
+      },
+      {
+        "channel": "RGB",
+        "label": "RGB 채널별",
+        "start": "00:00:01.000",
+        "end": "00:00:01.208",
+        "duration_ms": 208.3,
+        "measured": {
+          "flashes_per_sec": 7,
+          "area_ratio": 0.6287,
+          "delta": 0.996,
+          "window_origin": [
+            223,
+            0
+          ]
+        },
+        "threshold": {
+          "flashes_per_sec": 3.0,
+          "area_ratio": 0.25,
+          "delta": 0.1
+        },
+        "exceedance": {
+          "rate": 2.33,
+          "area": 2.51
+        },
+        "remediation": {
+          "required_gain": 0.0904
+        }
+      },
+      {
+        "channel": "RGB",
+        "label": "RGB 채널별",
+        "start": "00:00:01.291",
+        "end": "00:00:01.333",
+        "duration_ms": 41.7,
+        "measured": {
+          "flashes_per_sec": 7,
+          "area_ratio": 0.2507,
+          "delta": 0.7822,
+          "window_origin": [
+            27,
+            26
+          ]
+        },
+        "threshold": {
+          "flashes_per_sec": 3.0,
+          "area_ratio": 0.25,
+          "delta": 0.1
+        },
+        "exceedance": {
+          "rate": 2.33,
+          "area": 1.0
+        },
+        "remediation": {
+          "required_gain": 0.1151
+        }
+      },
+      {
+        "channel": "LUM",
+        "label": "휘도",
+        "start": "00:00:01.791",
+        "end": "00:00:01.875",
+        "duration_ms": 83.3,
+        "measured": {
+          "flashes_per_sec": 6,
+          "area_ratio": 0.2715,
+          "delta": 0.9391,
+          "window_origin": [
+            25,
+            29
+          ]
+        },
+        "threshold": {
+          "flashes_per_sec": 3.0,
+          "area_ratio": 0.25,
+          "delta": 0.1
+        },
+        "exceedance": {
+          "rate": 2.0,
+          "area": 1.09
+        },
+        "remediation": {
+          "required_gain": 0.0958
+        }
+      },
+      {
+        "channel": "LUM",
+        "label": "휘도",
+        "start": "00:00:03.375",
+        "end": "00:00:03.416",
+        "duration_ms": 41.7,
+        "measured": {
+          "flashes_per_sec": 7,
+          "area_ratio": 0.3399,
+          "delta": 0.9909,
+          "window_origin": [
+            23,
+            23
+          ]
+        },
+        "threshold": {
+          "flashes_per_sec": 3.0,
+          "area_ratio": 0.25,
+          "delta": 0.1
+        },
+        "exceedance": {
+          "rate": 2.33,
+          "area": 1.36
+        },
+        "remediation": {
+          "required_gain": 0.0908
+        }
+      },
+      {
+        "channel": "RGB",
+        "label": "RGB 채널별",
+        "start": "00:00:03.375",
+        "end": "00:00:03.416",
+        "duration_ms": 41.7,
+        "measured": {
+          "flashes_per_sec": 7,
+          "area_ratio": 0.3397,
+          "delta": 0.9909,
+          "window_origin": [
+            23,
+            23
+          ]
+        },
+        "threshold": {
+          "flashes_per_sec": 3.0,
+          "area_ratio": 0.25,
+          "delta": 0.1
+        },
+        "exceedance": {
+          "rate": 2.33,
+          "area": 1.36
+        },
+        "remediation": {
+          "required_gain": 0.0908
+        }
+      },
+      {
+        "channel": "LUM",
+        "label": "휘도",
+        "start": "00:00:04.291",
+        "end": "00:00:04.375",
+        "duration_ms": 83.3,
+        "measured": {
+          "flashes_per_sec": 7,
+          "area_ratio": 0.3683,
+          "delta": 0.9979,
+          "window_origin": [
+            2,
+            0
+          ]
+        },
+        "threshold": {
+          "flashes_per_sec": 3.0,
+          "area_ratio": 0.25,
+          "delta": 0.1
+        },
+        "exceedance": {
+          "rate": 2.33,
+          "area": 1.47
+        },
+        "remediation": {
+          "required_gain": 0.0902
+        }
+      },
+      {
+        "channel": "RGB",
+        "label": "RGB 채널별",
+        "start": "00:00:04.291",
+        "end": "00:00:05.000",
+        "duration_ms": 708.3,
+        "measured": {
+          "flashes_per_sec": 7,
+          "area_ratio": 0.4756,
+          "delta": 0.9979,
+          "window_origin": [
+            2,
+            0
+          ]
+        },
+        "threshold": {
+          "flashes_per_sec": 3.0,
+          "area_ratio": 0.25,
+          "delta": 0.1
+        },
+        "exceedance": {
+          "rate": 2.33,
+          "area": 1.9
+        },
+        "remediation": {
+          "required_gain": 0.0902
+        }
+      },
+      {
+        "channel": "LUM",
+        "label": "휘도",
+        "start": "00:00:04.416",
+        "end": "00:00:05.000",
+        "duration_ms": 583.3,
+        "measured": {
+          "flashes_per_sec": 7,
+          "area_ratio": 0.4543,
+          "delta": 0.9979,
+          "window_origin": [
+            155,
+            0
+          ]
+        },
+        "threshold": {
+          "flashes_per_sec": 3.0,
+          "area_ratio": 0.25,
+          "delta": 0.1
+        },
+        "exceedance": {
+          "rate": 2.33,
+          "area": 1.82
+        },
+        "remediation": {
+          "required_gain": 0.0902
+        }
+      },
+      {
+        "channel": "RGB",
+        "label": "RGB 채널별",
+        "start": "00:00:32.249",
+        "end": "00:00:32.416",
+        "duration_ms": 166.7,
+        "measured": {
+          "flashes_per_sec": 6,
+          "area_ratio": 0.2786,
+          "delta": 0.7747,
+          "window_origin": [
+            52,
+            52
+          ]
+        },
+        "threshold": {
+          "flashes_per_sec": 3.0,
+          "area_ratio": 0.25,
+          "delta": 0.1
+        },
+        "exceedance": {
+          "rate": 2.0,
+          "area": 1.11
+        },
+        "remediation": {
+          "required_gain": 0.1162
+        }
+      },
+      {
+        "channel": "LUM",
+        "label": "휘도",
+        "start": "00:00:33.000",
+        "end": "00:00:34.000",
+        "duration_ms": 1000.0,
+        "measured": {
+          "flashes_per_sec": 8,
+          "area_ratio": 0.6081,
+          "delta": 0.9111,
+          "window_origin": [
+            0,
+            62
+          ]
+        },
+        "threshold": {
+          "flashes_per_sec": 3.0,
+          "area_ratio": 0.25,
+          "delta": 0.1
+        },
+        "exceedance": {
+          "rate": 2.67,
+          "area": 2.43
+        },
+        "remediation": {
+          "required_gain": 0.0988
+        }
+      },
+      {
+        "channel": "RGB",
+        "label": "RGB 채널별",
+        "start": "00:00:33.000",
+        "end": "00:00:34.000",
+        "duration_ms": 1000.0,
+        "measured": {
+          "flashes_per_sec": 9,
+          "area_ratio": 0.7259,
+          "delta": 0.9679,
+          "window_origin": [
+            0,
+            62
+          ]
+        },
+        "threshold": {
+          "flashes_per_sec": 3.0,
+          "area_ratio": 0.25,
+          "delta": 0.1
+        },
+        "exceedance": {
+          "rate": 3.0,
+          "area": 2.9
+        },
+        "remediation": {
+          "required_gain": 0.093
+        }
+      },
+      {
+        "channel": "LUM",
+        "label": "휘도",
+        "start": "00:00:34.875",
+        "end": "00:00:35.666",
+        "duration_ms": 791.7,
+        "measured": {
+          "flashes_per_sec": 9,
+          "area_ratio": 0.6469,
+          "delta": 0.9462,
+          "window_origin": [
+            0,
+            0
+          ]
+        },
+        "threshold": {
+          "flashes_per_sec": 3.0,
+          "area_ratio": 0.25,
+          "delta": 0.1
+        },
+        "exceedance": {
+          "rate": 3.0,
+          "area": 2.59
+        },
+        "remediation": {
+          "required_gain": 0.0951
+        }
+      },
+      {
+        "channel": "RGB",
+        "label": "RGB 채널별",
+        "start": "00:00:34.875",
+        "end": "00:00:35.750",
+        "duration_ms": 875.0,
+        "measured": {
+          "flashes_per_sec": 9,
+          "area_ratio": 0.7373,
+          "delta": 0.9646,
+          "window_origin": [
+            0,
+            0
+          ]
+        },
+        "threshold": {
+          "flashes_per_sec": 3.0,
+          "area_ratio": 0.25,
+          "delta": 0.1
+        },
+        "exceedance": {
+          "rate": 3.0,
+          "area": 2.95
+        },
+        "remediation": {
+          "required_gain": 0.0933
+        }
+      }
+    ],
+    "warnings": [],
+    "channel_seconds": {
+      "LUM": 2.83,
+      "RGB": 3.04,
+      "RED": 0.0,
+      "RG": 0.0,
+      "BY": 0.0,
+      "RB": 0.0
+    },
+    "summary": {
+      "total_ms": 38791.7,
+      "violating_ms": 3166.7,
+      "violating_ratio": 0.08163,
+      "segments": 8,
+      "elapsed_sec": 26.75
+    },
+    "decode_note": "",
+    "caveats": [
+      "이 도구는 콘텐츠가 안전하다고 보증하지 않는다. 상용 배포 전 Harding FPA 등 외부 검증이 필요하다.",
+      "RG/BY 임계값은 임상 근거가 없는 추정치다. RB 축만 Parra 2007 근거가 있다.",
+      "RGB 채널별 축은 표준에 없는 신규 축이다. 기본 모드는 warn 이며 FAIL 판정에 반영되지 않는다.",
+      "전환 지속시간 66ms 조항, 20ms 면적 합산 동기화, 416x416 px 면적 규칙은 미구현이다.",
+      "움직임 보상은 전역(팬) 한정이다. 국소 물체 움직임은 보상되지 않는다."
+    ]
+  }
+]
