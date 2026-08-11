@@ -64,6 +64,52 @@ def test_streaming_ste_matches_in_memory_report(tmp_path: Path):
     assert output_frames.shape == frames.shape
 
 
+def _make_flash_video(path: Path, frame_count: int = 12) -> None:
+    writer = cv2.VideoWriter(
+        str(path), cv2.VideoWriter_fourcc(*"mp4v"), 12.0, (32, 24)
+    )
+    assert writer.isOpened()
+    for index in range(frame_count):
+        level = 200 if index in (5, 6) else 70
+        frame = np.full((24, 32, 3), level, dtype=np.uint8)
+        frame[:12, :16, 1] = min(255, level + 30)
+        writer.write(frame)
+    writer.release()
+
+
+def test_streaming_report_matches_in_memory_with_flash_correction(tmp_path: Path):
+    input_path = tmp_path / "input.mp4"
+    output_path = tmp_path / "output.mp4"
+    _make_flash_video(input_path)
+    cfg = STEConfig(bins=32, window_radius=2, moving_average_radius=1)
+    correction = AccessibilityCorrectionConfig(
+        flash=FlashCorrectionConfig(analysis_size=16),
+        red=RedCorrectionConfig(enabled=False),
+    )
+
+    frames, fps = read_video(input_path)
+    _, expected_report = ste_correct(
+        frames, ScaleTimeEqualization(cfg), correction=correction, fps=fps
+    )
+    actual_report, _ = ste_correct_video(
+        input_path,
+        output_path,
+        ScaleTimeEqualization(cfg),
+        audio_source=None,
+        correction=correction,
+    )
+
+    assert actual_report["singular_frames"] == expected_report["singular_frames"]
+    torch.testing.assert_close(
+        torch.tensor(actual_report["kl_divergence"]),
+        torch.tensor(expected_report["kl_divergence"]),
+    )
+    torch.testing.assert_close(
+        torch.tensor(actual_report["singular_threshold"]),
+        torch.tensor(expected_report["singular_threshold"]),
+    )
+
+
 def test_streaming_applies_correction_stages_in_fixed_order(tmp_path: Path):
     input_path = tmp_path / "input.mp4"
     output_path = tmp_path / "output.mp4"

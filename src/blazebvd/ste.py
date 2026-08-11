@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, fields
 
 import torch
 import torch.nn.functional as F
@@ -25,6 +25,23 @@ class DeflickerPriors:
     singular_frames: Tensor
     kl_divergence: Tensor
     singular_threshold: Tensor
+
+    def slice_time(self, start: int, end: int) -> DeflickerPriors:
+        """Return a view of frames ``[start, end)`` along the time axis."""
+        return DeflickerPriors(
+            **{
+                field.name: getattr(self, field.name)[:, start:end]
+                for field in fields(self)
+            }
+        )
+
+    def to(self, device: torch.device) -> DeflickerPriors:
+        return DeflickerPriors(
+            **{
+                field.name: getattr(self, field.name).to(device)
+                for field in fields(self)
+            }
+        )
 
 
 def rgb_value(frames: Tensor) -> Tensor:

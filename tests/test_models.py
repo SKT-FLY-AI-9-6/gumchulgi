@@ -43,6 +43,51 @@ def test_full_pipeline_smoke():
     assert result.priors.exposure_maps.shape == (1, 2, 1, 32, 32)
 
 
+def _small_pipeline() -> BlazeBVD:
+    cfg = BlazeBVDConfig()
+    cfg.ste.bins = 32
+    cfg.model.nonlocal_max_positions = 64
+    cfg.model.tcm_transformer_blocks = 1
+    cfg.model.tcm_window_size = 4
+    cfg.flow.backend = "zero"
+    return BlazeBVD(cfg, flow_estimator=ZeroFlow())
+
+
+def test_pipeline_accepts_precomputed_priors():
+    torch.manual_seed(0)
+    model = _small_pipeline()
+    video = torch.rand(1, 3, 3, 32, 32)
+    priors = model.ste(
+        video, fps=30.0, flash_config=model.config.correction.flash
+    )
+    baseline = model(video, run_tcm=False)
+    precomputed = model(video, run_tcm=False, priors=priors)
+    torch.testing.assert_close(precomputed.output, baseline.output)
+
+
+def test_infer_clips_uses_full_video_ste_priors():
+    from blazebvd.video import infer_clips
+
+    torch.manual_seed(0)
+    model = _small_pipeline()
+    frames = torch.rand(9, 3, 32, 32)
+    output, report = infer_clips(
+        model,
+        frames,
+        torch.device("cpu"),
+        clip_length=4,
+        overlap=2,
+        run_tcm=False,
+    )
+    assert output.shape == frames.shape
+    assert report["ste_scope"] == "full_video"
+    full_priors = model.ste(
+        frames.unsqueeze(0), fps=30.0, flash_config=model.config.correction.flash
+    )
+    expected = torch.where(full_priors.singular_frames[0])[0].tolist()
+    assert report["singular_frames"] == [int(index) for index in expected]
+
+
 def test_full_pipeline_receives_flash_consolidated_ste_prior():
     cfg = BlazeBVDConfig()
     cfg.ste.bins = 256
