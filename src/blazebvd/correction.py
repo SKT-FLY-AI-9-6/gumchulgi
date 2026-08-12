@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
+
 import torch
 import torch.nn.functional as F
 from torch import Tensor
@@ -183,18 +185,96 @@ def consolidate_temporal_flashes(
     return corrected[0] if squeezed else corrected
 
 
+@dataclass
+class RedAttenuationState:
+    """Temporal-gating history carried across streamed chunks of one video."""
+
+    coverage: Tensor
+    envelope: Tensor
+
+
+def _estimate_illuminant_chroma(
+    linear: Tensor,
+    luminance: Tensor,
+    illumination_size: int,
+) -> Tensor:
+    """Estimate a low-frequency, luminance-normalized illumination color field.
+
+    Illumination is assumed spatially smooth while object reflectance carries
+    the high-frequency detail, so the local mean color ratio approximates the
+    light. Dividing by this field (von Kries adaptation) neutralizes the light
+    without flattening the object's own colors.
+    """
+    b, t, c, height, width = linear.shape
+    flat_rgb = linear.reshape(b * t, c, height, width)
+    flat_lum = luminance.reshape(b * t, 1, height, width)
+    scale = min(1.0, illumination_size / max(height, width))
+    target = (max(1, int(round(height * scale))), max(1, int(round(width * scale))))
+    if target != (height, width):
+        flat_rgb = F.interpolate(flat_rgb, size=target, mode="area")
+        flat_lum = F.interpolate(flat_lum, size=target, mode="area")
+    chroma = flat_rgb / flat_lum.clamp_min(1e-6)
+    if target != (height, width):
+        chroma = F.interpolate(
+            chroma, size=(height, width), mode="bilinear", align_corners=False
+        )
+    normalizer = (
+        0.2126 * chroma[:, 0:1] + 0.7152 * chroma[:, 1:2] + 0.0722 * chroma[:, 2:3]
+    )
+    chroma = (chroma / normalizer.clamp_min(1e-6)).clamp(0.25, 4.0)
+    return chroma.reshape(b, t, c, height, width)
+
+
+def _temporal_red_gate(
+    mask: Tensor,
+    config: RedCorrectionConfig,
+    state: RedAttenuationState | None,
+) -> tuple[Tensor, RedAttenuationState]:
+    """Gate attenuation to frames near rapid red-coverage changes.
+
+    The per-frame recursion uses only past frames, so chunked processing with a
+    carried state reproduces the whole-video result exactly.
+    """
+    b, t = mask.shape[:2]
+    coverage = mask.mean(dim=(2, 3, 4))
+    previous_coverage = state.coverage if state is not None else coverage.new_zeros(b)
+    envelope = state.envelope if state is not None else coverage.new_zeros(b)
+    gates = []
+    for index in range(t):
+        activity = (coverage[:, index] - previous_coverage).abs()
+        envelope = torch.maximum(activity, config.gating_decay * envelope)
+        previous_coverage = coverage[:, index]
+        gates.append(
+            _smooth_weight(
+                envelope,
+                config.gating_threshold,
+                config.gating_transition_width,
+            )
+        )
+    gate = torch.stack(gates, dim=1)[:, :, None, None, None]
+    return gate, RedAttenuationState(coverage=previous_coverage, envelope=envelope)
+
+
 @torch.no_grad()
-def attenuate_saturated_red(
+def attenuate_saturated_red_stateful(
     frames: Tensor,
     config: RedCorrectionConfig,
-) -> Tensor:
-    """Reduce saturated red chroma while preserving linear-light luminance."""
+    state: RedAttenuationState | None = None,
+) -> tuple[Tensor, RedAttenuationState | None]:
+    """Streaming variant of :func:`attenuate_saturated_red`.
+
+    ``state`` carries temporal-gating history between consecutive chunks of the
+    same video; passing each chunk in order matches one whole-video call.
+    """
     config.validate()
     batch, squeezed = _as_batch(frames)
     original_dtype = batch.dtype
     working = batch.float().clamp(0, 1)
-    if not config.enabled or config.strength == 0:
-        return frames.clone()
+    active_strength = config.strength
+    if config.illumination_separation:
+        active_strength = max(config.strength, config.reflected_strength)
+    if not config.enabled or active_strength == 0:
+        return frames.clone(), state
 
     red_ratio = working[:, :, 0:1] / working.sum(dim=2, keepdim=True).clamp_min(1e-6)
     saturation = working.max(dim=2, keepdim=True).values - working.min(
@@ -220,6 +300,10 @@ def attenuate_saturated_red(
         flat_mask = F.avg_pool2d(flat_mask, kernel_size=2 * radius + 1, stride=1)
         mask = flat_mask.reshape(b, t, 1, height, width)
 
+    if config.temporal_gating:
+        gate, state = _temporal_red_gate(mask, config, state)
+        mask = mask * gate
+
     linear = _srgb_to_linear(working)
     luminance = (
         0.2126 * linear[:, :, 0:1]
@@ -227,9 +311,51 @@ def attenuate_saturated_red(
         + 0.0722 * linear[:, :, 2:3]
     )
     neutral = luminance.expand_as(linear)
-    corrected_linear = torch.lerp(linear, neutral, mask * config.strength)
+    if config.illumination_separation:
+        # Split the mask by brightness: near-clipping pixels are the light
+        # source itself (the PSE risk) and keep the strong desaturation, while
+        # dimmer masked pixels are red light on objects and are white-balanced
+        # instead so the object's reflectance stays recognizable.
+        value = working.max(dim=2, keepdim=True).values
+        emissive_weight = _smooth_weight(
+            value,
+            config.emissive_value_threshold,
+            config.emissive_transition_width,
+        )
+        illuminant = _estimate_illuminant_chroma(
+            linear, luminance, config.illumination_size
+        )
+        adapted = linear / illuminant
+        adapted_luminance = (
+            0.2126 * adapted[:, :, 0:1]
+            + 0.7152 * adapted[:, :, 1:2]
+            + 0.0722 * adapted[:, :, 2:3]
+        )
+        adapted = adapted * (luminance / adapted_luminance.clamp_min(1e-6))
+        corrected_linear = torch.lerp(
+            linear,
+            adapted,
+            mask * (1.0 - emissive_weight) * config.reflected_strength,
+        )
+        corrected_linear = torch.lerp(
+            corrected_linear,
+            neutral,
+            mask * emissive_weight * config.strength,
+        )
+    else:
+        corrected_linear = torch.lerp(linear, neutral, mask * config.strength)
     corrected = _linear_to_srgb(corrected_linear).clamp(0, 1).to(original_dtype)
-    return corrected[0] if squeezed else corrected
+    return (corrected[0] if squeezed else corrected), state
+
+
+@torch.no_grad()
+def attenuate_saturated_red(
+    frames: Tensor,
+    config: RedCorrectionConfig,
+) -> Tensor:
+    """Reduce saturated red chroma while preserving linear-light luminance."""
+    corrected, _ = attenuate_saturated_red_stateful(frames, config)
+    return corrected
 
 
 @torch.no_grad()

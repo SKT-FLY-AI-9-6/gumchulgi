@@ -47,6 +47,15 @@ BlazeBVD method:
    copied. The resulting V map replaces the `filtered_value` prior before GFRM.
 5. Saturated-red attenuation runs after GFRM/LFRM/TCM. It uses a soft red/saturation mask and
    interpolates toward a neutral color with the same linear-light luminance.
+   With `illumination_separation` the masked region is split by brightness:
+   near-clipping pixels are treated as the emissive light source and keep the
+   neutral desaturation, while dimmer masked pixels are treated as red light
+   reflected off objects and are corrected by dividing out a low-frequency
+   illuminant chroma field (von Kries adaptation, luminance preserved) so the
+   object's own reflectance detail survives. Optional `temporal_gating`
+   restricts attenuation to frames around rapid red-coverage changes using a
+   causal activity envelope; the recursion is streaming-safe via
+   `RedAttenuationState`, so chunked processing matches whole-video output.
 6. These stages do not implement a PSE pass/fail verdict or count flashes in a
    one-second standards window. Input selection and output validation remain the
    responsibility of the external detector.
