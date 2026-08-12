@@ -478,6 +478,18 @@ def analyze(path, width: int = 320, with_pattern: bool = True,
         except Exception as exc:  # noqa: BLE001
             pat_err = str(exc)
 
+    # ⑤ 화면전환도 같은 이유로 루프 안에서 잰다 (pse_cut.Stream).
+    # 예전에는 pse_cut.analyze(path) 가 VideoCapture 만 받아 이터러블 입력에서
+    # 예외가 pass=None 으로 삼켜졌고, 파일 입력이면 별도 디코드가 1회 더 있었다.
+    cut_stream = None
+    cut_err = None
+    if cut_result is None and with_cut:
+        try:
+            import pse_cut
+            cut_stream = pse_cut.Stream(fps)
+        except Exception as exc:  # noqa: BLE001
+            cut_err = str(exc)
+
     while True:
         if cap is not None:
             ok, frame = cap.read()
@@ -499,6 +511,11 @@ def analyze(path, width: int = 320, with_pattern: bool = True,
                 pat_stream.push(small)
             except Exception as exc:  # noqa: BLE001
                 pat_err, pat_stream = str(exc), None
+        if cut_stream is not None:
+            try:
+                cut_stream.push(small)
+            except Exception as exc:  # noqa: BLE001
+                cut_err, cut_stream = str(exc), None
         # 색 채널은 축소 프레임에서 (면적 비율만 필요)
         cw = min(COLOR_W, small.shape[1])
         small_c = cv2.resize(small, (cw, max(2, int(round(small.shape[0] * cw / small.shape[1])))),
@@ -517,8 +534,10 @@ def analyze(path, width: int = 320, with_pattern: bool = True,
             harmful = ((ld < DARK_LUM_THR) & (d >= LUM_DIFF_THR)) | \
                       ((ld >= DARK_LUM_THR) & (mich > MICHELSON_THR))
             sg = np.sign(lum - prev_lum)
-            flash.push(idx, _shrink(harmful & (sg > 0)), _shrink(harmful & (sg < 0)))
-            flash_lo.push(idx, _shrink(harmful & (sg > 0)), _shrink(harmful & (sg < 0)))
+            up_m = _shrink(harmful & (sg > 0))
+            dn_m = _shrink(harmful & (sg < 0))
+            flash.push(idx, up_m, dn_m)
+            flash_lo.push(idx, up_m, dn_m)
 
             # ② 강렬한 빨간색 전환 — 채도 조건 + **Δu\'v\' >= 0.2** (ISO/WCAG 조항)
             duv = np.linalg.norm(uv - prev_uv, axis=-1)
@@ -568,24 +587,27 @@ def analyze(path, width: int = 320, with_pattern: bool = True,
         else:
             rules["pattern"] = {"rule": "패턴", "pass": None, "error": pat_err}
 
-    # ⑤ 화면 전환
+    # ⑤ 화면 전환 — 메인 루프에서 누적한 Stream 을 마감한다
     if cut_result is not None:
         rules["cut"] = cut_result
     elif with_cut:
-        try:
-            import pse_cut
-            cr = pse_cut.analyze(path, width=width)
-            rules["cut"] = {
-                "rule": "화면전환", "pass": bool(not cr["verdict"]["dangerous"]),
-                "violation_seconds": cr["violation_seconds"],
-                "max_per_sec": cr["max_cuts_per_sec"], "limit_per_sec": cr["limit_cuts_per_sec"],
-                "total_cuts": cr["total_cuts"], "cuts_per_sec_mean": cr["cuts_per_sec_mean"],
-                "sustained_over_5s": cr["sustained_over_5s"],
-                "segments": cr["segments"],
-                "cut_times": cr.get("cut_times", []),
-            }
-        except Exception as exc:  # noqa: BLE001
-            rules["cut"] = {"rule": "화면전환", "pass": None, "error": str(exc)}
+        if cut_stream is not None:
+            try:
+                cr = cut_stream.finish(video=str(path)
+                                       if cap is not None else "<frames>")
+                rules["cut"] = {
+                    "rule": "화면전환", "pass": bool(not cr["verdict"]["dangerous"]),
+                    "violation_seconds": cr["violation_seconds"],
+                    "max_per_sec": cr["max_cuts_per_sec"], "limit_per_sec": cr["limit_cuts_per_sec"],
+                    "total_cuts": cr["total_cuts"], "cuts_per_sec_mean": cr["cuts_per_sec_mean"],
+                    "sustained_over_5s": cr["sustained_over_5s"],
+                    "segments": cr["segments"],
+                    "cut_times": cr.get("cut_times", []),
+                }
+            except Exception as exc:  # noqa: BLE001
+                rules["cut"] = {"rule": "화면전환", "pass": None, "error": str(exc)}
+        else:
+            rules["cut"] = {"rule": "화면전환", "pass": None, "error": cut_err}
 
     # ④ 5초 지속 — 플래시·적색·화면전환·패턴 중 어느 하나라도
     sustained = bool(rules["flash"]["sustained_over_5s"] or rules["red"]["sustained_over_5s"]
