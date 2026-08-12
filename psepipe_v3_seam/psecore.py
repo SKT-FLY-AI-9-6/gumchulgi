@@ -82,11 +82,9 @@ _LUM_LUT = {
 M_RGB2XYZ = np.array([[0.4124, 0.3576, 0.1805],
                       [0.2126, 0.7152, 0.0722],
                       [0.0193, 0.1192, 0.9505]], np.float32)
-# Smith-Pokorny LMS (L+M = Y 정규화)
-M_XYZ2LMS = np.array([[0.15514,  0.54312, -0.03286],
-                      [-0.15514, 0.45684,  0.03286],
-                      [0.0,      0.0,      0.01608]], np.float32)
-M_RGB2LMS = (M_XYZ2LMS @ M_RGB2XYZ).astype(np.float32)
+# (RG/BY 원추 대립축 제거 — 2026-08-12. Smith-Pokorny LMS 행렬은 그 축 전용이라
+#  함께 제거했다. 임계 RG 0.10 / BY 0.20 이 임상·표준 근거 없는 자체 추정치였다.
+#  RB 축은 Parra 2007 근거가 있어 유지한다.)
 
 UV_RED = (0.4507, 0.5229)      # BT.709 적 원색 u'v'
 UV_BLUE = (0.1754, 0.1579)     # BT.709 청 원색 u'v'
@@ -111,19 +109,6 @@ def uv_prime(lin_rgb: np.ndarray) -> np.ndarray:
     XYZ = lin_rgb @ M_RGB2XYZ.T
     d = np.maximum(XYZ[..., 0] + 15.0 * XYZ[..., 1] + 3.0 * XYZ[..., 2], 1e-6)
     return np.stack([4.0 * XYZ[..., 0] / d, 9.0 * XYZ[..., 1] / d], -1)
-
-
-def cone_contrast(lin_rgb: np.ndarray, bg_lms: np.ndarray):
-    """원추 대비 공간에서 RG(L−M) · BY(S−(L+M)) 축.
-
-    **절대 LMS 로 하면 안 된다** — L_white ≠ M_white 라서 무채색 스트로브가
-    가짜 적녹 신호를 만든다(실측 허위 위반 0.57초). 대비 공간에서 분해한다.
-    """
-    lms = lin_rgb @ M_RGB2LMS.T
-    cc = lms / np.maximum(bg_lms, 1e-4) - 1.0
-    rg = cc[..., 0] - cc[..., 1]
-    by = cc[..., 2] - 0.5 * (cc[..., 0] + cc[..., 1])
-    return lms, rg, by
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -357,16 +342,14 @@ class Cfg:
     # [임상] Parra 2007 — 적청 교대 유발률 100%(최고). u'v' 평면 대각선이라
     #        DKL 기본축에 나뉘어 들어가므로 전용 축으로 분리한다.
     rb_cos_min: float = 0.90
-    # [미검증] 원추 대비 임계 — 임상 근거 없음. 추정치.
-    theta_rg: float = 0.10
-    theta_by: float = 0.20
+    # (RG/BY 원추 대비 임계 theta_rg 0.10 / theta_by 0.20 은 임상 근거 없는
+    #  추정치라 축과 함께 제거했다 — 2026-08-12)
     dark_gate_y: float = 0.004
-    adapt_tau_s: float = 0.25
     # [미규정/신규] 채널별 RGB excursion — §0 참조. 기본 warn.
     theta_rgb: float = 0.10
     rgb_mode: Mode = "warn"
     red_mode: Mode = "fail"
-    chroma_mode: Mode = "fail"          # RG/BY/RB
+    chroma_mode: Mode = "fail"          # RB
 
     # ── 빈도 ──────────────────────────────────────────────────────────────
     max_flashes_per_sec: float = 3.0    # [확정]
@@ -401,14 +384,15 @@ PROFILES: dict[str, Cfg] = {
                    rgb_mode="fail"),
 }
 
-CHANNELS = ("LUM", "RGB", "RED", "RG", "BY", "RB")
+CHANNELS = ("LUM", "RGB", "RED", "RB")
 CH_LABEL = {"LUM": "휘도", "RGB": "RGB 채널별", "RED": "채도 적색",
-            "RG": "적녹 대립", "BY": "청황 대립", "RB": "적청 교대"}
+            "RB": "적청 교대"}
 
 CAVEATS = [
     "이 도구는 콘텐츠가 안전하다고 보증하지 않는다. 상용 배포 전 Harding FPA 등 "
     "외부 검증이 필요하다.",
-    "RG/BY 임계값은 임상 근거가 없는 추정치다. RB 축만 Parra 2007 근거가 있다.",
+    "RG/BY 원추 대립축은 임계값(0.10/0.20)이 임상 근거 없는 자체 추정치라 "
+    "제거했다(2026-08-12). RB 축만 유지 — Parra 2007 (적청 교대 유발률 100%) 근거.",
     "RGB 채널별 축은 표준에 없는 신규 축이다. 기본 모드는 warn 이며 FAIL 판정에 "
     "반영되지 않는다.",
     "전환 지속시간 66ms 조항, 20ms 면적 합산 동기화, 416x416 px 면적 규칙은 "
@@ -583,8 +567,6 @@ class Report:
             note = ""
             if c == "RGB" and cfg.rgb_mode != "fail":
                 note = "표준 밖 · warn 전용"
-            if c in ("RG", "BY"):
-                note = "임계 임상근거 없음"
             L.append(f" {CH_LABEL[c]:<12}{st:>8}{cs.get(c, 0.0):>10.2f}   {note}")
         if self.segments:
             L.append("")
@@ -680,23 +662,19 @@ def analyze(path, cfg: Cfg = None, profile_name: str = "custom",
     n_look = max(1, int(round(cfg.T_qualify_ms / frame_ms)))
     tol_ms = max(cfg.T_sync_ms, 1.5 * frame_ms)
     win_px = wcag_window_px(info.ana_w, info.ana_h, cfg.wcag_field_deg, cfg.fov_h_deg)
-    alpha = 1.0 - float(np.exp(-1.0 / (fps * cfg.adapt_tau_s)))
 
     S = {
         "LUM": _ChannelState("LUM", shape, cfg, win_frames, n_look, cfg.theta_lum),
         "RGB": _ChannelState("RGB", shape, cfg, win_frames, n_look, cfg.theta_rgb),
         "RED": _ChannelState("RED", shape, cfg, win_frames, n_look, 0.0, binary=True),
-        "RG":  _ChannelState("RG",  shape, cfg, win_frames, n_look, cfg.theta_rg),
-        "BY":  _ChannelState("BY",  shape, cfg, win_frames, n_look, cfg.theta_by),
         "RB":  _ChannelState("RB",  shape, cfg, win_frames, n_look, cfg.theta_uv),
     }
     mode_of = {"LUM": "fail", "RGB": cfg.rgb_mode, "RED": cfg.red_mode,
-               "RG": cfg.chroma_mode, "BY": cfg.chroma_mode, "RB": cfg.chroma_mode}
+               "RB": cfg.chroma_mode}
 
     viol: list[Segment] = []
     warns: list[Segment] = []
     masks: dict[str, list] = {c: [] for c in CHANNELS} if want_masks else None
-    bg_lms = None
     prev_gray = None
     n = 0
 
@@ -771,18 +749,7 @@ def analyze(path, cfg: Cfg = None, profile_name: str = "custom",
                 masks["RB"].append(f & lit)
             S["RED"]._prev_uv = uv
 
-            # ---- RG / BY : 원추 대비
-            lms = lin @ M_RGB2LMS.T
-            bg_lms = lms.copy() if bg_lms is None else (alpha * lms + (1 - alpha) * bg_lms)
-            cc = lms / np.maximum(bg_lms, 1e-4) - 1.0
-            rg = (cc[..., 0] - cc[..., 1]).astype(np.float32)
-            by = (cc[..., 2] - 0.5 * (cc[..., 0] + cc[..., 1])).astype(np.float32)
-            for key, sig in (("RG", rg), ("BY", by)):
-                f, d, _ = S[key].machine.step(sig)
-                S[key].counter.push(f & lit, t_ms)
-                dmax[key] = float(d.max()) if d.size else 0.0
-                if want_masks:
-                    masks[key].append(f & lit)
+            # (RG/BY 원추 대비 축은 임계 근거 부재로 제거 — 2026-08-12)
 
             # ---- 채널별 판정
             for ch in CHANNELS:
