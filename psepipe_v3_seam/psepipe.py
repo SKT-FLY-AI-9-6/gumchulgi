@@ -544,7 +544,7 @@ def dissolve_cuts(src, out_path, n_frames, cut_times, fps, verbose=True):
 
 def run(src, dst=None, width=320, eotf="bt1886", pad_s=0.5, verbose=True,
         max_rounds=9, dissolve=0, margin=0.0, min_seg=1, cut_src="judge",
-        spatial=True):
+        spatial=True, actuator_d=None):
     t0 = time.time()
     PF.set_eotf(eotf)
 
@@ -654,6 +654,82 @@ def run(src, dst=None, width=320, eotf="bt1886", pad_s=0.5, verbose=True,
                     "sec_total": round(time.time() - t0, 1),
                     "x_realtime": round((T / fps) / max(time.time() - t0, 1e-9), 2),
                     "dst": dst}
+
+    # ── 작동기 D (옵션) — **외부 보정기 한 판 승부.** 같은 심판(pse_bt1702)이
+    # 출력을 재판정하고, 통과 못 하면 D 출력은 버리고 **원본에서** A/B 사다리로
+    # 폴백한다. 직렬 연결 금지 — A 위에 D 를 겹치면 서로의 출력을 재보정하며
+    # 펌핑이 생긴다. cmd 는 "{src}" "{dst}" 자리표시자를 치환해 실행한다.
+    # 예: --actuator-d 'python -m blazebvd.cli correct {src} -o {dst} --stage ste'
+    if actuator_d and not diag["compliant"]:
+        import shlex as _shlex
+        import subprocess as _sp
+        d_tmp = os.path.splitext(dst or src)[0] + "_dout.mp4"
+        cmd = [x.format(src=src, dst=d_tmp) for x in _shlex.split(actuator_d)]
+        if verbose:
+            print(f"[D] 외부 보정기 실행: {' '.join(cmd)}")
+        t_d = time.time()
+        rd = _sp.run(cmd, capture_output=True, text=True)
+        d_sec = round(time.time() - t_d, 1)
+        if rd.returncode != 0 or not os.path.exists(d_tmp):
+            if verbose:
+                print(f"      D 실행 실패 (rc={rd.returncode}) — A/B 사다리로 폴백")
+            base_out["actuator_d"] = {"tried": True, "ok": False, "sec": d_sec,
+                                      "error": (rd.stderr or "")[-400:]}
+        else:
+            rep_d = BT.analyze(d_tmp, width=width)
+            new_bad_d = [x for x in rep_d["failed_rules"] if x not in failed]
+            base_out["actuator_d"] = {"tried": True, "sec": d_sec,
+                                      "ok": bool(rep_d["compliant"]),
+                                      "after_failed": rep_d["failed_rules"]}
+            if rep_d["compliant"] and not new_bad_d:
+                if verbose:
+                    print(f"      D 출력 적합 ({d_sec}s) — 채택")
+                events_d = merge_events(diag, 0.15, grids=None, fps=fps, T=T)
+                csvp = None
+                if dst:
+                    _passthrough(d_tmp, dst)
+                    os.remove(d_tmp)
+                    rep_f = BT.analyze(dst, width=width)   # 파일 재판정 (정직성)
+                    if [x for x in rep_f["failed_rules"] if x not in failed]:
+                        if verbose:
+                            print("      !! D 파일 재판정에서 새 위반 — 원본 유지, A/B 폴백")
+                        base_out["actuator_d"]["ok"] = False
+                    else:
+                        csvp = export_events_csv(
+                            os.path.splitext(dst)[0] + "_events.csv", events_d,
+                            [], rep_f["failed_rules"], auto_label="자동 보정됨(작동기 D)")
+                        return {**base_out, "untouched": False,
+                                "after_compliant": bool(rep_f["compliant"]),
+                                "after_failed": list(rep_f["failed_rules"]),
+                                "fixed": [r for r in failed
+                                          if r not in rep_f["failed_rules"]],
+                                "unfixable": [], "actuators": "D",
+                                "touched_time_pct": 100.0,
+                                "fc_hz": 0, "a_max": 0, "dn_max": 0, "cells": 0,
+                                "events": events_d, "events_csv": csvp,
+                                "sec_total": round(time.time() - t0, 1),
+                                "x_realtime": round((T / fps) /
+                                                    max(time.time() - t0, 1e-9), 2),
+                                "dst": dst}
+                else:
+                    return {**base_out, "untouched": False,
+                            "after_compliant": True,
+                            "after_failed": [],
+                            "fixed": list(failed), "unfixable": [],
+                            "actuators": "D", "touched_time_pct": 100.0,
+                            "fc_hz": 0, "a_max": 0, "dn_max": 0, "cells": 0,
+                            "events": events_d, "events_csv": None, "d_out": d_tmp,
+                            "sec_total": round(time.time() - t0, 1),
+                            "x_realtime": round((T / fps) /
+                                                max(time.time() - t0, 1e-9), 2),
+                            "dst": None}
+            else:
+                if verbose:
+                    print(f"      D 결과 위반 잔존({', '.join(rep_d['failed_rules'])}"
+                          f"{', 새 위반 ' + ','.join(new_bad_d) if new_bad_d else ''})"
+                          f" — D 출력 폐기, A/B 사다리로 폴백")
+                if os.path.exists(d_tmp):
+                    os.remove(d_tmp)
 
     fixable = [r for r in failed if r not in UNFIXABLE]
     unfix = [r for r in failed if r in UNFIXABLE]
@@ -801,8 +877,11 @@ def run(src, dst=None, width=320, eotf="bt1886", pad_s=0.5, verbose=True,
         stream = apply_stream(src, U, REF, (H, W), fps, cfg, wt=wt_r,
                               patfix=patfix, yield_ana=ana)
         pat_arg = pat0 if not need_B else None       # B 를 걸었으면 다시 재야 한다
+        # supplementary=False — 보조 채널(적청·순수빈도·저면적)은 판정에 안
+        # 들어가므로 사다리 재판정에서는 계산을 생략한다. 결과 불변, 시간 절약.
         rep = BT.analyze(stream, width=width, fps=fps,
-                         cut_result=cut_cached, pattern_result=pat_arg)
+                         cut_result=cut_cached, pattern_result=pat_arg,
+                         supplementary=False)
         still = [x for x in rep["failed_rules"] if x not in UNFIXABLE]
         ov = over_axes(rep, margin) if margin else []
         if verbose:
@@ -1037,13 +1116,17 @@ if __name__ == "__main__":
     ap.add_argument("--dissolve", type=int, default=0, metavar="N",
                     help="하드컷을 N프레임 디졸브로 (30fps 기준 5 부터 효과. "
                          "편집 의도를 크게 바꾸므로 기본 off)")
+    ap.add_argument("--actuator-d", default=None, metavar="CMD",
+                    help="외부 보정기(작동기 D) 명령. {src} {dst} 자리표시자 치환. "
+                         "심판이 출력을 재판정해 통과 못 하면 자동으로 A/B 폴백. "
+                         "예: 'python -m blazebvd.cli correct {src} -o {dst} --stage ste'")
     a = ap.parse_args()
     if a.cut_playbook:
         print(CUT_PLAYBOOK)
         raise SystemExit(0)
     r = run(a.src, a.dst, width=a.width, eotf=a.eotf, pad_s=a.pad,
             dissolve=a.dissolve, margin=a.margin,
-            spatial=not a.no_spatial)
+            spatial=not a.no_spatial, actuator_d=a.actuator_d)
     print()
     print(json.dumps(r, ensure_ascii=False, indent=1) if a.json else report(r))
     if r.get("unfixable"):

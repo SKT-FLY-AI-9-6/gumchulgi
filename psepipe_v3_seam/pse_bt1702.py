@@ -430,7 +430,8 @@ def _shrink(mask: np.ndarray) -> np.ndarray:
 def analyze(path, width: int = 320, with_pattern: bool = True,
             with_cut: bool = True, sequence_rule: bool = True,
             verbose: bool = False, fps: float = None,
-            pattern_result=None, cut_result=None, keep_masks: bool = False) -> dict:
+            pattern_result=None, cut_result=None, keep_masks: bool = False,
+            supplementary: bool = True) -> dict:
     """path 대신 **프레임 이터러블**(BGR uint8)을 줄 수 있다. 그 경우 fps 가 필수.
 
     필터의 폐루프에서 쓴다 — 라운드마다 무손실로 쓰고 다시 디코드하던 왕복이
@@ -522,7 +523,8 @@ def analyze(path, width: int = 320, with_pattern: bool = True,
                              interpolation=cv2.INTER_AREA) if cw < small.shape[1] else small
         red = saturated_red(small_c)
         uv = uv_prime(small_c)
-        r_side, b_side = rb_sides(small_c, uv)
+        r_side, b_side = (rb_sides(small_c, uv) if supplementary
+                          else (None, None))
 
         if prev_lum is not None:
             n = lum.size
@@ -537,7 +539,8 @@ def analyze(path, width: int = 320, with_pattern: bool = True,
             up_m = _shrink(harmful & (sg > 0))
             dn_m = _shrink(harmful & (sg < 0))
             flash.push(idx, up_m, dn_m)
-            flash_lo.push(idx, up_m, dn_m)
+            if supplementary:
+                flash_lo.push(idx, up_m, dn_m)
 
             # ② 강렬한 빨간색 전환 — 채도 조건 + **Δu\'v\' >= 0.2** (ISO/WCAG 조항)
             duv = np.linalg.norm(uv - prev_uv, axis=-1)
@@ -547,8 +550,9 @@ def analyze(path, width: int = 320, with_pattern: bool = True,
 
             # [보조] 적↔청 교대 — 규격 밖. Parra 2007 유발률 100% 근거.
             # 적 계열 <-> 청 계열의 실제 맞바꿈만 센다 (중점 통과가 아니라).
-            rb_c.push(idx, _shrink(r_side & prev_b & big),
-                           _shrink(b_side & prev_r & big))
+            if supplementary and prev_r is not None:
+                rb_c.push(idx, _shrink(r_side & prev_b & big),
+                               _shrink(b_side & prev_r & big))
 
         prev_lum, prev_red, prev_uv = lum, red, uv
         prev_r, prev_b = r_side, b_side
@@ -562,10 +566,13 @@ def analyze(path, width: int = 320, with_pattern: bool = True,
         raise IOError(f"프레임을 읽지 못했습니다: {path}")
 
     rules = {"flash": flash.summary(), "red": red_c.summary()}
-    supplementary = {"rb": rb_c.summary(),            # 규격 밖 — 판정에 넣지 않는다
-                     "flash_raw": flash.raw_summary(),    # 시퀀스 규칙 미적용 빈도
-                     "red_raw": red_c.raw_summary(),
-                     "flash_lo": flash_lo.raw_summary()}  # (선택) 저면적 10%
+    # 폐루프 재판정(supplementary=False)에서는 보조 채널을 통째로 생략한다 —
+    # 판정(compliant/failed_rules)에 안 들어가므로 결과 불변, 시간만 준다.
+    supp = ({"rb": rb_c.summary(),                     # 규격 밖 — 판정에 넣지 않는다
+             "flash_raw": flash.raw_summary(),         # 시퀀스 규칙 미적용 빈도
+             "red_raw": red_c.raw_summary(),
+             "flash_lo": flash_lo.raw_summary()}       # (선택) 저면적 10%
+            if supplementary else {})
 
     # ③ 패턴 — 메인 루프에서 누적한 Stream 을 마감한다
     if pattern_result is not None:
@@ -628,7 +635,7 @@ def analyze(path, width: int = 320, with_pattern: bool = True,
     # ("separated by 334 ms or more are acceptable")이라 위반 판정 조항이 아니다.
     # 시퀀스 분할(gap_frames)로 이미 구현돼 있다. (결함2_프레임간격_검증_v1.1)
     # min_separation / frame_separation / _sep 은 보고용 지표로만 남긴다.
-    supp_failed = [r["rule"] for r in supplementary.values() if r.get("pass") is False]
+    supp_failed = [r["rule"] for r in supp.values() if r.get("pass") is False]
 
     if not sep_ok:
         need_sep_f = need_sep
@@ -669,7 +676,7 @@ def analyze(path, width: int = 320, with_pattern: bool = True,
         # 근거는 임상(Parra 2007: 적-청 교대 유발률 100%, 단색 적 88% / 청 72%)이고
         # 임계는 표준에서 가져왔지만(CIE 1976 UCS Δu'v' >= 0.2), 이 축 자체는
         # BT.1702 에도 WCAG 에도 없다. 그래서 "위반"이 아니라 "주의"로 보고한다.
-        "supplementary": supplementary,
+        "supplementary": supp,
         "supplementary_flags": supp_failed,
         "frame_separation": {
             "required_frames": need_sep,
