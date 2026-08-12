@@ -67,6 +67,12 @@ SEQ_GAP_S_50 = 0.360        # 50Hz 계열 (25/50fps) —  9프레임 @25fps
 
 def seq_gap_s(fps):
     return SEQ_GAP_S_50 if (24 <= fps <= 26 or 49 <= fps <= 51) else SEQ_GAP_S_60
+
+# (jinsuk 브랜치 이식) 화소 동일성 비교 전 마스크 팽창 커널. 반경 2 (MASK_W=40
+# 기준 ≈ 화면 폭 5%). 시선·조명 이동 허용오차 — 화소 정밀 일치는 규칙 취지보다
+# 엄격해 화면을 돌아다니는 스트로브의 시퀀스를 고아로 쪼갠다 (결함 ①, Test.mp4
+# 실증: 순수 계수 9회/s 인데 초반 30초가 전부 적합으로 나왔다).
+_SEQ_KERNEL = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
 MASK_W = 40                 # 화소 동일성 검사용 마스크 폭 (축소 저장)
 COLOR_W = 96                # 색 채널(적색·적청) 분석 폭.
                             # 색 판정은 면적 비율만 쓰고 마스크도 40px 로 줄여
@@ -200,11 +206,13 @@ class Counter:
         누적하고, 교집합이 임계 아래로 떨어지면 거기서 시퀀스를 끊는다.
     """
 
-    def __init__(self, name: str, fps: float, sequence_rule: bool = True):
+    def __init__(self, name: str, fps: float, sequence_rule: bool = True,
+                 area_thr: float = AREA_THR):
         self.name = name
         self.fps = fps
         self.win = max(1, int(round(fps)))
         self.sequence_rule = sequence_rule
+        self.area_thr = area_thr        # 면적 관문. 기본 25%, 보조 채널은 낮출 수 있다
         self.gap_frames = seq_gap_s(fps) * fps
         self.pending: tuple[int, int, np.ndarray] | None = None
         self.edges: list[int] = []              # 플래시 선행엣지 프레임
@@ -225,9 +233,9 @@ class Counter:
         self.n_frames = idx + 1
 
         tr = 0
-        if net > AREA_THR:
+        if net > self.area_thr:
             tr, mask = +1, mask_up
-        elif -net > AREA_THR:
+        elif -net > self.area_thr:
             tr, mask = -1, mask_dn
         else:
             return
@@ -252,7 +260,14 @@ class Counter:
             gap_ok = True
             if self.sequence_rule:
                 gap_ok = (e - self.edges[cur[-1]]) <= self.gap_frames
-            cand = inter & m
+            # (jinsuk 이식) 팽창 후 교집합 — "겹치는 영역이 면적 임계를 넘어야
+            # 한다"(Jordan 2025)는 문언 구조는 유지하고, 화소 정밀 일치 요구만
+            # ±5% 허용오차로 완화한다. 회귀: 31_two_regions_alt 적합 유지,
+            # 32_one_region_4hz 위반 유지, 오탐 대조군(25~27) 적합 유지,
+            # Test.mp4 위반 1.71s → 3.21s.
+            a = cv2.dilate(self.masks[cur[-1]].astype(np.uint8), _SEQ_KERNEL) > 0
+            b = cv2.dilate(m.astype(np.uint8), _SEQ_KERNEL) > 0
+            cand = a & b
             overlap_ok = float(cand.mean()) > AREA_THR
             if gap_ok and overlap_ok:
                 cur.append(k)
@@ -278,6 +293,45 @@ class Counter:
 
     def viol_array(self) -> np.ndarray:
         return self._counts() > MAX_PER_SEC
+
+    # ---------- 보조: 순수 빈도 (시퀀스 규칙 미적용 = WCAG/ISO/NAB-J 식)
+    def _raw_counts(self) -> np.ndarray:
+        """프레임별 '직전 1초의 플래시 수'. 334ms 규칙도 화소 동일성도 안 쓴다.
+
+        시퀀스 분할은 ITU-R/Ofcom 이 봐주는 경우를 반영하는 층이지 위험을 찾는
+        층이 아니다. 화면을 돌아다니는 스트로브는 인접 플래시 겹침이 25% 관문
+        아래라 시퀀스가 고아로 쪼개져 빈도 위반이 사라진다(결함 ①).
+        WCAG 등에는 두 조항이 없으므로 이 값이 곧 WCAG 식 빈도다.
+        **규격 판정(compliant)에는 넣지 않는다** — supplementary 로만 보고.
+        """
+        c = np.zeros(max(self.n_frames, 1), int)
+        for e in self.edges:
+            for f in range(e, min(e + self.win, len(c))):
+                n = sum(1 for x in self.edges if f - self.win < x <= f)
+                if n > c[f]:
+                    c[f] = n
+        return c
+
+    def raw_summary(self) -> dict:
+        c = self._raw_counts()
+        v = c > MAX_PER_SEC
+        segs, st = [], None
+        for i, x in enumerate(v):
+            if x and st is None:
+                st = i
+            elif not x and st is not None:
+                segs.append([round(st / self.fps, 2), round(i / self.fps, 2)]); st = None
+        if st is not None:
+            segs.append([round(st / self.fps, 2), round(len(v) / self.fps, 2)])
+        return {
+            "rule": f"{self.name}(순수빈도)",
+            "pass": bool(not v.any()),
+            "violation_seconds": round(float(v.sum()) / self.fps, 2),
+            "max_per_sec": int(c.max()) if c.size else 0,
+            "limit_per_sec": MAX_PER_SEC,
+            "segments": segs,
+            "note": "시퀀스 규칙(334ms·화소 동일성) 미적용 1초 창 계수 = WCAG/ISO/NAB-J 식",
+        }
 
     def min_separation(self) -> int | None:
         if len(self.edges) < 2:
@@ -408,6 +462,11 @@ def analyze(path, width: int = 320, with_pattern: bool = True,
     flash = Counter("플래시", fps, sequence_rule=sequence_rule)
     red_c = Counter("적색", fps, sequence_rule=sequence_rule)
     rb_c = Counter("적청교대", fps, sequence_rule=sequence_rule)
+    # (jinsuk 이식 · 선택) 저면적 보조 채널 — 접근성 고시 문언에는 면적 조건이
+    # 없다. 25% 로는 놓치는 국소 점멸(화면 10%)을 잡되, 오탐 대조군(휙 팬·줌·
+    # 손떨림)이 깨지지 않는 실측 하한이 10% (5%부터 whip_pan 이 올라오기 시작).
+    flash_lo = Counter("플래시(저면적10%)", fps, sequence_rule=sequence_rule,
+                       area_thr=0.10)
     prev_lum = prev_red = prev_uv = None
     prev_r = prev_b = None
     idx = 0
@@ -482,7 +541,10 @@ def analyze(path, width: int = 320, with_pattern: bool = True,
             harmful = ((ld < DARK_LUM_THR) & (d >= LUM_DIFF_THR)) | \
                       ((ld >= DARK_LUM_THR) & (mich > MICHELSON_THR))
             sg = np.sign(lum - prev_lum)
-            flash.push(idx, _shrink(harmful & (sg > 0)), _shrink(harmful & (sg < 0)))
+            up_m = _shrink(harmful & (sg > 0))
+            dn_m = _shrink(harmful & (sg < 0))
+            flash.push(idx, up_m, dn_m)
+            flash_lo.push(idx, up_m, dn_m)
 
             # ② 강렬한 빨간색 전환 — 채도 조건 + **Δu\'v\' >= 0.2** (ISO/WCAG 조항)
             duv = np.linalg.norm(uv - prev_uv, axis=-1)
@@ -507,7 +569,10 @@ def analyze(path, width: int = 320, with_pattern: bool = True,
         raise IOError(f"프레임을 읽지 못했습니다: {path}")
 
     rules = {"flash": flash.summary(), "red": red_c.summary()}
-    supplementary = {"rb": rb_c.summary()}   # 규격 밖 — 판정에 넣지 않는다
+    supplementary = {"rb": rb_c.summary(),               # 규격 밖 — 판정에 넣지 않는다
+                     "flash_raw": flash.raw_summary(),   # 시퀀스 규칙 미적용 빈도
+                     "red_raw": red_c.raw_summary(),
+                     "flash_lo": flash_lo.raw_summary()} # (선택) 저면적 10%
 
     # ③ 패턴 — 메인 루프에서 누적한 Stream 을 마감한다
     if pattern_result is not None:
@@ -668,6 +733,24 @@ def report(r: dict) -> str:
         if not sup["pass"]:
             L.append("     └ Parra 2007 에서 유발률 100% 인 조합. 규격에는 없는 축이라")
             L.append("       규격 판정에는 반영하지 않았다.")
+    fr = r.get("supplementary", {}).get("flash_raw")
+    rr = r.get("supplementary", {}).get("red_raw")
+    lo = r.get("supplementary", {}).get("flash_lo")
+    if fr:
+        L.append(f"  [보조·규격밖] 순수 빈도   {'초과없음' if fr['pass'] else '한도 초과'}  "
+                 f"{fr['violation_seconds']:>5.2f}s  최대 {fr['max_per_sec']}회/s  "
+                 f"(시퀀스 규칙 미적용 = WCAG 식)")
+        if not fr["pass"] and r["rules"]["flash"]["pass"]:
+            L.append("     └ 시퀀스 분할이 흩어놓아 규격 판정은 적합이나 WCAG 식으로는 초과.")
+        if fr.get("segments") and not fr["pass"]:
+            for s in fr["segments"][:6]:
+                L.append(f"       {s[0]:>6.2f} ~ {s[1]:>6.2f}s")
+    if rr and not rr["pass"]:
+        L.append(f"  [보조·규격밖] 적색 순수빈도  한도 초과  {rr['violation_seconds']:>5.2f}s  "
+                 f"최대 {rr['max_per_sec']}회/s")
+    if lo and not lo["pass"]:
+        L.append(f"  [보조·규격밖] 저면적(10%)  한도 초과  {lo['violation_seconds']:>5.2f}s  "
+                 f"최대 {lo['max_per_sec']}회/s  (고시 문언 프로파일 근사)")
     if r["violation_segments"]:
         L.append("")
         L.append("  위반 구간:")
