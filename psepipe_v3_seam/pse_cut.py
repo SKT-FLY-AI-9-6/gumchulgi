@@ -112,36 +112,32 @@ def block_distances(a: np.ndarray, b: np.ndarray) -> np.ndarray:
     return d
 
 
-def analyze(path: str, width: int = 320, paired: bool = False,
-            verbose: bool = False) -> dict:
-    cap = cv2.VideoCapture(path)
-    if not cap.isOpened():
-        raise IOError(f"영상을 열 수 없습니다: {path}")
-    fps = cap.get(cv2.CAP_PROP_FPS)
-    if not fps or fps != fps or fps <= 0 or fps > 240:
-        fps = 30.0
+class Stream:
+    """프레임(분석 폭으로 축소된 BGR uint8)을 **한 장씩** 받아 컷을 누적한다.
 
-    limit = MAX_CUTS_PER_SEC * (2 if paired else 1)
-    win = max(1, int(round(fps)))
+    pse_pattern.Stream 과 같은 이유로 존재한다 — pse_bt1702 의 메인 루프가
+    자기 디코드·축소 프레임을 그대로 먹일 수 있어야 프레임 이터러블 입력에서도
+    컷 판정이 가능하고(이전에는 VideoCapture(path) 만 받아 이터러블이면
+    예외가 pass=None 으로 삼켜졌다), 컷용 별도 디코드도 없어진다.
+    """
 
-    hists = deque(maxlen=4)      # 최근 4프레임 히스토그램 (앞뒤 일시변화 판별용)
-    recent = deque(maxlen=ADAPT_WIN)   # 최근 변화율 (적응 기준선)
-    series = []                  # 프레임별 기록
-    cut_frames = []              # 컷으로 확정된 프레임 인덱스
-    last_cut = -10**9
-    recent_shots = deque(maxlen=24)   # 최근 샷 시작 히스토그램 (왕복 판별용)
-    idx = 0
+    def __init__(self, fps: float, paired: bool = False):
+        self.fps = fps
+        self.paired = paired
+        self.limit = MAX_CUTS_PER_SEC * (2 if paired else 1)
+        self.win = max(1, int(round(fps)))
+        self.hists = deque(maxlen=4)       # 최근 4프레임 히스토그램 (앞뒤 일시변화 판별용)
+        self.recent = deque(maxlen=ADAPT_WIN)   # 최근 변화율 (적응 기준선)
+        self.series = []                   # 프레임별 기록
+        self.cut_frames = []               # 컷으로 확정된 프레임 인덱스
+        self.last_cut = -10**9
+        self.recent_shots = deque(maxlen=24)    # 최근 샷 시작 히스토그램 (왕복 판별용)
+        self.idx = 0
 
-    while True:
-        ok, frame = cap.read()
-        if not ok:
-            break
-        h0, w0 = frame.shape[:2]
-        if not w0 or not h0:
-            break
-        small = cv2.resize(frame, (width, max(2, int(round(h0 * width / w0)))),
-                           interpolation=cv2.INTER_AREA)
-        hists.append(block_hists(small))
+    def push(self, small_bgr: np.ndarray) -> None:
+        idx = self.idx
+        self.hists.append(block_hists(small_bgr))
+        hists = self.hists
 
         changed = 0.0
         is_cut = False
@@ -156,10 +152,10 @@ def analyze(path: str, width: int = 320, paired: bool = False,
         if len(hists) >= 4:
             Z, A, B, C = hists[0], hists[1], hists[2], hists[3]
             changed = float((block_distances(A, B) > BLOCK_DIST_THR).mean())
-            recent.append(changed)
+            self.recent.append(changed)
 
             # (2) 적응 임계 — 최근 중앙값 대비 이상치인가
-            base = float(np.median(recent)) if len(recent) >= 8 else 0.0
+            base = float(np.median(self.recent)) if len(self.recent) >= 8 else 0.0
             adaptive = max(ABS_MIN_DIST, ADAPT_K * base)
 
             cand = (changed > AREA_THR) and (changed >= adaptive)
@@ -184,8 +180,8 @@ def analyze(path: str, width: int = 320, paired: bool = False,
             #     장면이 순환하고 있다는 뜻이고, 그건 플래시/패턴 쪽 위험이다.
             #     (적↔흑 5Hz 점멸이 컷 5회/s 로 세지던 것을 실측으로 확인)
             if cand:
-                for si, sh in recent_shots:
-                    if idx - si > win:
+                for si, sh in self.recent_shots:
+                    if idx - si > self.win:
                         continue
                     same = float((block_distances(sh, B) > BLOCK_DIST_THR).mean())
                     if same < ALT_AREA_THR:      # 최근 본 샷으로 되돌아옴
@@ -194,30 +190,72 @@ def analyze(path: str, width: int = 320, paired: bool = False,
                         break
 
             # 같은 경계 중복 계상 방지
-            if cand and (cut_idx - last_cut) < MIN_CUT_GAP:
+            if cand and (cut_idx - self.last_cut) < MIN_CUT_GAP:
                 cand = False
                 reason = "gap"
 
             if cand:
                 is_cut = True
-                last_cut = cut_idx
-                cut_frames.append(cut_idx)
-                recent_shots.append((cut_idx, B))
+                self.last_cut = cut_idx
+                self.cut_frames.append(cut_idx)
+                self.recent_shots.append((cut_idx, B))
         elif len(hists) >= 2:
-            recent.append(float((block_distances(hists[-2], hists[-1]) > BLOCK_DIST_THR).mean()))
+            self.recent.append(float((block_distances(hists[-2], hists[-1]) > BLOCK_DIST_THR).mean()))
 
-        cnt = sum(1 for c in cut_frames if idx - win < c <= idx)
-        series.append({"i": idx, "changed": round(changed, 4),
-                       "cut": bool(is_cut), "cuts_in_window": cnt,
-                       "viol": cnt > limit, "why": reason})
-        idx += 1
-        if verbose and idx % 300 == 0:
-            print(f"    ... {idx} frames", file=sys.stderr)
+        cnt = sum(1 for c in self.cut_frames if idx - self.win < c <= idx)
+        self.series.append({"i": idx, "changed": round(changed, 4),
+                           "cut": bool(is_cut), "cuts_in_window": cnt,
+                           "viol": cnt > self.limit, "why": reason})
+        self.idx = idx + 1
 
-    cap.release()
-    if idx == 0:
+    def finish(self, video: str = "<frames>") -> dict:
+        return _finish(self.series, self.cut_frames, self.fps, self.paired,
+                       self.limit, self.idx, video)
+
+
+def analyze(path, width: int = 320, paired: bool = False,
+            verbose: bool = False, fps: float = None) -> dict:
+    """path 대신 프레임 이터러블(BGR uint8)도 받는다. 그 경우 fps 필수."""
+    import os as _os
+    if isinstance(path, (str, _os.PathLike)):
+        cap = cv2.VideoCapture(path)
+        if not cap.isOpened():
+            raise IOError(f"영상을 열 수 없습니다: {path}")
+        fps = cap.get(cv2.CAP_PROP_FPS)
+        if not fps or fps != fps or fps <= 0 or fps > 240:
+            fps = 30.0
+        frames_in = None
+    else:
+        if fps is None:
+            raise ValueError("프레임을 직접 넘길 때는 fps 가 필요합니다")
+        cap, frames_in = None, iter(path)
+
+    st = Stream(fps, paired=paired)
+    while True:
+        if cap is not None:
+            ok, frame = cap.read()
+            if not ok:
+                break
+        else:
+            frame = next(frames_in, None)
+            if frame is None:
+                break
+        h0, w0 = frame.shape[:2]
+        if not w0 or not h0:
+            break
+        small = (cv2.resize(frame, (width, max(2, int(round(h0 * width / w0)))),
+                            interpolation=cv2.INTER_AREA) if w0 != width else frame)
+        st.push(small)
+        if verbose and st.idx % 300 == 0:
+            print(f"    ... {st.idx} frames", file=sys.stderr)
+    if cap is not None:
+        cap.release()
+    if st.idx == 0:
         raise IOError(f"프레임을 읽지 못했습니다: {path}")
+    return st.finish(video=str(path) if cap is not None else "<frames>")
 
+
+def _finish(series, cut_frames, fps, paired, limit, idx, video):
     viol = np.array([s["viol"] for s in series], bool)
     counts = np.array([s["cuts_in_window"] for s in series], int)
 
@@ -241,7 +279,7 @@ def analyze(path: str, width: int = 320, paired: bool = False,
     dur = idx / fps
     n_cuts = len(cut_frames)
     return {
-        "video": path,
+        "video": video,
         "standard": "ITU-R BT.1702 '화면 전환' — 빠른 컷을 플래시와 동일하게 간주",
         "interpretation": "paired (컷 2회=플래시 1회)" if paired else "literal (컷 1회=플래시 1회)",
         "limit_cuts_per_sec": limit,
