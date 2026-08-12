@@ -22,19 +22,16 @@ pse_bt1702.py — ITU-R BT.1702 규격 준수 판정기  [단일 판정]
   색 채널이 필요하면 `pse_analyze.py` 를 별도로 쓸 것 — 다만 그 결과는
   "규격 위반"이 아니라 "규격 밖 추가 위험"으로 따로 보고해야 한다.
 
-⑥ 프레임 간격 — **별도 조항이 맞다** (2026-08-10 정정)
-  처음에는 숫자가 겹쳐서(334ms ≈ 1/3초) ① 의 3Hz 한도를 프레임으로 바꿔 쓴
-  것이라고 판단했다. **틀렸다.** Jordan, "Evaluating Conformance of Video Safety
-  Tools for Photosensitive Epilepsy", HCII 2025 원문:
-
-      "ITU-R 과 Ofcom 표준에는 추가 단서가 있다 — 선행엣지가 334ms 넘게 떨어진
-       플래시는 안전한 것으로 본다. 다른 표준에는 이런 단서가 없다."
-
-  즉 **시퀀스를 나누는 규칙**이다. 예를 들어 t=0.00/0.05/0.10 에 몰린 버스트
-  뒤 t=0.95 에 하나가 더 있으면, 1초 창에는 4회라 WCAG·ISO·NAB-J 는 위반이지만
-  ITU-R·Ofcom 은 마지막이 334ms 넘게 떨어져 새 시퀀스가 되므로 통과한다.
-  → ITU-R/Ofcom 이 이 지점에서 **더 관대**하다. `sequence_rule=False` 로 끄면
-    WCAG/ISO/NAB-J 동작이 된다.
+⑥ 프레임 간격 — **허용 문언이다. 위반 판정에 넣지 않는다** (2026-08-11 확정)
+  BT.1702-3 (11/2023) 원문: "successive flashes for which the leading edges are
+  separated by 360 ms or more are acceptable in a 50 Hz environment or separated
+  by 334 ms or more are acceptable in a 60 Hz environment."
+  "For clarification" 으로 시작하는 3회/s 한도의 부연이며, 실체는 **시퀀스를
+  나누는 규칙**이다 (ITU-R/Ofcom 이 이 지점에서 더 관대. `sequence_rule=False`
+  로 끄면 WCAG/ISO/NAB-J 동작). failed 에 넣으면 허용 조항을 금지 조항으로
+  뒤집는 것 — 실측(합성 24편)에서 30/31 두 편이 규격 밖 위반으로 뒤집혔다.
+  min_separation / frame_separation 은 보고용 지표로만 남긴다.
+  (전문: 결함2_프레임간격_검증_v1.1)
 
 화소 동일성 — 같은 화소가 관여해야 한다 (2026-08-10 추가)
   같은 논문: "화면의 25% 가 번쩍인 뒤 **다른** 25% 가 번쩍이면 방송 기준상
@@ -62,13 +59,12 @@ MICHELSON_THR = 1.0 / 17.0
 AREA_THR = 0.25             # "화면의 1/4 이상"
 MAX_PER_SEC = 3             # "1초 동안 3회 초과"
 SUSTAIN_SEC = 5.0           # "5초 이상 지속되는 경우를 피하도록 권고"
-SEQ_GAP_S_60 = 0.334        # 60Hz 계열 (30/60fps) — 10프레임 @30fps
-SEQ_GAP_S_50 = 0.360        # 50Hz 계열 (25/50fps) —  9프레임 @25fps
+# ⑥ 시퀀스 분할 간격 — BT.1702-3 (11/2023) 원문이 두 값을 나눠 적는다.
+#    50Hz 환경(25/50fps) 360ms / 60Hz 환경 334ms. (결함2_프레임간격_검증_v1.1)
+SEQ_GAP_S_50 = 0.360
+SEQ_GAP_S_60 = 0.334
 
-def seq_gap_s(fps):
-    return SEQ_GAP_S_50 if (24 <= fps <= 26 or 49 <= fps <= 51) else SEQ_GAP_S_60
-
-# (jinsuk 브랜치 이식) 화소 동일성 비교 전 마스크 팽창 커널. 반경 2 (MASK_W=40
+# (선택 · 판정 변경) 화소 동일성 비교 전 마스크 팽창 커널. 반경 2 (MASK_W=40
 # 기준 ≈ 화면 폭 5%). 시선·조명 이동 허용오차 — 화소 정밀 일치는 규칙 취지보다
 # 엄격해 화면을 돌아다니는 스트로브의 시퀀스를 고아로 쪼갠다 (결함 ①, Test.mp4
 # 실증: 순수 계수 9회/s 인데 초반 30초가 전부 적합으로 나왔다).
@@ -213,7 +209,8 @@ class Counter:
         self.win = max(1, int(round(fps)))
         self.sequence_rule = sequence_rule
         self.area_thr = area_thr        # 면적 관문. 기본 25%, 보조 채널은 낮출 수 있다
-        self.gap_frames = seq_gap_s(fps) * fps
+        gap_s = SEQ_GAP_S_50 if round(fps) in (25, 50) else SEQ_GAP_S_60
+        self.gap_frames = gap_s * fps
         self.pending: tuple[int, int, np.ndarray] | None = None
         self.edges: list[int] = []              # 플래시 선행엣지 프레임
         self.masks: list[np.ndarray] = []       # 그 플래시에 관여한 화소 마스크
@@ -260,11 +257,10 @@ class Counter:
             gap_ok = True
             if self.sequence_rule:
                 gap_ok = (e - self.edges[cur[-1]]) <= self.gap_frames
-            # (jinsuk 이식) 팽창 후 교집합 — "겹치는 영역이 면적 임계를 넘어야
-            # 한다"(Jordan 2025)는 문언 구조는 유지하고, 화소 정밀 일치 요구만
-            # ±5% 허용오차로 완화한다. 회귀: 31_two_regions_alt 적합 유지,
-            # 32_one_region_4hz 위반 유지, 오탐 대조군(25~27) 적합 유지,
-            # Test.mp4 위반 1.71s → 3.21s.
+            # 팽창 후 교집합 — "겹치는 영역이 면적 임계를 넘어야 한다"(Jordan 2025)는
+            # 문언 구조는 유지하고, 화소 정밀 일치 요구만 ±5% 허용오차로 완화한다.
+            # 회귀: 31_two_regions_alt 적합 유지, 32_one_region_4hz 위반 유지,
+            # 오탐 대조군(25~27) 적합 유지, Test.mp4 위반 1.71s → 3.21s (0.67s~).
             a = cv2.dilate(self.masks[cur[-1]].astype(np.uint8), _SEQ_KERNEL) > 0
             b = cv2.dilate(m.astype(np.uint8), _SEQ_KERNEL) > 0
             cand = a & b
@@ -462,9 +458,6 @@ def analyze(path, width: int = 320, with_pattern: bool = True,
     flash = Counter("플래시", fps, sequence_rule=sequence_rule)
     red_c = Counter("적색", fps, sequence_rule=sequence_rule)
     rb_c = Counter("적청교대", fps, sequence_rule=sequence_rule)
-    # (jinsuk 이식 · 선택) 저면적 보조 채널 — 접근성 고시 문언에는 면적 조건이
-    # 없다. 25% 로는 놓치는 국소 점멸(화면 10%)을 잡되, 오탐 대조군(휙 팬·줌·
-    # 손떨림)이 깨지지 않는 실측 하한이 10% (5%부터 whip_pan 이 올라오기 시작).
     flash_lo = Counter("플래시(저면적10%)", fps, sequence_rule=sequence_rule,
                        area_thr=0.10)
     prev_lum = prev_red = prev_uv = None
@@ -484,18 +477,6 @@ def analyze(path, width: int = 320, with_pattern: bool = True,
             pat_stream = pse_pattern.Stream(keep_masks=keep_masks)
         except Exception as exc:  # noqa: BLE001
             pat_err = str(exc)
-
-    # ⑤ 화면전환도 같은 이유로 루프 안에서 잰다 (pse_cut.Stream).
-    # 예전에는 pse_cut.analyze(path) 가 VideoCapture 만 받아 이터러블 입력에서
-    # 예외가 pass=None 으로 삼켜졌고, 파일 입력이면 별도 디코드가 1회 더 있었다.
-    cut_stream = None
-    cut_err = None
-    if cut_result is None and with_cut:
-        try:
-            import pse_cut
-            cut_stream = pse_cut.Stream(fps)
-        except Exception as exc:  # noqa: BLE001
-            cut_err = str(exc)
 
     while True:
         if cap is not None:
@@ -518,11 +499,6 @@ def analyze(path, width: int = 320, with_pattern: bool = True,
                 pat_stream.push(small)
             except Exception as exc:  # noqa: BLE001
                 pat_err, pat_stream = str(exc), None
-        if cut_stream is not None:
-            try:
-                cut_stream.push(small)
-            except Exception as exc:  # noqa: BLE001
-                cut_err, cut_stream = str(exc), None
         # 색 채널은 축소 프레임에서 (면적 비율만 필요)
         cw = min(COLOR_W, small.shape[1])
         small_c = cv2.resize(small, (cw, max(2, int(round(small.shape[0] * cw / small.shape[1])))),
@@ -541,10 +517,8 @@ def analyze(path, width: int = 320, with_pattern: bool = True,
             harmful = ((ld < DARK_LUM_THR) & (d >= LUM_DIFF_THR)) | \
                       ((ld >= DARK_LUM_THR) & (mich > MICHELSON_THR))
             sg = np.sign(lum - prev_lum)
-            up_m = _shrink(harmful & (sg > 0))
-            dn_m = _shrink(harmful & (sg < 0))
-            flash.push(idx, up_m, dn_m)
-            flash_lo.push(idx, up_m, dn_m)
+            flash.push(idx, _shrink(harmful & (sg > 0)), _shrink(harmful & (sg < 0)))
+            flash_lo.push(idx, _shrink(harmful & (sg > 0)), _shrink(harmful & (sg < 0)))
 
             # ② 강렬한 빨간색 전환 — 채도 조건 + **Δu\'v\' >= 0.2** (ISO/WCAG 조항)
             duv = np.linalg.norm(uv - prev_uv, axis=-1)
@@ -569,10 +543,10 @@ def analyze(path, width: int = 320, with_pattern: bool = True,
         raise IOError(f"프레임을 읽지 못했습니다: {path}")
 
     rules = {"flash": flash.summary(), "red": red_c.summary()}
-    supplementary = {"rb": rb_c.summary(),               # 규격 밖 — 판정에 넣지 않는다
-                     "flash_raw": flash.raw_summary(),   # 시퀀스 규칙 미적용 빈도
+    supplementary = {"rb": rb_c.summary(),            # 규격 밖 — 판정에 넣지 않는다
+                     "flash_raw": flash.raw_summary(),    # 시퀀스 규칙 미적용 빈도
                      "red_raw": red_c.raw_summary(),
-                     "flash_lo": flash_lo.raw_summary()} # (선택) 저면적 10%
+                     "flash_lo": flash_lo.raw_summary()}  # (선택) 저면적 10%
 
     # ③ 패턴 — 메인 루프에서 누적한 Stream 을 마감한다
     if pattern_result is not None:
@@ -594,27 +568,24 @@ def analyze(path, width: int = 320, with_pattern: bool = True,
         else:
             rules["pattern"] = {"rule": "패턴", "pass": None, "error": pat_err}
 
-    # ⑤ 화면 전환 — 메인 루프에서 누적한 Stream 을 마감한다
+    # ⑤ 화면 전환
     if cut_result is not None:
         rules["cut"] = cut_result
     elif with_cut:
-        if cut_stream is not None:
-            try:
-                cr = cut_stream.finish(video=str(path)
-                                       if cap is not None else "<frames>")
-                rules["cut"] = {
-                    "rule": "화면전환", "pass": bool(not cr["verdict"]["dangerous"]),
-                    "violation_seconds": cr["violation_seconds"],
-                    "max_per_sec": cr["max_cuts_per_sec"], "limit_per_sec": cr["limit_cuts_per_sec"],
-                    "total_cuts": cr["total_cuts"], "cuts_per_sec_mean": cr["cuts_per_sec_mean"],
-                    "sustained_over_5s": cr["sustained_over_5s"],
-                    "segments": cr["segments"],
-                    "cut_times": cr.get("cut_times", []),
-                }
-            except Exception as exc:  # noqa: BLE001
-                rules["cut"] = {"rule": "화면전환", "pass": None, "error": str(exc)}
-        else:
-            rules["cut"] = {"rule": "화면전환", "pass": None, "error": cut_err}
+        try:
+            import pse_cut
+            cr = pse_cut.analyze(path, width=width)
+            rules["cut"] = {
+                "rule": "화면전환", "pass": bool(not cr["verdict"]["dangerous"]),
+                "violation_seconds": cr["violation_seconds"],
+                "max_per_sec": cr["max_cuts_per_sec"], "limit_per_sec": cr["limit_cuts_per_sec"],
+                "total_cuts": cr["total_cuts"], "cuts_per_sec_mean": cr["cuts_per_sec_mean"],
+                "sustained_over_5s": cr["sustained_over_5s"],
+                "segments": cr["segments"],
+                "cut_times": cr.get("cut_times", []),
+            }
+        except Exception as exc:  # noqa: BLE001
+            rules["cut"] = {"rule": "화면전환", "pass": None, "error": str(exc)}
 
     # ④ 5초 지속 — 플래시·적색·화면전환·패턴 중 어느 하나라도
     sustained = bool(rules["flash"]["sustained_over_5s"] or rules["red"]["sustained_over_5s"]
@@ -631,6 +602,10 @@ def analyze(path, width: int = 320, with_pattern: bool = True,
     failed = [r["rule"] for r in rules.values() if r.get("pass") is False]
     if sustained:
         failed.append("5초지속")
+    # ⑥ 프레임간격은 failed 에 넣지 않는다 — BT.1702-3 원문이 허용 문언
+    # ("separated by 334 ms or more are acceptable")이라 위반 판정 조항이 아니다.
+    # 시퀀스 분할(gap_frames)로 이미 구현돼 있다. (결함2_프레임간격_검증_v1.1)
+    # min_separation / frame_separation / _sep 은 보고용 지표로만 남긴다.
     supp_failed = [r["rule"] for r in supplementary.values() if r.get("pass") is False]
 
     if not sep_ok:
@@ -683,7 +658,7 @@ def analyze(path, width: int = 320, with_pattern: bool = True,
         "sustained_over_5s": sustained,
         "sequence_rule": {
             "applied": sequence_rule,
-            "gap_seconds": seq_gap_s(fps),
+            "gap_seconds": round(flash.gap_frames / fps, 3),
             "note": ("ITU-R/Ofcom 조항 적용 — 선행엣지 334ms 초과 시 다른 시퀀스. "
                      "WCAG/ISO/NAB-J 로 재려면 sequence_rule=False"),
         },
