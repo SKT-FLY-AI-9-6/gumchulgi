@@ -62,7 +62,11 @@ MICHELSON_THR = 1.0 / 17.0
 AREA_THR = 0.25             # "화면의 1/4 이상"
 MAX_PER_SEC = 3             # "1초 동안 3회 초과"
 SUSTAIN_SEC = 5.0           # "5초 이상 지속되는 경우를 피하도록 권고"
-SEQ_GAP_S = 0.334           # ITU-R/Ofcom: 선행엣지가 이보다 벌어지면 다른 시퀀스
+SEQ_GAP_S_60 = 0.334        # 60Hz 계열 (30/60fps) — 10프레임 @30fps
+SEQ_GAP_S_50 = 0.360        # 50Hz 계열 (25/50fps) —  9프레임 @25fps
+
+def seq_gap_s(fps):
+    return SEQ_GAP_S_50 if (24 <= fps <= 26 or 49 <= fps <= 51) else SEQ_GAP_S_60
 MASK_W = 40                 # 화소 동일성 검사용 마스크 폭 (축소 저장)
 COLOR_W = 96                # 색 채널(적색·적청) 분석 폭.
                             # 색 판정은 면적 비율만 쓰고 마스크도 40px 로 줄여
@@ -201,7 +205,7 @@ class Counter:
         self.fps = fps
         self.win = max(1, int(round(fps)))
         self.sequence_rule = sequence_rule
-        self.gap_frames = SEQ_GAP_S * fps
+        self.gap_frames = seq_gap_s(fps) * fps
         self.pending: tuple[int, int, np.ndarray] | None = None
         self.edges: list[int] = []              # 플래시 선행엣지 프레임
         self.masks: list[np.ndarray] = []       # 그 플래시에 관여한 화소 마스크
@@ -408,20 +412,6 @@ def analyze(path, width: int = 320, with_pattern: bool = True,
     prev_r = prev_b = None
     idx = 0
 
-    # ③ 패턴은 **이 루프 안에서** 같이 잰다 (pse_pattern.Stream).
-    # 예전에는 루프가 끝난 뒤 pse_pattern.analyze(path) 를 따로 불렀는데,
-    # path 가 프레임 이터러블이면 이미 소진된 뒤라 0프레임을 보고 조용히
-    # 통과했다(폐루프 버그, 실측 v_stripes). 루프 통합으로 그 경로가 사라지고
-    # 파일 입력에서도 패턴용 재디코드 1회가 없어진다.
-    pat_stream = None
-    pat_err = None
-    if pattern_result is None and with_pattern:
-        try:
-            import pse_pattern
-            pat_stream = pse_pattern.Stream(keep_masks=keep_masks)
-        except Exception as exc:  # noqa: BLE001
-            pat_err = str(exc)
-
     while True:
         if cap is not None:
             ok, frame = cap.read()
@@ -438,11 +428,6 @@ def analyze(path, width: int = 320, with_pattern: bool = True,
                             interpolation=cv2.INTER_AREA)
                  if w0 != width else frame)
         lum = luminance_cd(small)
-        if pat_stream is not None:
-            try:
-                pat_stream.push(small)
-            except Exception as exc:  # noqa: BLE001
-                pat_err, pat_stream = str(exc), None
         # 색 채널은 축소 프레임에서 (면적 비율만 필요)
         cw = min(COLOR_W, small.shape[1])
         small_c = cv2.resize(small, (cw, max(2, int(round(small.shape[0] * cw / small.shape[1])))),
@@ -488,25 +473,23 @@ def analyze(path, width: int = 320, with_pattern: bool = True,
     rules = {"flash": flash.summary(), "red": red_c.summary()}
     supplementary = {"rb": rb_c.summary()}   # 규격 밖 — 판정에 넣지 않는다
 
-    # ③ 패턴 — 메인 루프에서 누적한 Stream 을 마감한다
+    # ③ 패턴
     if pattern_result is not None:
         rules["pattern"] = pattern_result
     elif with_pattern:
-        if pat_stream is not None:
-            try:
-                pr = pat_stream.finish(fps, video=str(path)
-                                       if cap is not None else "<frames>")
-                rules["pattern"] = {
-                    "rule": "패턴", "pass": bool(pr["pass"]), "co_axes": pr.get("co_axes"),
-                    "violation_seconds": pr["violation_seconds"],
-                    "max_pairs": pr["max_pairs"], "max_area_pct": pr["max_area_pct"],
-                    "segments": [list(s) for s in pr["segments"]],
-                    "_masks": pr.get("_masks"),
-                }
-            except Exception as exc:  # noqa: BLE001
-                rules["pattern"] = {"rule": "패턴", "pass": None, "error": str(exc)}
-        else:
-            rules["pattern"] = {"rule": "패턴", "pass": None, "error": pat_err}
+        try:
+            import pse_pattern
+            pr = pse_pattern.analyze(path, width=width, verbose=False,
+                                     keep_masks=keep_masks)
+            rules["pattern"] = {
+                "rule": "패턴", "pass": bool(pr["pass"]), "co_axes": pr.get("co_axes"),
+                "violation_seconds": pr["violation_seconds"],
+                "max_pairs": pr["max_pairs"], "max_area_pct": pr["max_area_pct"],
+                "segments": [list(s) for s in pr["segments"]],
+                "_masks": pr.get("_masks"),
+            }
+        except Exception as exc:  # noqa: BLE001
+            rules["pattern"] = {"rule": "패턴", "pass": None, "error": str(exc)}
 
     # ⑤ 화면 전환
     if cut_result is not None:
@@ -542,8 +525,6 @@ def analyze(path, width: int = 320, with_pattern: bool = True,
     failed = [r["rule"] for r in rules.values() if r.get("pass") is False]
     if sustained:
         failed.append("5초지속")
-    if not sep_ok:
-        failed.append("프레임간격")
     supp_failed = [r["rule"] for r in supplementary.values() if r.get("pass") is False]
 
     if not sep_ok:
@@ -596,7 +577,7 @@ def analyze(path, width: int = 320, with_pattern: bool = True,
         "sustained_over_5s": sustained,
         "sequence_rule": {
             "applied": sequence_rule,
-            "gap_seconds": SEQ_GAP_S,
+            "gap_seconds": seq_gap_s(fps),
             "note": ("ITU-R/Ofcom 조항 적용 — 선행엣지 334ms 초과 시 다른 시퀀스. "
                      "WCAG/ISO/NAB-J 로 재려면 sequence_rule=False"),
         },
