@@ -14,7 +14,9 @@ from torch import Tensor
 
 from .config import AccessibilityCorrectionConfig, STEConfig
 from .correction import (
+    RedAttenuationState,
     attenuate_saturated_red,
+    attenuate_saturated_red_stateful,
     consolidate_temporal_flashes,
     flash_block_frame_count,
 )
@@ -306,6 +308,7 @@ def ste_correct_video(
         exposed_ratios: list[float] = []
         buffered: dict[int, tuple[Tensor, Tensor, Tensor, Tensor]] = {}
         correction_buffer: list[tuple[Tensor, Tensor, Tensor]] = []
+        red_state: RedAttenuationState | None = None
         frame_index = 0
         next_center = 0
 
@@ -314,6 +317,7 @@ def ste_correct_video(
             correction_block_frames = flash_block_frame_count(fps, correction.flash)
 
         def flush_correction_buffer() -> None:
+            nonlocal red_state
             if not correction_buffer:
                 return
             corrected_frames = torch.stack(
@@ -339,9 +343,12 @@ def ste_correct_video(
                     # includes flash consolidation but not red attenuation —
                     # the same definition as the in-memory path.
                     kl_source = rgb_value(corrected_frames[None])[0]
-                corrected_frames = attenuate_saturated_red(
+                # The stateful call carries red temporal-gating history across
+                # flush blocks so chunked output matches a whole-video call.
+                corrected_frames, red_state = attenuate_saturated_red_stateful(
                     corrected_frames,
                     correction.red,
+                    red_state,
                 )
             filtered_histograms = normalized_histograms(kl_source[None], cfg.bins)[0]
             eps = torch.finfo(filtered_histograms.dtype).eps

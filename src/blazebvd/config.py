@@ -87,7 +87,20 @@ class FlashCorrectionConfig:
 
 @dataclass
 class RedCorrectionConfig:
-    """Parameters for luminance-preserving saturated-red attenuation."""
+    """Parameters for luminance-preserving saturated-red attenuation.
+
+    With ``illumination_separation`` enabled the masked region is split by
+    brightness: near-clipping pixels are treated as the light source itself and
+    desaturated with ``strength``, while dimmer masked pixels are treated as
+    red light reflected off objects and corrected by dividing out a
+    low-frequency illuminant estimate (``reflected_strength``), which keeps the
+    object's own reflectance detail. ``illumination_size`` is the resolution of
+    the illuminant field; it must be smaller than the frame for the smoothness
+    assumption to hold. ``temporal_gating`` restricts attenuation to frames
+    around rapid changes in red coverage — a steady red-lit scene is not a red
+    flash — using an activity envelope that decays by ``gating_decay`` per
+    frame.
+    """
 
     enabled: bool = True
     red_ratio_threshold: float = 0.75
@@ -96,6 +109,15 @@ class RedCorrectionConfig:
     saturation_transition_width: float = 0.10
     strength: float = 0.75
     mask_blur_radius: int = 3
+    illumination_separation: bool = True
+    illumination_size: int = 32
+    emissive_value_threshold: float = 0.80
+    emissive_transition_width: float = 0.10
+    reflected_strength: float = 0.85
+    temporal_gating: bool = False
+    gating_threshold: float = 0.05
+    gating_transition_width: float = 0.05
+    gating_decay: float = 0.75
 
     def validate(self) -> None:
         for name, value in (
@@ -104,11 +126,20 @@ class RedCorrectionConfig:
             ("minimum_saturation", self.minimum_saturation),
             ("saturation_transition_width", self.saturation_transition_width),
             ("strength", self.strength),
+            ("emissive_value_threshold", self.emissive_value_threshold),
+            ("emissive_transition_width", self.emissive_transition_width),
+            ("reflected_strength", self.reflected_strength),
+            ("gating_threshold", self.gating_threshold),
+            ("gating_transition_width", self.gating_transition_width),
         ):
             if not 0 <= value <= 1:
                 raise ValueError(f"correction.red.{name} must be in [0, 1]")
         if self.mask_blur_radius < 0:
             raise ValueError("correction.red.mask_blur_radius must be non-negative")
+        if self.illumination_size < 1:
+            raise ValueError("correction.red.illumination_size must be >= 1")
+        if not 0 <= self.gating_decay < 1:
+            raise ValueError("correction.red.gating_decay must be in [0, 1)")
 
 
 @dataclass

@@ -41,6 +41,24 @@ correction:
     strength: 0.75
     mask_blur_radius: 3
 
+    # Illumination/reflectance separation: near-clipping red pixels are treated
+    # as the light source and desaturated with `strength`; dimmer masked pixels
+    # are treated as red light reflected off objects and white-balanced instead
+    # (divide by a low-frequency illuminant field) so people stay recognizable.
+    illumination_separation: true
+    illumination_size: 32
+    emissive_value_threshold: 0.80
+    emissive_transition_width: 0.10
+    reflected_strength: 0.85
+
+    # Attenuate only around rapid changes in red coverage (red flashes) and
+    # leave steady red-lit scenes untouched. Off by default: with no external
+    # PSE detector yet, unconditional attenuation is the safer setting.
+    temporal_gating: false
+    gating_threshold: 0.05
+    gating_transition_width: 0.05
+    gating_decay: 0.75
+
 model:
   gfrm_output_mode: residual
   nonlocal_max_positions: 1024
