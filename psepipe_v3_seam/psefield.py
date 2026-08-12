@@ -69,6 +69,12 @@ v2 에서 이미 확립된 것 (요약)
     out(x,t) = in(x,t)·g(x,t) + a(x,t)      g, a 는 공간·시간 저역
 과거 프레임의 **화소값**이 out 에 나타날 경로가 식에 없다. g 나 a 가 틀리면
 그 영역이 조금 밝거나 어두울 뿐, 두 겹으로 보이지 않는다.
+
+2026-08-12 정리 — pse_bt1702 정본 확정에 따라 **단독 실행 경로를 제거**했다:
+  run()/CLI (psecore 레거시 판정기 의존), 1D apply_stream, _drain.
+  이 모듈은 이제 psepipe 의 조명장 수학 라이브러리다 (CfgF, collect, zero_phase,
+  make_u, fir_half, segments, find_cuts, find_level_cuts, ana_size, set_eotf).
+  게인 적용은 psepipe.apply_stream(3D 마스크 지원) 한 벌만 남는다.
 """
 from __future__ import annotations
 
@@ -208,14 +214,6 @@ def collect(src, cfg: CfgF):
 
 
 # ────────────────────────────────────────────────────────────── 2. 컷
-def _ncc(a, b, search):
-    """이동에 강한 NCC. 실측: genre/26_safe_shaky 가 보정 없이는 120프레임 중
-    100개가 컷으로 잡혔다(→ 구간이 부서져 필터가 아예 안 걸림). 보정 후 0개."""
-    if search <= 0:
-        return float((a * b).mean())
-    pad = cv2.copyMakeBorder(a, search, search, search, search,
-                             cv2.BORDER_CONSTANT, value=0.0)
-    return float(cv2.matchTemplate(pad, b, cv2.TM_CCORR).max()) / b.size
 
 
 def find_level_cuts(L, fps, cfg: CfgF):
@@ -232,6 +230,18 @@ def find_level_cuts(L, fps, cfg: CfgF):
             continue
         out.append(t)
     return out
+
+
+
+
+def _ncc(a, b, search):
+    """이동에 강한 NCC. 실측: genre/26_safe_shaky 가 보정 없이는 120프레임 중
+    100개가 컷으로 잡혔다(→ 구간이 부서져 필터가 아예 안 걸림). 보정 후 0개."""
+    if search <= 0:
+        return float((a * b).mean())
+    pad = cv2.copyMakeBorder(a, search, search, search, search,
+                             cv2.BORDER_CONSTANT, value=0.0)
+    return float(cv2.matchTemplate(pad, b, cv2.TM_CCORR).max()) / b.size
 
 
 def find_cuts(sigs, sds, cfg: CfgF):
@@ -328,206 +338,10 @@ def make_u(L, ref, cfg):
 
 
 # ────────────────────────────────────────────────────────────── 4. 적용
-def apply_stream(src, U, REF, shape_hw, fps, cfg: CfgF, out_path=None,
-                 audio_src=None, yield_ana=None, wt=None):
-    """디코드 -> 적용 -> (선택)인코딩. **분석해상도 프레임을 yield 한다.**
-
-    폐루프가 이걸 psecore 에 바로 먹인다. 예전에는 라운드마다 FFV1 로 쓰고
-    다시 디코드했는데 그게 전체 시간의 대부분이었다(인코딩 18% + 판정 안의 디코드).
-    """
-    H, W = shape_hw
-    q = None
-    if out_path:
-        if out_path.lower().endswith(".mkv"):
-            ve = ["-c:v", "ffv1", "-level", "3", "-pix_fmt", "gbrp"]
-            extra = []
-        else:
-            ve = ["-c:v", "libx264", "-preset", "medium", "-crf", "16",
-                  "-pix_fmt", "yuv420p", "-movflags", "+faststart"]
-            extra = (["-i", audio_src, "-map", "0:v:0", "-map", "1:a:0?",
-                      "-c:a", "copy", "-shortest"] if audio_src else [])
-        q = subprocess.Popen(
-            ["ffmpeg", "-y", "-v", "error", "-f", "rawvideo", "-pix_fmt", "bgr24",
-             "-s", f"{W}x{H}", "-r", str(fps), "-i", "-"] + extra + ve + [out_path],
-            stdin=subprocess.PIPE)
-
-    cap = cv2.VideoCapture(src)
-    t = 0
-    try:
-        while t < len(U):
-            ok, f = cap.read()
-            if not ok:
-                break
-            lin = LIN[f]
-            # 시간 마스크 — **위반 구간에만** 건다. w 는 이미 같은 FIR 로 평활돼
-            # 있으므로 fc 위 성분이 없다 => 마스크가 켜지고 꺼지는 것 자체가
-            # 새 플래시를 만들 수 없다(구조적 보장).
-            wt_t = 1.0 if wt is None else float(wt[t])
-            if wt_t <= 1e-4:
-                bgr = f
-                if q is not None:
-                    q.stdin.write(np.ascontiguousarray(bgr).tobytes())
-                if yield_ana is not None:
-                    aw, ah = yield_ana
-                    yield (cv2.resize(bgr, (aw, ah), interpolation=cv2.INTER_AREA)
-                           if (aw, ah) != (W, H) else bgr)
-                t += 1
-                continue
-            g = np.exp(wt_t * cv2.resize(U[t].astype(np.float32), (W, H),
-                                         interpolation=cv2.INTER_LINEAR))
-            # 클리핑은 색상을 돌린다 -> **채널별로** 캡한다. 최대채널 하나로 묶어
-            # 캡하면 포화 화소에서 g<=1 이 되어 색도 보정이 통째로 막힌다.
-            np.minimum(g, 1.0 / np.maximum(lin, 1e-4), out=g)
-            o = lin * g
-            if cfg.a_max * wt_t > 0:
-                # 곱셈은 0 을 못 들어올린다. 목표까지 **더해서** 채운다(상한 a_max).
-                rl = np.exp(cv2.resize(REF[t].astype(np.float32), (W, H),
-                                       interpolation=cv2.INTER_LINEAR))
-                o += np.clip(rl - o, 0.0, cfg.a_max * wt_t)
-            idx = (np.clip(o, 0.0, 1.0) * (len(OET) - 1) + 0.5).astype(np.int32)
-            bgr = np.ascontiguousarray(OET[idx])
-            if q is not None:
-                q.stdin.write(bgr.tobytes())
-            if yield_ana is not None:
-                aw, ah = yield_ana
-                yield (cv2.resize(bgr, (aw, ah), interpolation=cv2.INTER_AREA)
-                       if (aw, ah) != (W, H) else bgr)
-            t += 1
-    finally:
-        cap.release()
-        if q is not None:
-            q.stdin.close()
-            q.wait()
 
 
-def _drain(gen):
-    for _ in gen:
-        pass
 
 
 # ────────────────────────────────────────────────────────────── 실행
-def run(src, dst=None, cfg: CfgF = None, verbose=True, keep_mkv=None,
-        profile="bt1702"):
-    cfg = replace(cfg or CfgF())          # 폐루프가 값을 바꾸므로 사본으로
-    import psecore as PC                  # 레거시 판정기 — 이 경로에서만 쓴다
-    prof = PC.PROFILES[profile]
-    t_all = time.time()
-    L, fps, (H, W), (fh, fw), sigs, sds = collect(src, cfg)
-    T = L.shape[0]
-    cuts = sorted(set(find_cuts(sigs, sds, cfg) + find_level_cuts(L, fps, cfg)))
-    segs = segments(cuts, T, cfg.min_seg)
-    ana = ana_size(W, H, prof.short_side)
-    if verbose:
-        print(f"입력 {src}  {W}x{H}  {T}프레임 @ {fps:g}fps  ({T/fps:.1f}초)")
-        print(f"조명장 {fw}x{fh} (셀 {min(H,W)/fh:.1f}px)  컷 {len(cuts)} "
-              f"-> 구간 {len(segs)}  지연상당 {fir_half(fps, cfg.fc_hz)}프레임")
-
-    base = PC.analyze(src, prof)
-    v0 = sum(base.channel_seconds().values())
-    if verbose:
-        print(f"원본 위반 {v0:.2f}s {base.verdict}")
-
-    # **원본이 이미 통과하면 손대지 않는다.**  고칠 게 없는데 고치면 손해만 난다 —
-    # 실측(코퍼스): 안전 클립인데도 02 가 4.58dB, 11 이 4.77dB 바뀌었고,
-    # 14(흐르는 줄무늬)는 잔상이 0.288 까지 생겼다. 28 은 3.20 -> 3.20 으로
-    # 개선이 0 인데 6.22dB 를 바꿨다. 보정 도구의 기본값은 '위반한 것만 고친다'다.
-    if base.verdict == "PASS" and not cfg.force:
-        if verbose:
-            print("  원본이 이미 PASS — 손대지 않고 그대로 둡니다 (--force 로 무시)")
-        for p in filter(None, (dst, keep_mkv)):
-            subprocess.run(["ffmpeg", "-y", "-v", "error", "-i", src, "-c", "copy", p])
-        return {"src": src, "res": f"{W}x{H}", "frames": T, "fps": round(fps, 3),
-                "field": f"{fw}x{fh}", "cells": cfg.cells,
-                "cell_px": round(min(H, W) / fh, 1),
-                "cuts": len(cuts), "segs": len(segs),
-                "before_s": round(v0, 2), "after_s": round(v0, 2),
-                "verdict": base.verdict, "filt": cfg.filt, "fc_hz": cfg.fc_hz,
-                "a_max": 0.0, "dn_max": 0.0, "gain_dev_dB": 0.0,
-                "harmed": False, "untouched": True,
-                "sec_total": round(time.time() - t_all, 1),
-                "x_realtime": round((T / fps) / max(time.time() - t_all, 1e-9), 2),
-                "dst": dst}
-
-    best = None
-    rungs = cfg.ladder[:max(1, cfg.rounds)]
-    for r, (fc, a_max, dn, cells) in enumerate(rungs):
-        if cells != cfg.cells:
-            cfg.cells = cells
-            L, fps, (H, W), (fh, fw), sigs, sds = collect(src, cfg)
-            segs = segments(cuts, L.shape[0], cfg.min_seg)
-        cfg.a_max, cfg.dn_max = a_max, dn
-        REF = zero_phase(L, fps, segs, cfg, fc)
-        U = make_u(L, REF, cfg)
-        rep = PC.analyze(
-            apply_stream(src, U, REF, (H, W), fps, cfg, yield_ana=ana),
-            prof, fps=fps, src_hw=(H, W))
-        v = sum(rep.channel_seconds().values())
-        dev = float(np.abs(U.astype(np.float32)).mean()) * 8.686
-        if verbose:
-            bad = [k for k, x in rep.channel_seconds().items() if x > 0]
-            print(f"  [{r}] 칸{cells} fc{fc:.1f} a{a_max:.2f} dn{dn:.1f}"
-                  f" -> {v:.2f}s {rep.verdict}  게인편차 {dev:.2f}dB"
-                  f"{'  남은채널 ' + ','.join(bad) if bad else ''}")
-        if best is None or v < best[0]:
-            best = (v, rep.verdict, fc, a_max, dn, cells, dev)
-        if rep.verdict == "PASS":
-            break
-
-    v, verdict, fc, a_max, dn, ncell, dev = best
-    # **무해 보장** — 원본보다 나쁘면 내보내지 않는다.
-    harmed = v > v0 + 1e-6
-    if harmed:
-        if verbose:
-            print(f"  !! 원본({v0:.2f}s)보다 나빠서({v:.2f}s) 원본을 그대로 둡니다")
-        v, verdict = v0, base.verdict
-
-    if dst or keep_mkv:
-        if harmed:
-            for p in filter(None, (dst, keep_mkv)):
-                subprocess.run(["ffmpeg", "-y", "-v", "error", "-i", src,
-                                "-c", "copy", p])
-        else:
-            cfg.a_max, cfg.dn_max = a_max, dn
-            if ncell != cfg.cells:
-                cfg.cells = ncell
-                L, fps, (H, W), (fh, fw), sigs, sds = collect(src, cfg)
-                segs = segments(cuts, L.shape[0], cfg.min_seg)
-            REF = zero_phase(L, fps, segs, cfg, fc)
-            U = make_u(L, REF, cfg)
-            for p, aud in ((dst, src), (keep_mkv, None)):
-                if p:
-                    _drain(apply_stream(src, U, REF, (H, W), fps, cfg,
-                                        out_path=p, audio_src=aud))
-
-    el = time.time() - t_all
-    return {"src": src, "res": f"{W}x{H}", "frames": T, "fps": round(fps, 3),
-            "field": f"{L.shape[2]}x{L.shape[1]}", "cells": ncell,
-            "cell_px": round(min(H, W) / max(L.shape[1], 1), 1),
-            "cuts": len(cuts), "segs": len(segs),
-            "before_s": round(v0, 2), "after_s": round(v, 2), "verdict": verdict,
-            "filt": cfg.filt, "fc_hz": round(fc, 2), "a_max": round(a_max, 3),
-            "dn_max": round(dn, 2), "gain_dev_dB": round(0.0 if harmed else dev, 2),
-            "harmed": harmed, "untouched": False, "sec_total": round(el, 1),
-            "x_realtime": round((T / fps) / max(el, 1e-9), 2), "dst": dst}
 
 
-if __name__ == "__main__":
-    ap = argparse.ArgumentParser()
-    ap.add_argument("src")
-    ap.add_argument("dst", nargs="?", default=None)
-    ap.add_argument("--filt", default="fir", choices=["fir", "butter"])
-    ap.add_argument("--fc", type=float, default=3.0)
-    ap.add_argument("--cells", type=int, default=8,
-                    help="조명장: 짧은변을 몇 칸으로 (작을수록 거칠고 잔상이 적다)")
-    ap.add_argument("--up", type=float, default=1.0)
-    ap.add_argument("--dn", type=float, default=2.0)
-    ap.add_argument("--a", type=float, default=0.0, help="가산 항 시작값")
-    ap.add_argument("--rounds", type=int, default=6, help="사다리 최대 단수")
-    ap.add_argument("--keep-mkv", default=None, help="무손실 판정본도 남긴다")
-    ap.add_argument("--force", action="store_true",
-                    help="원본이 이미 PASS 여도 필터를 적용한다")
-    a = ap.parse_args()
-    c = CfgF(filt=a.filt, fc_hz=a.fc, cells=a.cells, up_max=a.up, dn_max=a.dn,
-             a_max=a.a, rounds=a.rounds, force=a.force)
-    print(json.dumps(run(a.src, a.dst, c, keep_mkv=a.keep_mkv),
-                     ensure_ascii=False, indent=1))
