@@ -193,13 +193,17 @@ supplementary=False(보조 채널 생략, 판정 불변): 단당 7~10% 절감
 (cera 11.8→10.9s, travis 10.2→9.2s). 남은 레버: 재판정 해상도 320→240,
 재판정 채널 축소는 미착수 — 판정 어긋남 위험이 있어 실측 후 도입할 것.
 
-## 남은 이슈 (수정 안 함 — 팀 결정 필요)
+## 남은 이슈 — 해소 (2026-08-12 팀 결정: pse_bt1702 정본)
 
-1. 판정기 이원화 자체는 남아 있다: psecore(sRGB) vs pse_bt1702(BT.1886).
-   어느 쪽을 정본으로 삼을지 팀 결정 후 psefield.run/CLI 를 pse_bt1702 로
-   갈아타거나 제거할 것. (psepipe 경로는 이미 pse_bt1702 단일.)
-2. apply_stream 이 psepipe(3D 마스크 지원)와 psefield(1D)에 두 벌 —
-   psefield.run 정리와 함께 통합할 것.
+1. ~~판정기 이원화~~ **해소.** 18클립 실측(psecore 14/17 vs pse_bt1702 16/17,
+   psecore 는 ③패턴·⑤화면전환 채널 부재)으로 **pse_bt1702 정본 확정**.
+   psefield 의 단독 실행 경로(run/CLI, psecore 의존)를 제거해 저장소에서
+   psecore 를 부르는 코드가 사라졌다. psecore 는 삭제하지 않고 "정본 아님 —
+   규격 밖 임상 채널(채널별 RGB) 단독 분석 전용"으로 격하해 남긴다
+   (pse_bt1702 에 없는 유일 기능이라 보존).
+2. ~~apply_stream 두 벌~~ **해소.** psefield 1D 판을 run 정리와 함께 삭제 —
+   psepipe.apply_stream(3D 마스크) 한 벌만 남는다. psefield 는 이제 psepipe 의
+   조명장 수학 라이브러리(320줄)다.
 
 ## 실사 검증 (2026-08-12, 업로드 2편)
 
