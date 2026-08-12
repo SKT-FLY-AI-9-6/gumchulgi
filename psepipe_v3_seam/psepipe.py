@@ -215,6 +215,63 @@ def merge_events(diag, gap_s=0.15, grids=None, fps=30.0, T=0):
                                  round(float(ys.max() + 1) / gh * 100, 1)]
     return ev
 
+def _sep_is_cut_caused(diag):
+    """⑥ 타이트쌍이 **전부** 판정 컷과 겹치는가. 겹치면 그 '플래시'는 컷이고,
+    게인장(컷 보호 설계)으로는 구조상 못 고친다 — 디졸브나 편집만 가능."""
+    sep_segs = (diag["rules"].get("_sep") or {}).get("segments") or []
+    ctimes = (diag["rules"].get("cut") or {}).get("cut_times") or []
+    return bool(sep_segs and ctimes and
+                all(any(a <= t <= b for t in ctimes) for a, b in sep_segs))
+
+
+# 편집자 권장방안 — 규칙별. 자동 보정이 안 되는 것만 사람 손이 필요하다.
+RECOMMEND = {
+    "화면전환":        "컷 밀도를 초당 3컷 이하로: 샷 병합, 컷 절반 덜어내기, "
+                       "또는 하드컷을 5프레임 이상 디졸브로 (--dissolve 5 로 자동 시험 가능)",
+    "프레임간격(컷유발)": "⑥으로 검출됐지만 실체는 컷 연타 — 컷 밀도를 초당 3컷 이하로: 샷 병합, 컷 덜어내기, 또는 5프레임 이상 디졸브 (--dissolve 5 자동 시험)",
+    "플래시":          "자동 보정됨 (시간 조명장)",
+    "적색":            "자동 보정됨 (시간 조명장 + 가산항)",
+    "5초지속":         "자동 보정됨 (시간 조명장)",
+    "프레임간격":       "자동 보정됨 (시간 조명장)",
+    "패턴":            "자동 보정됨 (공간 대비 축소)",
+}
+
+
+def export_events_csv(csv_path, events, unfix, after_failed,
+                      auto_label="자동 보정됨"):
+    """편집자용 산출물. 통합 이벤트마다: 어디(시각·화면위치), 뭐가(규칙),
+    도구가 뭘 했나(조치), 사람이 뭘 해야 하나(권장). Excel 한글 호환 utf-8-sig."""
+    import csv as _csv
+    unfix_set = set(unfix) | (set(after_failed) & UNFIXABLE)
+    with open(csv_path, "w", newline="", encoding="utf-8-sig") as f:
+        w = _csv.writer(f)
+        w.writerow(["이벤트", "시작(초)", "끝(초)", "길이(초)", "규칙",
+                    "화면위치 bbox(%)", "마스크면적(%)", "조치", "권장방안"])
+        for i, e in enumerate(events or [], 1):
+            rules = e["rules"]
+            # 이 이벤트에 남은(위반 잔존) 규칙이 있으면 편집 필요, 아니면 자동 보정
+            left = [r for r in rules if r in after_failed or
+                    any(u.startswith(r) for u in unfix_set)]
+            act = "편집 필요" if left else auto_label
+            recs = []
+            for r in rules:
+                if r in left:
+                    key = next((u for u in unfix_set if u.startswith(r)), r)
+                    recs.append(RECOMMEND.get(key, RECOMMEND.get(r, "")))
+                elif auto_label != "자동 보정됨":
+                    recs.append(auto_label)      # 디졸브 등 특수 경로가 고쳤다
+                else:
+                    t = RECOMMEND.get(r, "")
+                    recs.append(t if t.startswith("자동") else auto_label)
+            bbox = e.get("bbox_pct")
+            w.writerow([f"E{i:03d}", e["start_s"], e["end_s"],
+                        round(e["end_s"] - e["start_s"], 2), " + ".join(rules),
+                        (" ".join(str(x) for x in bbox) if bbox else "전체/미상"),
+                        e.get("mask_area_pct", ""), act,
+                        " / ".join(dict.fromkeys(recs))])
+    return csv_path
+
+
 # ══════════════════════════════════════════════════════════════ 작동기 B
 class PatternFix:
     """공간 대비 축소. 프레임 간 참조가 없다 — 시간축 부작용 0."""
@@ -423,40 +480,65 @@ def _drain(g):
 
 # ══════════════════════════════════════════════════════════════ 파이프라인
 def dissolve_cuts(src, out_path, n_frames, cut_times, fps, verbose=True):
-    """하드컷을 n_frames 디졸브로 바꾼다. **전체 프레임을 메모리에 올린다** —
-    컷 앞뒤 프레임이 필요해서다. 긴 영상에는 구간 단위로 나눠 쓸 것."""
+    """하드컷을 n_frames 디졸브로 바꾼다. **스트리밍** — 디졸브 프레임은
+    양끝 A·B 만으로 만들 수 있어(중간 원본은 버려진다) 버퍼가 프레임 1장이다.
+    이전 구현은 전체를 float32 두 벌로 올려 720p 15초에서 9.8GB -> OOM(실측).
+    겹치는 창(컷 간격 < n_frames)은 병합한다."""
     import subprocess
     cap = cv2.VideoCapture(src)
     W = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
     H = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-    fr = []
-    while True:
-        ok, f = cap.read()
-        if not ok:
-            break
-        fr.append(f.astype(np.float32))
-    cap.release()
-    out = [f.copy() for f in fr]
-    for t in cut_times:
+    n_total = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+    # 창 만들기 + 겹침 병합
+    wins = []
+    for t in sorted(cut_times):
         c = int(round(t * fps))
-        a = max(0, c - 1)
-        b = min(len(fr) - 1, c + n_frames - 1)
-        A, B = fr[a], fr[b]
-        for k in range(a, b + 1):
-            w = (k - a) / max(b - a, 1)
-            out[k] = (1 - w) * A + w * B
+        a, b = max(0, c - 1), min(max(n_total - 1, 0), c + n_frames - 1)
+        if wins and a <= wins[-1][1]:
+            wins[-1][1] = max(wins[-1][1], b)
+        else:
+            wins.append([a, b])
     ve = (["-c:v", "ffv1", "-level", "3", "-pix_fmt", "gbrp"]
           if out_path.lower().endswith(".mkv") else
           ["-c:v", "libx264", "-preset", "medium", "-crf", "16", "-pix_fmt", "yuv420p"])
     q = subprocess.Popen(["ffmpeg", "-y", "-v", "error", "-f", "rawvideo",
                           "-pix_fmt", "bgr24", "-s", f"{W}x{H}", "-r", str(fps),
                           "-i", "-"] + ve + [out_path], stdin=subprocess.PIPE)
-    for f in out:
-        q.stdin.write(np.clip(f, 0, 255).astype(np.uint8).tobytes())
+    wi = 0
+    A = None                      # 현재 창의 시작 프레임 (float32 1장)
+    k = 0
+    while True:
+        ok, f = cap.read()
+        if not ok:
+            break
+        if wi < len(wins) and wins[wi][0] <= k <= wins[wi][1]:
+            a, b = wins[wi]
+            if k == a:
+                A = f.astype(np.float32)
+            if k == b:                       # B 도착 -> 창 전체를 한 번에 쓴다
+                B = f.astype(np.float32)
+                if A is None:                # 창 시작이 0 이전으로 잘린 경우
+                    A = B
+                for kk in range(a, b + 1):
+                    w = (kk - a) / max(b - a, 1)
+                    q.stdin.write(np.clip((1 - w) * A + w * B, 0, 255)
+                                  .astype(np.uint8).tobytes())
+                A = None
+                wi += 1
+            # a <= k < b 인 중간 프레임은 버린다 (블렌드가 대체)
+        else:
+            q.stdin.write(f.tobytes())
+        k += 1
+    # 파일 끝이 창 중간에서 끊긴 경우 — A 부터 마지막까지 A 를 그대로 쓴다
+    if A is not None and wi < len(wins):
+        a, b = wins[wi]
+        for _ in range(a, min(b, k - 1) + 1):
+            q.stdin.write(np.clip(A, 0, 255).astype(np.uint8).tobytes())
+    cap.release()
     q.stdin.close()
     q.wait()
     if verbose:
-        print(f"      디졸브 {n_frames}f x {len(cut_times)}개 -> {out_path}")
+        print(f"      디졸브 {n_frames}f x 창 {len(wins)}개 -> {out_path}", flush=True)
     return out_path
 
 
@@ -503,8 +585,17 @@ def run(src, dst=None, width=320, eotf="bt1886", pad_s=0.5, verbose=True,
                 "after_failed": [], "unfixable": [], "dst": dst,
                 "sec_total": round(time.time() - t0, 1)}
 
-    # ── 컷 전처리 (옵션) — A/B 보다 **먼저** 하고 다시 진단한다
-    if dissolve > 0 and "화면전환" in failed and cut_cached and cut_cached.get("pass") is False:
+    # ── 컷 전처리 (옵션) — A/B 보다 **먼저** 하고 다시 진단한다.
+    # ⑤ 뿐 아니라 **컷유발 ⑥**(타이트쌍 전부가 컷)에도 적용한다 — 같은 실체다.
+    # (주: 현행 의미론에서 ⑥ 은 failed_rules 에 안 들어가므로 두 번째 조건은
+    #  ⑥ 판정 복원 시에만 살아난다. v4 와의 정합을 위해 그대로 둔다.)
+    orig_failed = list(failed)
+    diag0 = diag                       # 디졸브 전 원본 진단 (CSV 는 이걸로)
+    cut_relevant = (("화면전환" in failed and cut_cached
+                     and cut_cached.get("pass") is False)
+                    or ("프레임간격" in failed and "플래시" not in failed
+                        and _sep_is_cut_caused(diag)))
+    if dissolve > 0 and cut_relevant:
         import pse_cut as _CUT
         cr = _CUT.analyze(src, width=width)
         tmp = os.path.splitext(dst or src)[0] + "_dis.mkv"
@@ -524,10 +615,42 @@ def run(src, dst=None, width=320, eotf="bt1886", pad_s=0.5, verbose=True,
                 subprocess.run(["ffmpeg", "-y", "-v", "error", "-i", src,
                                 "-c:v", "libx264", "-preset", "medium", "-crf", "16",
                                 "-pix_fmt", "yuv420p", dst])
-            return {**base_out, "untouched": False, "after_compliant": True,
-                    "after_failed": [], "fixed": ["화면전환"], "unfixable": [],
+                # **파일 재판정** — 메인 경로와 같은 원칙. 디졸브가 적합해도
+                # 인코딩이 뒤집을 수 있다 (인코딩경계 실측 있음).
+                rep_f = BT.analyze(dst, width=width)
+                if not rep_f["compliant"]:
+                    new_bad = [x for x in rep_f["failed_rules"]
+                               if x not in orig_failed]
+                    if new_bad:
+                        if verbose:
+                            print(f"      !! 디졸브 파일에서 새 위반({', '.join(new_bad)})"
+                                  f" — 원본 유지")
+                        _passthrough(base_out["src"], dst)
+                        return {**base_out, "untouched": True, "harmed": True,
+                                "harm_reason": "디졸브후인코딩", "harm_rules": new_bad,
+                                "after_compliant": False, "after_failed": orig_failed,
+                                "fixed": [], "unfixable": [], "actuators": "-",
+                                "touched_time_pct": 0.0, "fc_hz": 0, "a_max": 0,
+                                "dn_max": 0, "cells": 0,
+                                "sec_total": round(time.time() - t0, 1),
+                                "x_realtime": 0.0, "dst": dst}
+                after_f = list(rep_f["failed_rules"])
+            else:
+                after_f = []
+            events0 = merge_events(diag0, 0.15, None, fps, T)
+            csvp = None
+            if dst:
+                csvp = export_events_csv(
+                    os.path.splitext(dst)[0] + "_events.csv", events0, [], after_f,
+                    auto_label=f"자동 보정됨(디졸브 {dissolve}f)")
+            return {**base_out, "untouched": False,
+                    "after_compliant": not after_f,
+                    "after_failed": after_f,
+                    "fixed": [r for r in orig_failed if r not in after_f],
+                    "unfixable": [],
                     "actuators": "C", "touched_time_pct": 100.0,
                     "fc_hz": 0, "a_max": 0, "dn_max": 0, "cells": 0,
+                    "events": events0, "events_csv": csvp,
                     "sec_total": round(time.time() - t0, 1),
                     "x_realtime": round((T / fps) / max(time.time() - t0, 1e-9), 2),
                     "dst": dst}
@@ -541,14 +664,13 @@ def run(src, dst=None, width=320, eotf="bt1886", pad_s=0.5, verbose=True,
     # 흔들어 **원본에 없던 화면전환 위반**을 만든다. 실측(Db2D03pxZjy):
     # 14단 전부 실패 + 새 위반 -> 원본복귀, 346초 낭비. 타이트쌍 전부에 판정
     # 컷이 겹칠 때만 발동한다 (플래시 규칙도 위반이면 사다리는 어차피 필요).
-    if "프레임간격" in fixable and "플래시" not in failed:
-        sep_segs = (diag["rules"].get("_sep") or {}).get("segments") or []
-        ctimes = ((cut_cached or {}).get("cut_times") or [])
-        if sep_segs and ctimes and            all(any(a <= t <= b for t in ctimes) for a, b in sep_segs):
-            fixable.remove("프레임간격")
-            unfix.append("프레임간격(컷유발)")
-            if verbose:
-                print("      ⑥ 타이트쌍이 전부 컷과 일치 — 컷유발로 분류, 편집 방안으로")
+    if "프레임간격" in fixable and "플래시" not in failed \
+            and _sep_is_cut_caused(diag):
+        fixable.remove("프레임간격")
+        unfix.append("프레임간격(컷유발)")
+        if verbose:
+            print("      ⑥ 타이트쌍이 전부 컷과 일치 — 컷유발로 분류, 편집 방안으로"
+                  + ("" if dissolve else "  (--dissolve 5 로 자동 시험 가능)"))
     if margin:      # 넘는 축이 있으면 그 축의 작동기를 켠다
         for n, m, l in over0:
             act = dict((a[0], a[3]) for a in axes(diag))[n]
@@ -782,7 +904,11 @@ def run(src, dst=None, width=320, eotf="bt1886", pad_s=0.5, verbose=True,
                 print(f"      !! 파일에서 원본에 없던 위반({', '.join(new_bad2)}) — "
                       f"{why} — 원본 유지")
             _passthrough(src, dst)
+            csvp = (export_events_csv(os.path.splitext(dst)[0] + "_events.csv",
+                                      events, unfix, failed)
+                    if events else None)
             return {**base_out, "untouched": True, "harmed": True,
+                    "events": events, "events_csv": csvp,
                     "harm_reason": reason, "harm_rules": new_bad2,
                     "after_compliant": diag["compliant"], "after_failed": failed,
                     "fixed": [], "unfixable": unfix, "actuators": "-",
@@ -803,6 +929,9 @@ def run(src, dst=None, width=320, eotf="bt1886", pad_s=0.5, verbose=True,
             "spatial_gate": bool(space_pct is not None),
             "mask_mode": mmode,
             "events": events,
+            "events_csv": (export_events_csv(
+                os.path.splitext(dst)[0] + "_events.csv", events, unfix,
+                after_fail) if dst and events else None),
             "fc_hz": fc, "a_max": a_max, "dn_max": dn, "cells": cells,
             "pat_min_k": (bmin if need_B else None),
             "gain_mode": gmode, "min_seg": cfg.min_seg, "cut_src": cut_src, "n_segs": len(fsegs) if need_A else 0,
@@ -886,6 +1015,8 @@ def report(r):
              f"  dn {r['dn_max']}  칸 {r['cells']}"
              + (f"  B강도 {r['pat_min_k']}" if r.get("pat_min_k") is not None else ""))
     L.append(f"  {r['sec_total']}s  ({r['x_realtime']}배속)")
+    if r.get("events_csv"):
+        L.append(f"  편집자 CSV  {r['events_csv']}")
     return "\n".join(L)
 
 
