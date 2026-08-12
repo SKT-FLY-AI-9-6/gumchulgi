@@ -237,7 +237,15 @@ class PatternFix:
         base = cv2.blur(Y, (k, k), borderType=cv2.BORDER_REFLECT101)
         Yn = base + kap * (Y - base)
         g = np.clip(Yn / np.maximum(Y, 1e-5), 0.0, 4.0)[..., None]
-        return np.clip(lin * g, 0.0, 1.0)
+        out = lin * g
+        # **곱셈은 0 을 못 들어올린다** — 작동기 A 의 가산항과 같은 물리.
+        # 검정 바(Y=0)는 g 를 아무리 키워도 0 이라, 밝은 바만 내려가고 명암차가
+        # 임계 아래로 못 간다 (실측 v_stripes 200cd: min_k 0.03 에서도 잔존
+        # p2t 109cd 위반). 목표 휘도 Yn 에 못 미친 만큼을 **무채색으로 더한다** —
+        # 휘도 가중치 합이 1 이라 등량 RGB 가산은 Y 를 정확히 그만큼 올린다.
+        # kap=1 인 곳(p2t < target)은 Yn=Y 라 가산도 0 — 자기제한은 그대로다.
+        deficit = np.maximum(Yn - Y * g[..., 0], 0.0)[..., None]
+        return np.clip(out + deficit, 0.0, 1.0)
 
 
 def _passthrough(src, dst):
@@ -297,28 +305,40 @@ def over_axes(rep, factor=1.0, actuators="AB"):
 def plan_ladder(failed, margin=False):
     """**실패한 규칙이 쓸 수 있는 레버만** 사다리에 넣는다. 헛도는 라운드가 없다.
 
-    단은 (fc, a_max, dn_max, cells, gain_mode) 다.
+    단은 (fc, a_max, dn_max, cells, gain_mode, b_min_k) 다.
       gain_mode "luma" = 휘도비 스칼라. 색도 보존 -> 컷 검출을 안 흔든다. **기본**
                 "chan" = 채널별. 색 규칙을 고칠 수 있지만 컷을 흔든다(실측 참조)
     색 규칙(②)은 휘도비로 못 고치므로 그때만 chan 으로 올린다.
+
+    b_min_k 는 작동기 B(PatternFix)의 kappa 하한 — **B 의 세기 사다리**다.
+    kappa = clip(target/p2t, min_k, 1) 이라 min_k=0.25 로는 p2t > 76cd 인
+    고대비 줄무늬를 임계(20cd) 아래로 못 내린다 (실측 v_stripes 200cd:
+    잔존 50cd 로 위반 유지). 최소 개입 원칙대로 0.25 부터 시작해 패턴이 안
+    잡힐 때만 낮춘다. kappa 는 자기제한적이라 (p2t < target 인 곳은 어차피 1)
+    하한을 낮춰도 안 건드릴 곳은 안 건드린다.
     """
     f = set(failed)
     need_t = bool({"플래시", "프레임간격", "5초지속"} & f) or margin
-    need_c = "적색" in f
-    rungs = [(3.0, 0.00, 2.0, 8, "luma")]
+    pat = "패턴" in f
+    B0, B_ESC = 0.25, (0.10, 0.03)
+    rungs = [(3.0, 0.00, 2.0, 8, "luma", B0)]
+    if pat:
+        rungs += [(3.0, 0.00, 2.0, 8, "luma", b) for b in B_ESC]
+    # 패턴이 실패로 확인된 뒤의 단들은 강한 B 로 간다 — 자기제한적이라 무해
+    bb = B_ESC[-1] if pat else B0
     if need_t:
-        rungs += [(2.0, 0.00, 2.0, 8, "luma"), (1.5, 0.00, 2.0, 8, "luma")]
+        rungs += [(2.0, 0.00, 2.0, 8, "luma", bb), (1.5, 0.00, 2.0, 8, "luma", bb)]
     if margin:
         # 실측(cera): 여백을 만드는 건 fc 다. ①면적 61.8 -> fc3.0 32.6 -> fc1.0 22.3.
-        rungs += [(1.0, 0.00, 2.0, 8, "luma"), (0.7, 0.00, 2.0, 8, "luma")]
+        rungs += [(1.0, 0.00, 2.0, 8, "luma", bb), (0.7, 0.00, 2.0, 8, "luma", bb)]
     # 여기서부터 채널별 — 색 규칙용이거나 휘도비로 안 될 때의 후퇴
     # 실측: a 나 dn 단독으로는 안 넘어간다. 같이 올려야 한다.
     # **휘도 플래시에도 필요하다** — 전면 백↔흑(28_flash_only_5hz)은 골짜기가
     # 0 이라 곱셈으로 못 들어올린다. fc 만 낮추면 영원히 안 넘어간다(실측).
-    rungs += [(3.0, 0.00, 2.0, 8, "chan"), (3.0, 0.05, 3.0, 8, "chan"),
-              (3.0, 0.15, 4.0, 8, "chan"), (2.0, 0.15, 4.0, 16, "chan")]
+    rungs += [(3.0, 0.00, 2.0, 8, "chan", bb), (3.0, 0.05, 3.0, 8, "chan", bb),
+              (3.0, 0.15, 4.0, 8, "chan", bb), (2.0, 0.15, 4.0, 16, "chan", bb)]
     if margin:
-        rungs += [(1.0, 0.15, 4.0, 8, "chan"), (0.5, 0.30, 4.5, 8, "chan")]
+        rungs += [(1.0, 0.15, 4.0, 8, "chan", bb), (0.5, 0.30, 4.5, 8, "chan", bb)]
     out, seen = [], set()
     for r in rungs:
         if r not in seen:
@@ -627,14 +647,20 @@ def run(src, dst=None, width=320, eotf="bt1886", pad_s=0.5, verbose=True,
         fsegs = PF.segments(cuts, L.shape[0], cfg.min_seg)
 
     # ── 4. 폐루프 — 실패한 규칙이 쓸 수 있는 레버만
-    ladder = (plan_ladder(fixable, margin=bool(margin)) if need_A
-              else [(3.0, 0.0, 2.0, 8, "luma")])
+    if need_A:
+        ladder = plan_ladder(fixable, margin=bool(margin))
+    else:
+        # B 만 필요한 경우 — A 파라미터는 무시되므로 B 세기(min_k)만 사다리다
+        ladder = [(3.0, 0.0, 2.0, 8, "luma", b)
+                  for b in ((0.25, 0.10, 0.03) if "패턴" in fixable else (0.25,))]
     best = None
     if verbose:
         print(f"[3/4] 보정  사다리 {len(ladder)}단 x 마스크 {len(mask_modes)}종")
-    rungs = [(fc, a, d, c, g, mm) for (fc, a, d, c, g) in ladder
+    rungs = [(fc, a, d, c, g, b, mm) for (fc, a, d, c, g, b) in ladder
              for mm in mask_modes]
-    for r, (fc, a_max, dn, cells, gmode, mmode) in enumerate(rungs[:max_rounds * 2]):
+    for r, (fc, a_max, dn, cells, gmode, bmin, mmode) in enumerate(rungs[:max_rounds * 2]):
+        if patfix is not None:
+            patfix.min_k = bmin
         if need_A:
             if cells != col_cells:
                 cfg.cells = col_cells = cells
@@ -659,17 +685,20 @@ def run(src, dst=None, width=320, eotf="bt1886", pad_s=0.5, verbose=True,
         ov = over_axes(rep, margin) if margin else []
         if verbose:
             ovs = ("  넘는축 " + ",".join(f"{n}{m/l*100:.0f}%" for n, m, l in ov)) if ov else ""
-            print(f"      [{r}] {gmode:<4}/{mmode} fc{fc:.1f} a{a_max:.2f} dn{dn:.1f} "
+            bs = f" b{bmin:.2f}" if patfix is not None else ""
+            print(f"      [{r}] {gmode:<4}/{mmode} fc{fc:.1f} a{a_max:.2f} dn{dn:.1f}{bs} "
                   f"-> {'적합' if rep['compliant'] else '위반 ' + ','.join(rep['failed_rules'])}{ovs}")
         score = (len(still), len(ov),
                  sum(s["violation_seconds"] for s in rep["rules"].values()
                      if isinstance(s.get("violation_seconds"), (int, float))))
         if best is None or score < best[0]:
-            best = (score, fc, a_max, dn, cells, rep, gmode, mmode)
+            best = (score, fc, a_max, dn, cells, rep, gmode, mmode, bmin)
         if not still and not ov:
             break
 
-    score, fc, a_max, dn, cells, rep, gmode, mmode = best
+    score, fc, a_max, dn, cells, rep, gmode, mmode, bmin = best
+    if patfix is not None:
+        patfix.min_k = bmin          # 최종 렌더도 best 단과 같은 B 세기로
     after_fail = list(rep["failed_rules"])
 
     # **무해 보장** — 원본에 없던 위반 규칙이 생겼으면 내보내지 않는다.
@@ -775,6 +804,7 @@ def run(src, dst=None, width=320, eotf="bt1886", pad_s=0.5, verbose=True,
             "mask_mode": mmode,
             "events": events,
             "fc_hz": fc, "a_max": a_max, "dn_max": dn, "cells": cells,
+            "pat_min_k": (bmin if need_B else None),
             "gain_mode": gmode, "min_seg": cfg.min_seg, "cut_src": cut_src, "n_segs": len(fsegs) if need_A else 0,
             "sec_total": round(el, 1),
             "x_realtime": round((T / fps) / max(el, 1e-9), 2),
@@ -853,7 +883,8 @@ def report(r):
              + (f"  ·  마스크 {r.get('mask_mode','시간')}"
                 + (f" (시공간 화소의 {sp}%)" if sp is not None and r.get('mask_mode') == '공간' else "")))
     L.append(f"  게인 {r.get('gain_mode','-')}  fc {r['fc_hz']}Hz  a {r['a_max']}"
-             f"  dn {r['dn_max']}  칸 {r['cells']}")
+             f"  dn {r['dn_max']}  칸 {r['cells']}"
+             + (f"  B강도 {r['pat_min_k']}" if r.get("pat_min_k") is not None else ""))
     L.append(f"  {r['sec_total']}s  ({r['x_realtime']}배속)")
     return "\n".join(L)
 

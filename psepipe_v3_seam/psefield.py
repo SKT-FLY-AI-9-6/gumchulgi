@@ -82,9 +82,12 @@ from dataclasses import dataclass, replace
 import cv2
 import numpy as np
 
-import psecore as PC
-
 __version__ = "3.1.0"
+
+# psecore(구판 통합 판정기)는 **레거시 단독 실행 경로(run/CLI)에서만** 쓴다.
+# psepipe 는 판정을 pse_bt1702 로 하므로 모듈 로드 시점에는 필요 없다 —
+# 지연 임포트로 결합을 끊어, 판정기 이원화(psecore vs pse_bt1702)의 영향
+# 범위를 psefield 단독 실행으로 한정한다.
 
 # **전달함수는 심판과 같은 것을 써야 한다.**  pse_bt1702 는 감마 2.4(BT.1886),
 # psecore 는 sRGB 구간함수를 쓴다. 어두운 쪽에서 값이 달라(8bit 10 에서 sRGB
@@ -99,7 +102,10 @@ def set_eotf(kind="srgb"):
         y = np.linspace(0.0, 1.0, 4096)
         OET = np.clip(np.round((y ** (1.0 / 2.4)) * 255.0), 0, 255).astype(np.uint8)
     else:
-        LIN = PC._LIN
+        # sRGB 구간함수 LUT (psecore._srgb_lut 와 동일) — 지연 임포트를 위해 인라인
+        c = np.arange(256, dtype=np.float64) / 255.0
+        LIN = np.where(c <= 0.04045, c / 12.92,
+                       ((c + 0.055) / 1.055) ** 2.4).astype(np.float32)
         # pselive3._build_oetf() 인라인 — sRGB 역변환 4096-LUT.
         # (pselive3.py 가 배포물에 없어 지연 대체. 동일한 sRGB 구간함수다.)
         y = np.linspace(0.0, 1.0, 4096)
@@ -403,6 +409,7 @@ def _drain(gen):
 def run(src, dst=None, cfg: CfgF = None, verbose=True, keep_mkv=None,
         profile="bt1702"):
     cfg = replace(cfg or CfgF())          # 폐루프가 값을 바꾸므로 사본으로
+    import psecore as PC                  # 레거시 판정기 — 이 경로에서만 쓴다
     prof = PC.PROFILES[profile]
     t_all = time.time()
     L, fps, (H, W), (fh, fw), sigs, sds = collect(src, cfg)

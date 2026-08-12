@@ -412,6 +412,32 @@ def analyze(path, width: int = 320, with_pattern: bool = True,
     prev_r = prev_b = None
     idx = 0
 
+    # ③ 패턴은 **이 루프 안에서** 같이 잰다 (pse_pattern.Stream).
+    # 예전에는 루프가 끝난 뒤 pse_pattern.analyze(path) 를 따로 불렀는데,
+    # path 가 프레임 이터러블이면 이미 소진된 뒤라 0프레임을 보고 조용히
+    # 통과했다(폐루프 버그, 실측 v_stripes). 루프 통합으로 그 경로가 사라지고
+    # 파일 입력에서도 패턴용 재디코드 1회가 없어진다.
+    pat_stream = None
+    pat_err = None
+    if pattern_result is None and with_pattern:
+        try:
+            import pse_pattern
+            pat_stream = pse_pattern.Stream(keep_masks=keep_masks)
+        except Exception as exc:  # noqa: BLE001
+            pat_err = str(exc)
+
+    # ⑤ 화면전환도 같은 이유로 루프 안에서 잰다 (pse_cut.Stream).
+    # 예전에는 pse_cut.analyze(path) 가 VideoCapture 만 받아 이터러블 입력에서
+    # 예외가 pass=None 으로 삼켜졌고, 파일 입력이면 별도 디코드가 1회 더 있었다.
+    cut_stream = None
+    cut_err = None
+    if cut_result is None and with_cut:
+        try:
+            import pse_cut
+            cut_stream = pse_cut.Stream(fps)
+        except Exception as exc:  # noqa: BLE001
+            cut_err = str(exc)
+
     while True:
         if cap is not None:
             ok, frame = cap.read()
@@ -428,6 +454,16 @@ def analyze(path, width: int = 320, with_pattern: bool = True,
                             interpolation=cv2.INTER_AREA)
                  if w0 != width else frame)
         lum = luminance_cd(small)
+        if pat_stream is not None:
+            try:
+                pat_stream.push(small)
+            except Exception as exc:  # noqa: BLE001
+                pat_err, pat_stream = str(exc), None
+        if cut_stream is not None:
+            try:
+                cut_stream.push(small)
+            except Exception as exc:  # noqa: BLE001
+                cut_err, cut_stream = str(exc), None
         # 색 채널은 축소 프레임에서 (면적 비율만 필요)
         cw = min(COLOR_W, small.shape[1])
         small_c = cv2.resize(small, (cw, max(2, int(round(small.shape[0] * cw / small.shape[1])))),
@@ -473,42 +509,47 @@ def analyze(path, width: int = 320, with_pattern: bool = True,
     rules = {"flash": flash.summary(), "red": red_c.summary()}
     supplementary = {"rb": rb_c.summary()}   # 규격 밖 — 판정에 넣지 않는다
 
-    # ③ 패턴
+    # ③ 패턴 — 메인 루프에서 누적한 Stream 을 마감한다
     if pattern_result is not None:
         rules["pattern"] = pattern_result
     elif with_pattern:
-        try:
-            import pse_pattern
-            pr = pse_pattern.analyze(path, width=width, verbose=False,
-                                     keep_masks=keep_masks)
-            rules["pattern"] = {
-                "rule": "패턴", "pass": bool(pr["pass"]), "co_axes": pr.get("co_axes"),
-                "violation_seconds": pr["violation_seconds"],
-                "max_pairs": pr["max_pairs"], "max_area_pct": pr["max_area_pct"],
-                "segments": [list(s) for s in pr["segments"]],
-                "_masks": pr.get("_masks"),
-            }
-        except Exception as exc:  # noqa: BLE001
-            rules["pattern"] = {"rule": "패턴", "pass": None, "error": str(exc)}
+        if pat_stream is not None:
+            try:
+                pr = pat_stream.finish(fps, video=str(path)
+                                       if cap is not None else "<frames>")
+                rules["pattern"] = {
+                    "rule": "패턴", "pass": bool(pr["pass"]), "co_axes": pr.get("co_axes"),
+                    "violation_seconds": pr["violation_seconds"],
+                    "max_pairs": pr["max_pairs"], "max_area_pct": pr["max_area_pct"],
+                    "segments": [list(s) for s in pr["segments"]],
+                    "_masks": pr.get("_masks"),
+                }
+            except Exception as exc:  # noqa: BLE001
+                rules["pattern"] = {"rule": "패턴", "pass": None, "error": str(exc)}
+        else:
+            rules["pattern"] = {"rule": "패턴", "pass": None, "error": pat_err}
 
-    # ⑤ 화면 전환
+    # ⑤ 화면 전환 — 메인 루프에서 누적한 Stream 을 마감한다
     if cut_result is not None:
         rules["cut"] = cut_result
     elif with_cut:
-        try:
-            import pse_cut
-            cr = pse_cut.analyze(path, width=width)
-            rules["cut"] = {
-                "rule": "화면전환", "pass": bool(not cr["verdict"]["dangerous"]),
-                "violation_seconds": cr["violation_seconds"],
-                "max_per_sec": cr["max_cuts_per_sec"], "limit_per_sec": cr["limit_cuts_per_sec"],
-                "total_cuts": cr["total_cuts"], "cuts_per_sec_mean": cr["cuts_per_sec_mean"],
-                "sustained_over_5s": cr["sustained_over_5s"],
-                "segments": cr["segments"],
-                "cut_times": cr.get("cut_times", []),
-            }
-        except Exception as exc:  # noqa: BLE001
-            rules["cut"] = {"rule": "화면전환", "pass": None, "error": str(exc)}
+        if cut_stream is not None:
+            try:
+                cr = cut_stream.finish(video=str(path)
+                                       if cap is not None else "<frames>")
+                rules["cut"] = {
+                    "rule": "화면전환", "pass": bool(not cr["verdict"]["dangerous"]),
+                    "violation_seconds": cr["violation_seconds"],
+                    "max_per_sec": cr["max_cuts_per_sec"], "limit_per_sec": cr["limit_cuts_per_sec"],
+                    "total_cuts": cr["total_cuts"], "cuts_per_sec_mean": cr["cuts_per_sec_mean"],
+                    "sustained_over_5s": cr["sustained_over_5s"],
+                    "segments": cr["segments"],
+                    "cut_times": cr.get("cut_times", []),
+                }
+            except Exception as exc:  # noqa: BLE001
+                rules["cut"] = {"rule": "화면전환", "pass": None, "error": str(exc)}
+        else:
+            rules["cut"] = {"rule": "화면전환", "pass": None, "error": cut_err}
 
     # ④ 5초 지속 — 플래시·적색·화면전환·패턴 중 어느 하나라도
     sustained = bool(rules["flash"]["sustained_over_5s"] or rules["red"]["sustained_over_5s"]
