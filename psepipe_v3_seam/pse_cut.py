@@ -77,6 +77,10 @@ AREA_THR = 0.80             # **장면 전환의 면적 조건은 80%다** (25% 
 ALT_AREA_THR = 0.25         # 왕복 판별용 (같은 샷으로 되돌아왔는지)
 ADAPT_WIN = 45              # 적응 기준선을 잡을 최근 프레임 수 (~1.5초 @30fps)
 ADAPT_K = 2.5               # 최근 중앙값의 몇 배를 넘어야 이상치로 볼지
+BASE_EXCL = 0.60            # 기준선 추정에서 제외할 변화율 하한 — 컷(>0.80)과
+                            # 게인 보정이 만드는 경계 번짐 잔상(0.6~0.8)은 평상시
+                            # 모션이 아니다. 이보다 큰 값이 기준선에 섞이면
+                            # 연속 컷 구간에서 임계가 컷 높이까지 올라간다.
 ABS_MIN_DIST = 0.30         # 적응 임계가 낮아져도 이 아래는 컷으로 안 본다
 MIN_CUT_GAP = 2             # 컷 사이 최소 프레임 간격 (같은 경계 중복 계상 방지)
 TRANSIENT_RATIO = 0.60      # 앞뒤가 이만큼 비슷하면 컷이 아니라 일시적 변화(플래시)
@@ -154,8 +158,16 @@ class Stream:
             changed = float((block_distances(A, B) > BLOCK_DIST_THR).mean())
             self.recent.append(changed)
 
-            # (2) 적응 임계 — 최근 중앙값 대비 이상치인가
-            base = float(np.median(self.recent)) if len(self.recent) >= 8 else 0.0
+            # (2) 적응 임계 — 최근 중앙값 대비 이상치인가.
+            # 기준선은 **평상시 모션**을 대표해야 하므로 컷급 변화와 그 번짐
+            # 잔상(BASE_EXCL 초과)은 빼고 추정한다. 게인 보정(작동기 A)의 시간
+            # 저역통과가 컷 경계를 2프레임으로 번지게 하면(부분 변화 0.6~0.8)
+            # 그 잔상이 중앙값을 컷 높이까지 끌어올려 진짜 컷이 통째로
+            # 탈락했다 — 27_anime 실측 15→9. 잔상을 빼면 기준선은 다시 저변
+            # 모션만 반영하고, 계속 흔들리는 영상(0.6 이하 변화 연속)의 오탐
+            # 방어는 그대로 남는다.
+            lows = [v for v in self.recent if v <= BASE_EXCL]
+            base = float(np.median(lows)) if len(lows) >= 8 else 0.0
             adaptive = max(ABS_MIN_DIST, ADAPT_K * base)
 
             cand = (changed > AREA_THR) and (changed >= adaptive)

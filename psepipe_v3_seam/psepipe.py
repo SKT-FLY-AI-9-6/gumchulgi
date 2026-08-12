@@ -943,7 +943,16 @@ def run(src, dst=None, width=320, eotf="bt1886", pad_s=0.5, verbose=True,
         # ── **출력 파일 재판정** — 보고하는 판정은 스트림이 아니라 파일의 것.
         # 스트림 판정과 파일이 어긋나는 버그가 두 번 있었다(마스크 상이, L 낡음).
         # 인코딩 손실도 판정을 뒤집을 수 있다. 파일을 재는 것만이 정직하다.
-        rep_f = BT.analyze(dst, width=width)
+        #
+        # 단 ⑤화면전환만은 **원본의 컷 판정을 상속**한다(cut_result=cut_cached).
+        # 게인 보정은 컷을 물리적으로 제거하지 못한다 — 장면은 여전히 바뀐다.
+        # 보정본에서 컷을 다시 세면 (i) 게인의 경계 번짐이 검출을 눌러 위반이
+        # 사라져 보이거나(27_anime 15→9), (ii) 재인코딩 노이즈로 경계 컷이
+        # 늘어난다(travis +3/-2, 대조군 실증). 어느 쪽도 파일의 실제 위험
+        # 변화가 아니다. 이 상속은 게인 경로(A/B) 전용이다 — 디졸브·작동기 D 는
+        # 컷을 실제로 바꿀 수 있으므로(fein_fix: 프레임 정지로 컷이 진짜 소멸)
+        # 각자의 재판정에서 새로 센다.
+        rep_f = BT.analyze(dst, width=width, cut_result=cut_cached)
         mismatch = list(rep_f["failed_rules"]) != list(rep["failed_rules"])
         if verbose and mismatch:
             print(f"      !! 스트림 판정과 파일 판정 불일치: "
