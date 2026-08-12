@@ -135,38 +135,29 @@ def _gabor(Y, period, theta):
     return re, im
 
 
-def analyze(path, width: int = 320, verbose: bool = True, fps: float = None,
-            keep_masks: bool = False) -> dict:
-    """path 대신 프레임 이터러블(BGR uint8)도 받는다. 그 경우 fps 필수."""
-    import os as _os
-    if isinstance(path, (str, _os.PathLike)):
-        cap = cv2.VideoCapture(path)
-        if not cap.isOpened():
-            raise IOError(path)
-        fps = cap.get(cv2.CAP_PROP_FPS) or 30.0
-        frames_in = None
-    else:
-        if fps is None:
-            raise ValueError("프레임을 직접 넘길 때는 fps 가 필요합니다")
-        cap, frames_in = None, iter(path)
-    series, prev_phase = [], None
-    masks = [] if keep_masks else None
-    idx = 0
-    while True:
-        if cap is not None:
-            ok, frame = cap.read()
-            if not ok:
-                break
-        else:
-            frame = next(frames_in, None)
-            if frame is None:
-                break
-        h0, w0 = frame.shape[:2]
-        small = (cv2.resize(frame, (width, max(2, int(h0 * width / w0))),
-                            interpolation=cv2.INTER_AREA) if w0 != width else frame)
-        lin = decode_linear(small)
+class Stream:
+    """프레임을 **한 장씩** 받아 패턴 축을 누적한다.
+
+    왜 필요한가 — 폐루프 버그(실측, v_stripes): pse_bt1702 가 프레임 이터러블을
+    받으면 메인 루프가 제너레이터를 소진한 **뒤에** 이 모듈을 호출했다. 패턴
+    분석기는 0프레임을 보거나(fps 를 넘긴 경우 조용히 pass=True) fps 누락
+    ValueError 로 pass=None 이 됐고, 어느 쪽이든 사다리가 0단에서 "패턴이
+    고쳐졌다"고 착각했다. 이 클래스로 pse_bt1702 의 메인 루프가 자기
+    디코드·축소 프레임을 그대로 먹인다 — 제너레이터 소진 문제가 사라지고
+    패턴용 별도 디코드도 없어진다.
+
+    push() 에 주는 프레임은 **이미 분석 폭으로 축소된 BGR uint8** 이어야 한다
+    (pse_bt1702 의 `small` 과 같은 INTER_AREA 축소 = 기존 판정과 동일).
+    """
+
+    def __init__(self, keep_masks: bool = False):
+        self.series: list[dict] = []
+        self.masks = [] if keep_masks else None
+        self._prev_phase = None
+
+    def push(self, small_bgr: np.ndarray) -> None:
+        lin = decode_linear(small_bgr)
         Y = (lin @ W_Y) * SDR_PEAK              # cd/m^2
-        h, w = Y.shape
         pairs, period_px, theta, conc = _dominant_freq(Y)
         Yf = Y.astype(np.float32)
         re, im = _gabor(Yf, period_px, theta)
@@ -185,25 +176,63 @@ def analyze(path, width: int = 320, verbose: bool = True, fps: float = None,
         else:
             ph = 0.0
         dphase = 0.0
-        if prev_phase is not None:
-            d = ph - prev_phase
+        if self._prev_phase is not None:
+            d = ph - self._prev_phase
             dphase = float(abs((d + np.pi) % (2 * np.pi) - np.pi))
-        prev_phase = ph
-        if masks is not None:
+        self._prev_phase = ph
+        if self.masks is not None:
             # 검출된 줄무늬 화소를 격자로 줄여 보관 (작동기 B 공간 게이트용)
             gw = min(64, strong.shape[1])
             gh = max(2, int(round(gw * strong.shape[0] / strong.shape[1])))
-            masks.append(cv2.resize(strong.astype(np.float32), (gw, gh),
-                                    interpolation=cv2.INTER_AREA).astype(np.float16))
-        series.append({"i": idx, "period": round(period_px, 2), "conc": round(conc, 4),
-                       "area": round(area, 4), "pairs": round(float(pairs), 2),
-                       "dphase": round(dphase, 4)})
+            self.masks.append(cv2.resize(strong.astype(np.float32), (gw, gh),
+                                         interpolation=cv2.INTER_AREA).astype(np.float16))
+        self.series.append({"i": len(self.series), "period": round(period_px, 2),
+                            "conc": round(conc, 4), "area": round(area, 4),
+                            "pairs": round(float(pairs), 2),
+                            "dphase": round(dphase, 4)})
+
+    def finish(self, fps: float, video: str = "<frames>") -> dict:
+        return _finish(self.series, self.masks, fps, video)
+
+
+def analyze(path, width: int = 320, verbose: bool = True, fps: float = None,
+            keep_masks: bool = False) -> dict:
+    """path 대신 프레임 이터러블(BGR uint8)도 받는다. 그 경우 fps 필수."""
+    import os as _os
+    if isinstance(path, (str, _os.PathLike)):
+        cap = cv2.VideoCapture(path)
+        if not cap.isOpened():
+            raise IOError(path)
+        fps = cap.get(cv2.CAP_PROP_FPS) or 30.0
+        frames_in = None
+    else:
+        if fps is None:
+            raise ValueError("프레임을 직접 넘길 때는 fps 가 필요합니다")
+        cap, frames_in = None, iter(path)
+    st = Stream(keep_masks=keep_masks)
+    idx = 0
+    while True:
+        if cap is not None:
+            ok, frame = cap.read()
+            if not ok:
+                break
+        else:
+            frame = next(frames_in, None)
+            if frame is None:
+                break
+        h0, w0 = frame.shape[:2]
+        small = (cv2.resize(frame, (width, max(2, int(h0 * width / w0))),
+                            interpolation=cv2.INTER_AREA) if w0 != width else frame)
+        st.push(small)
         idx += 1
         if verbose and idx % 300 == 0:
             print(f"    ... {idx} frames", flush=True)
     if cap is not None:
         cap.release()
+    return st.finish(fps, video=str(path) if cap is not None else "<frames>")
 
+
+def _finish(series, masks, fps, video):
     n = len(series)
     dph = np.array([s["dphase"] for s in series])
     moving = dph > DRIFT_PHASE_THR
@@ -248,7 +277,7 @@ def analyze(path, width: int = 320, verbose: bool = True, fps: float = None,
           "need_area_pct": (AREA_DYNAMIC if moving[bi] else AREA_STATIC)*100,
           "closeness": round(best, 3)} if bi is not None else None
     return {"co_axes": co,
-            "video": str(path) if cap is not None else "<frames>", "fps": round(fps, 3), "frames": n,
+            "video": video, "fps": round(fps, 3), "frames": n,
             "pass": bool(out.sum() == 0),
             "violation_seconds": round(float(out.sum()) / fps, 2),
             "max_pairs": round(float(max((s["pairs"] for s in series), default=0)), 2),
