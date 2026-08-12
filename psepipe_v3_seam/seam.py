@@ -130,11 +130,18 @@ def main():
     ap.add_argument("--base", default=None,
                     help="인코딩-만-한 대조군. 주면 excess(대조군 초과분)도 낸다")
     ap.add_argument("--max-frames", type=int, default=None)
+    ap.add_argument("--make-base", action="store_true",
+                    help="대조군을 자동 생성해 초과분을 낸다")
     ap.add_argument("--json", action="store_true")
     a = ap.parse_args()
     r = measure(a.src, a.out, a.max_frames)
-    if a.base:
-        b = measure(a.src, a.base, a.max_frames)
+    base = a.base
+    if a.make_base and not base:
+        import os, tempfile
+        base = os.path.join(tempfile.gettempdir(), "_seam_ctrl.mp4")
+        make_control(a.src, base)
+    if base:
+        b = measure(a.src, base, a.max_frames)
         r["base"] = b
         r["pumping_excess"] = round(max(r["pumping"] - b["pumping"], 0.0), 4)
         r["halo_excess"] = round(max(r["halo"] - b["halo"], 0.0), 4)
@@ -143,7 +150,7 @@ def main():
     else:
         print(f"펌핑 {r['pumping']:.3f} (최악 {r['pumping_worst']:.3f} @f{r['pumping_worst_t']})   "
               f"헤일로 {r['halo']:.3f} (최악 {r['halo_worst']:.3f} @f{r['halo_worst_t']})")
-        if a.base:
+        if base:
             print(f"인코딩 대조군 대비 초과 — 펌핑 +{r['pumping_excess']:.3f}  헤일로 +{r['halo_excess']:.3f}")
 
 
