@@ -1,0 +1,142 @@
+{
+ "Db4Sor9OcyL": {
+  "bt_gamma": {
+   "pass": true,
+   "max_per_sec": 0,
+   "max_area_pct": 1.6,
+   "events": 0,
+   "seqs": 0,
+   "segments": [],
+   "raw_max": 0
+  },
+  "bt_linear": {
+   "pass": true,
+   "max_per_sec": 0,
+   "max_area_pct": 19.6,
+   "events": 0,
+   "seqs": 0,
+   "segments": [],
+   "raw_max": 0
+  }
+ },
+ "Db4afDPIFbY": {
+  "bt_gamma": {
+   "pass": true,
+   "max_per_sec": 0,
+   "max_area_pct": 0.5,
+   "events": 0,
+   "seqs": 0,
+   "segments": [],
+   "raw_max": 0
+  },
+  "bt_linear": {
+   "pass": true,
+   "max_per_sec": 0,
+   "max_area_pct": 6.1,
+   "events": 0,
+   "seqs": 0,
+   "segments": [],
+   "raw_max": 0
+  }
+ },
+ "Db4bFuguKZf": {
+  "bt_gamma": {
+   "pass": true,
+   "max_per_sec": 0,
+   "max_area_pct": 3.2,
+   "events": 0,
+   "seqs": 0,
+   "segments": [],
+   "raw_max": 0
+  },
+  "bt_linear": {
+   "pass": true,
+   "max_per_sec": 0,
+   "max_area_pct": 3.7,
+   "events": 0,
+   "seqs": 0,
+   "segments": [],
+   "raw_max": 0
+  }
+ },
+ "anime27": {
+  "bt_gamma": {
+   "pass": true,
+   "max_per_sec": 0,
+   "max_area_pct": 0.0,
+   "events": 0,
+   "seqs": 0,
+   "segments": [],
+   "raw_max": 0
+  },
+  "bt_linear": {
+   "pass": true,
+   "max_per_sec": 0,
+   "max_area_pct": 0.0,
+   "events": 0,
+   "seqs": 0,
+   "segments": [],
+   "raw_max": 0
+  }
+ },
+ "cera_orig": {
+  "bt_gamma": {
+   "pass": true,
+   "max_per_sec": 0,
+   "max_area_pct": 19.1,
+   "events": 0,
+   "seqs": 0,
+   "segments": [],
+   "raw_max": 0
+  },
+  "bt_linear": {
+   "pass": true,
+   "max_per_sec": 0,
+   "max_area_pct": 22.9,
+   "events": 0,
+   "seqs": 0,
+   "segments": [],
+   "raw_max": 0
+  }
+ },
+ "travis_full": {
+  "bt_gamma": {
+   "pass": true,
+   "max_per_sec": 0,
+   "max_area_pct": 0.0,
+   "events": 0,
+   "seqs": 0,
+   "segments": [],
+   "raw_max": 0
+  },
+  "bt_linear": {
+   "pass": true,
+   "max_per_sec": 0,
+   "max_area_pct": 0.0,
+   "events": 0,
+   "seqs": 0,
+   "segments": [],
+   "raw_max": 0
+  }
+ },
+ "travis_scott_new": {
+  "bt_gamma": {
+   "pass": true,
+   "max_per_sec": 0,
+   "max_area_pct": 0.0,
+   "events": 0,
+   "seqs": 0,
+   "segments": [],
+   "raw_max": 0
+  },
+  "bt_linear": {
+   "pass": true,
+   "max_per_sec": 0,
+   "max_area_pct": 0.0,
+   "events": 0,
+   "seqs": 0,
+   "segments": [],
+   "raw_max": 0
+  }
+ }
+}
