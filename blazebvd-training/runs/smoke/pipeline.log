@@ -1,0 +1,148 @@
+
+$ /opt/pytorch/bin/python -m blazebvd.train --data data/smoke --config /home/ec2-user/blazebvd-training/configs/smoke.yaml --training-config /home/ec2-user/blazebvd-training/configs/train.yaml --stage gfrm --output runs/smoke/gfrm --epochs 1 --batch-size 1 --clip-length 3 --crop-size 32 --workers 0 --train-samples 2 --val-samples 1 --device cpu --flow zero
+/opt/pytorch/lib64/python3.13/site-packages/torch/cuda/__init__.py:63: FutureWarning: The pynvml package is deprecated. Please install nvidia-ml-py instead. If you did not install pynvml directly, please report this to the maintainers of the package that installed pynvml for you.
+  import pynvml  # type: ignore[import]
+{
+  "stage": "gfrm",
+  "device": "cpu",
+  "trainable_parameters": 4703939,
+  "split_source": "deterministic_random",
+  "train_sequences": 3,
+  "val_sequences": 1,
+  "train_batches_per_epoch": 2,
+  "start_epoch": 1
+}
+
+gfrm train epoch 1/1:   0%|          | 0/2 [00:00<?, ?it/s]
+gfrm train epoch 1/1:   0%|          | 0/2 [00:00<?, ?it/s, loss=0.0215, lr=1.00e-06, psnr=18.71]
+gfrm train epoch 1/1:  50%|█████     | 1/2 [00:00<00:00,  4.83it/s, loss=0.0215, lr=1.00e-06, psnr=18.71]
+gfrm train epoch 1/1:  50%|█████     | 1/2 [00:00<00:00,  4.83it/s, loss=0.1125, lr=2.00e-06, psnr=13.03]
+gfrm train epoch 1/1: 100%|██████████| 2/2 [00:00<00:00,  7.78it/s, loss=0.1125, lr=2.00e-06, psnr=13.03]
+
+gfrm val epoch 1/1:   0%|          | 0/1 [00:00<?, ?it/s]
+gfrm val epoch 1/1:   0%|          | 0/1 [00:00<?, ?it/s, loss=0.1692, lr=2.00e-06, psnr=8.07]
+gfrm val epoch 1/1: 100%|██████████| 1/1 [00:00<00:00, 73.98it/s, loss=0.1692, lr=2.00e-06, psnr=8.07]
+{
+  "epoch": 1,
+  "global_step": 2,
+  "best_val_loss": 0.1691647619009018,
+  "train": {
+    "mse": 0.0987904891371727,
+    "temporal_excess": 0.05341205245349556,
+    "rebound": 0.08324830234050751,
+    "safety_total": 0.013666036073118448,
+    "loss": 0.11245652474462986,
+    "psnr": 13.031356811523438,
+    "ste_singular_recall": 0.5000000149011612
+  },
+  "val": {
+    "mse": 0.1560577154159546,
+    "temporal_excess": 0.13105587661266327,
+    "rebound": 1.4547611499438062e-05,
+    "safety_total": 0.013107042759656906,
+    "loss": 0.1691647619009018,
+    "psnr": 8.067148208618164,
+    "ste_singular_recall": 0.3333333432674408
+  }
+}
+
+$ /opt/pytorch/bin/python -m blazebvd.train --data data/smoke --config /home/ec2-user/blazebvd-training/configs/smoke.yaml --training-config /home/ec2-user/blazebvd-training/configs/train.yaml --stage lfrm --output runs/smoke/lfrm --epochs 1 --batch-size 1 --clip-length 3 --crop-size 32 --workers 0 --train-samples 2 --val-samples 1 --device cpu --flow zero --init-checkpoint runs/smoke/gfrm/best.pt
+/opt/pytorch/lib64/python3.13/site-packages/torch/cuda/__init__.py:63: FutureWarning: The pynvml package is deprecated. Please install nvidia-ml-py instead. If you did not install pynvml directly, please report this to the maintainers of the package that installed pynvml for you.
+  import pynvml  # type: ignore[import]
+{
+  "stage": "lfrm",
+  "device": "cpu",
+  "trainable_parameters": 16595,
+  "split_source": "deterministic_random",
+  "train_sequences": 3,
+  "val_sequences": 1,
+  "train_batches_per_epoch": 2,
+  "start_epoch": 1
+}
+
+lfrm train epoch 1/1:   0%|          | 0/2 [00:00<?, ?it/s]
+lfrm train epoch 1/1:   0%|          | 0/2 [00:00<?, ?it/s, loss=0.1269, lr=1.00e-06, psnr=17.81]
+lfrm train epoch 1/1:   0%|          | 0/2 [00:00<?, ?it/s, loss=0.2705, lr=2.00e-06, psnr=12.68]
+lfrm train epoch 1/1: 100%|██████████| 2/2 [00:00<00:00, 27.82it/s, loss=0.2705, lr=2.00e-06, psnr=12.68]
+
+lfrm val epoch 1/1:   0%|          | 0/1 [00:00<?, ?it/s]
+lfrm val epoch 1/1:   0%|          | 0/1 [00:00<?, ?it/s, loss=0.3928, lr=2.00e-06, psnr=8.06]
+lfrm val epoch 1/1: 100%|██████████| 1/1 [00:00<00:00, 59.95it/s, loss=0.3928, lr=2.00e-06, psnr=8.06]
+{
+  "epoch": 1,
+  "global_step": 2,
+  "best_val_loss": 0.39283713698387146,
+  "train": {
+    "l1": 0.24880561232566833,
+    "temporal_excess": 0.13260938180610538,
+    "rebound": 0.08438080176711082,
+    "safety_total": 0.02169901831075549,
+    "loss": 0.2705046236515045,
+    "psnr": 12.677157878875732,
+    "ste_singular_recall": 0.5000000149011612
+  },
+  "val": {
+    "l1": 0.3800939917564392,
+    "temporal_excess": 0.12741698324680328,
+    "rebound": 1.4547611499438062e-05,
+    "safety_total": 0.012743153609335423,
+    "loss": 0.39283713698387146,
+    "psnr": 8.06244945526123,
+    "ste_singular_recall": 0.3333333432674408
+  }
+}
+
+$ /opt/pytorch/bin/python -m blazebvd.train --data data/smoke --config /home/ec2-user/blazebvd-training/configs/smoke.yaml --training-config /home/ec2-user/blazebvd-training/configs/train.yaml --stage tcm --output runs/smoke/tcm --epochs 1 --batch-size 1 --clip-length 3 --crop-size 32 --workers 0 --train-samples 2 --val-samples 1 --device cpu --flow zero --init-checkpoint runs/smoke/lfrm/best.pt
+/opt/pytorch/lib64/python3.13/site-packages/torch/cuda/__init__.py:63: FutureWarning: The pynvml package is deprecated. Please install nvidia-ml-py instead. If you did not install pynvml directly, please report this to the maintainers of the package that installed pynvml for you.
+  import pynvml  # type: ignore[import]
+{
+  "stage": "tcm",
+  "device": "cpu",
+  "trainable_parameters": 173781,
+  "split_source": "deterministic_random",
+  "train_sequences": 3,
+  "val_sequences": 1,
+  "train_batches_per_epoch": 2,
+  "start_epoch": 1
+}
+
+tcm train epoch 1/1:   0%|          | 0/2 [00:00<?, ?it/s]
+tcm train epoch 1/1:   0%|          | 0/2 [00:00<?, ?it/s, loss=0.1073, lr=1.00e-06, psnr=19.71]
+tcm train epoch 1/1:  50%|█████     | 1/2 [00:00<00:00,  8.95it/s, loss=0.1073, lr=1.00e-06, psnr=19.71]
+tcm train epoch 1/1:  50%|█████     | 1/2 [00:00<00:00,  8.95it/s, loss=0.2797, lr=2.00e-06, psnr=13.58]
+tcm train epoch 1/1: 100%|██████████| 2/2 [00:00<00:00, 10.79it/s, loss=0.2797, lr=2.00e-06, psnr=13.58]
+
+tcm val epoch 1/1:   0%|          | 0/1 [00:00<?, ?it/s]
+tcm val epoch 1/1:   0%|          | 0/1 [00:00<?, ?it/s, loss=0.3696, lr=2.00e-06, psnr=8.49]
+tcm val epoch 1/1: 100%|██████████| 1/1 [00:00<00:00, 34.39it/s, loss=0.3696, lr=2.00e-06, psnr=8.49]
+{
+  "epoch": 1,
+  "global_step": 2,
+  "best_val_loss": 0.3695661723613739,
+  "train": {
+    "reconstruction": 0.248531773686409,
+    "perceptual": 0.0,
+    "adversarial": 0.0,
+    "warp": 0.20618591830134392,
+    "total": 0.26915036514401436,
+    "temporal_excess": 0.03209518693256541,
+    "rebound": 0.07333000376820564,
+    "safety_total": 0.010542519623413682,
+    "loss": 0.279692891985178,
+    "psnr": 13.579318046569824,
+    "ste_singular_recall": 0.5000000149011612
+  },
+  "val": {
+    "reconstruction": 0.3287195861339569,
+    "perceptual": 0.0,
+    "adversarial": 0.0,
+    "warp": 0.26760053634643555,
+    "total": 0.3554796278476715,
+    "temporal_excess": 0.1309194713830948,
+    "rebound": 0.009946087375283241,
+    "safety_total": 0.014086555689573288,
+    "loss": 0.3695661723613739,
+    "psnr": 8.486994743347168,
+    "ste_singular_recall": 0.3333333432674408
+  }
+}

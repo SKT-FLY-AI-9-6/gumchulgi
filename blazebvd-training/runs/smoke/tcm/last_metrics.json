@@ -1,0 +1,31 @@
+{
+  "epoch": 1,
+  "global_step": 2,
+  "best_val_loss": 0.3695661723613739,
+  "train": {
+    "reconstruction": 0.248531773686409,
+    "perceptual": 0.0,
+    "adversarial": 0.0,
+    "warp": 0.20618591830134392,
+    "total": 0.26915036514401436,
+    "temporal_excess": 0.03209518693256541,
+    "rebound": 0.07333000376820564,
+    "safety_total": 0.010542519623413682,
+    "loss": 0.279692891985178,
+    "psnr": 13.579318046569824,
+    "ste_singular_recall": 0.5000000149011612
+  },
+  "val": {
+    "reconstruction": 0.3287195861339569,
+    "perceptual": 0.0,
+    "adversarial": 0.0,
+    "warp": 0.26760053634643555,
+    "total": 0.3554796278476715,
+    "temporal_excess": 0.1309194713830948,
+    "rebound": 0.009946087375283241,
+    "safety_total": 0.014086555689573288,
+    "loss": 0.3695661723613739,
+    "psnr": 8.486994743347168,
+    "ste_singular_recall": 0.3333333432674408
+  }
+}
