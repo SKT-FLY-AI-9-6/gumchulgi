@@ -1,0 +1,23 @@
+영상                  BT1702  단계        BT 근거                     psecore  PC 채널         일치
+----------------------------------------------------------------------------------------------------
+Db32IzEyT-y         적합      여백없음      -                         적합       -             O
+Db3RVcavBn3         적합      여백없음      -                         적합       -             O
+Db3U0CAIkY8         적합      여백없음      -                         적합       -             O
+Db3tmI-o5fF         적합      안전        -                         적합       -             O
+Db4AcVhIFh6         적합      여백없음      -                         적합       -             O
+Db4El3qOiBq         적합      안전        -                         적합       -             O
+Db4KspvNBoy         적합      여백없음      -                         적합       -             O
+Db4N_guM1Wy         적합      안전        -                         적합       -             O
+Db4RJg4iPw9         적합      안전        -                         적합       -             O
+Db4Sor9OcyL         위반      위반        플래시,화면전환                  적합       -             X  <<<
+Db4TkhjBnlg         적합      여백없음      -                         적합       -             O
+Db4XZ1vRDr9         적합      여백없음      -                         적합       -             O
+Db4afDPIFbY         적합      여백없음      -                         적합       -             O
+Db4bFuguKZf         적합      여백없음      -                         위반       LUM           X  <<<
+Db4eEO7t3TQ         적합      안전        -                         적합       -             O
+Db4gpb0x49y         적합      여백없음      -                         적합       -             O
+Db4hQ2CotZZ         적합      안전        -                         적합       -             O
+Db4m3JCRdHb         적합      여백없음      -                         적합       -             O
+Db4nCSlsNBD         적합      여백없음      -                         적합       -             O
+----------------------------------------------------------------------------------------------------
+총 19편 · 일치 17편 · 불일치 2편 → Db4Sor9OcyL, Db4bFuguKZf
