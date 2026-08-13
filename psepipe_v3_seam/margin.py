@@ -13,11 +13,11 @@ def red_profile(path, width=320):
         if not ok: break
         h0, w0 = f.shape[:2]
         s = cv2.resize(f, (width, max(2, int(round(h0*width/w0)))), interpolation=cv2.INTER_AREA)
-        x = s.astype(np.float32)/255.0
-        b, g, r = x[...,0], x[...,1], x[...,2]
+        lin = BT.decode_linear(s)          # 채도비는 정본과 같이 선형광에서
+        r, g, b = lin[...,0], lin[...,1], lin[...,2]
         tot = r+g+b+1e-6
         ratio = r/tot
-        lit = r >= BT.RED_MIN_V
+        lit = s[...,2] >= int(BT.RED_MIN_V*255)
         rows.append([float((( ratio>=0.80)&lit).mean()),
                      float((( ratio>=0.70)&lit).mean()),
                      float((( ratio>=0.60)&lit).mean()),

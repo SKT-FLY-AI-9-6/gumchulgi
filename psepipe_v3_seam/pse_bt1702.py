@@ -75,7 +75,7 @@ COLOR_W = 96                # 색 채널(적색·적청) 분석 폭.
                             # 저장하므로 320px 로 돌릴 이유가 없다. CIE 변환이
                             # 프레임당 비용의 절반을 먹고 있어 여기서 줄인다.
 RED_RATIO = 0.80            # 강렬한 빨간색: R/(R+G+B)
-RED_MIN_V = 0.25
+RED_MIN_V = 0.25            # 감마 인코딩 값 기준의 최소 R (지각적 게이트)
 DUV_THR = 0.20              # CIE 1976 UCS 색차 임계.
                             # 근거: Jordan & Vanderheiden, ACM TACCESS 2024 —
                             # 적색 플래시는 채도 조건 R/(R+G+B) >= 0.8 만으로
@@ -155,10 +155,17 @@ def rb_sides(bgr: np.ndarray, uv: np.ndarray):
 
 
 def saturated_red(bgr: np.ndarray) -> np.ndarray:
-    f = bgr.astype(np.float32) / 255.0
-    b, g, r = f[..., 0], f[..., 1], f[..., 2]
+    # 채도비는 **선형광**에서 잰다. WCAG 2.2 는 같은 문장에서 CIE 1976 u'v'
+    # (선형광 전제)로 전환 거리를 정의하므로 채도비만 감마 값으로 재면
+    # 비정합이고, EA IRIS 도 EOTF 복원 후 R/(R+G+B) 를 계산한다
+    # (config/appsettings.json 의 sRGBValues LUT). 감마 공간 0.62 인 탈채도
+    # 적색(138,42,42)이 선형광에서는 0.87 — 포리곤 유사 사례가 규격 축 안으로
+    # 들어온다. 최소 R 게이트는 지각적 문턱이므로 감마 값 그대로 유지한다.
+    lin = decode_linear(bgr)
+    r, g, b = lin[..., 0], lin[..., 1], lin[..., 2]
     tot = r + g + b + 1e-6
-    return (r / tot >= RED_RATIO) & (r >= RED_MIN_V)
+    return (r / tot >= RED_RATIO) & \
+           (bgr[..., 2] >= int(RED_MIN_V * 255))
 
 
 # ══════════════════════════════════════════ 검출 화소 -> 격자 마스크
