@@ -1,0 +1,6 @@
+include CHANGES.md
+include TRAINING.md
+include VERIFICATION.md
+recursive-include configs *.yaml
+recursive-include scripts *.py
+recursive-include tests *.py

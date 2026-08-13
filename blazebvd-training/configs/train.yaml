@@ -1,0 +1,34 @@
+degradation:
+  # BlazeBVD paper replacement assumption: shared window W ~ U{2,...,12}.
+  min_window: 2
+  max_window: 12
+  global_amplitude: 0.30
+  color_amplitude: 0.12
+  local_probability: 0.50
+  local_amplitude: 0.45
+
+  # Accessibility-oriented additions for rapid/local/red temporal changes.
+  alternating_probability: 0.65
+  alternating_min_period: 1
+  alternating_max_period: 3
+  alternating_amplitude: 0.40
+  impulse_probability: 0.35
+  impulse_amplitude: 0.50
+  red_flash_probability: 0.35
+  red_flash_amplitude: 0.45
+
+loss:
+  # These regularizers discourage neural stages from undoing deterministic STE.
+  temporal_excess_weight: 0.10
+  rebound_weight: 0.10
+  temporal_margin: 0.02
+  rebound_margin: 0.02
+
+  lfrm_artifact_threshold: 0.03
+  lfrm_artifact_boost: 4.0
+
+  # BlazeBVD Stage-3 weights: reconstruction, perceptual, GAN, adaptive warp.
+  reconstruction_weight: 1.0
+  perceptual_weight: 1.0
+  adversarial_weight: 0.01
+  warp_weight: 0.10
