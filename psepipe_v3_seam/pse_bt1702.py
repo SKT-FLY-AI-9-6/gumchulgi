@@ -438,7 +438,7 @@ def analyze(path, width: int = 320, with_pattern: bool = True,
             with_cut: bool = True, sequence_rule: bool = True,
             verbose: bool = False, fps: float = None,
             pattern_result=None, cut_result=None, keep_masks: bool = False,
-            supplementary: bool = True) -> dict:
+            supplementary: bool = True, with_comfort: bool = False) -> dict:
     """path 대신 **프레임 이터러블**(BGR uint8)을 줄 수 있다. 그 경우 fps 가 필수.
 
     필터의 폐루프에서 쓴다 — 라운드마다 무손실로 쓰고 다시 디코드하던 왕복이
@@ -498,6 +498,16 @@ def analyze(path, width: int = 320, with_pattern: bool = True,
         except Exception as exc:  # noqa: BLE001
             cut_err = str(exc)
 
+    # [점수] 편두통 컴포트 — 판정(compliant/failed_rules)에는 절대 안 들어간다.
+    # 규격 관문 미달 자극을 연속 점수로 재는 별도 층 (pse_comfort.py 참조).
+    comfort_stream, comfort_err = None, None
+    if with_comfort:
+        try:
+            import pse_comfort
+            comfort_stream = pse_comfort.Stream(fps)
+        except Exception as exc:  # noqa: BLE001
+            comfort_err = str(exc)
+
     while True:
         if cap is not None:
             ok, frame = cap.read()
@@ -524,6 +534,11 @@ def analyze(path, width: int = 320, with_pattern: bool = True,
                 cut_stream.push(small)
             except Exception as exc:  # noqa: BLE001
                 cut_err, cut_stream = str(exc), None
+        if comfort_stream is not None:
+            try:
+                comfort_stream.push(small, lum=lum)
+            except Exception as exc:  # noqa: BLE001
+                comfort_err, comfort_stream = str(exc), None
         # 색 채널은 축소 프레임에서 (면적 비율만 필요)
         cw = min(COLOR_W, small.shape[1])
         small_c = cv2.resize(small, (cw, max(2, int(round(small.shape[0] * cw / small.shape[1])))),
@@ -672,7 +687,14 @@ def analyze(path, width: int = 320, with_pattern: bool = True,
                            interpolation=cv2.INTER_AREA)
                 for x in pm]).astype(np.float16)
 
+    # [점수] 컴포트 마감 — with_comfort=False 면 키 자체가 없어 기존 출력과 동일
+    _comfort = None
+    if with_comfort:
+        _comfort = (comfort_stream.summary() if comfort_stream is not None
+                    else {"error": comfort_err})
+
     return {
+        **({"comfort": _comfort} if with_comfort else {}),
         "video": str(path) if cap is not None or isinstance(path, str) else "<frames>",
         "standard": "ITU-R BT.1702 (가이드북 2026 인용 조항)",
         "fps": round(fps, 3), "frames": idx, "duration_s": round(idx / fps, 2),
