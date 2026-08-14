@@ -1,0 +1,10 @@
+clip,chain,actuator,after,pump_excess,halo_excess,winner
+anime27,native,A,화면전환,1.326,10.716,A
+anime27,native,D-STE,"플래시,화면전환",0.114,9.703,
+anime27,native,D-full,화면전환,3.822,33.486,
+cera_orig,360,A,,0.000,2.542,A
+cera_orig,360,D-STE,,0.087,29.226,
+cera_orig,360,D-full,,1.734,29.849,
+travis_scott_new,360,A,화면전환,0.004,4.506,
+travis_scott_new,360,D-STE,,0.665,27.156,
+travis_scott_new,360,D-full,,1.317,21.672,D-full
