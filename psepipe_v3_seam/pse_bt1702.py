@@ -52,11 +52,21 @@ import numpy as np
 
 # ---------------------------------------------------------------- BT.1702 상수
 SDR_PEAK = 200.0            # cd/m², NOTE 3 (SDR peak white)
-EOTF_GAMMA = 2.4            # BT.1886
+EOTF_GAMMA = 2.4            # sRGB 조각별 공식의 지수부 (아래 LUT 참조)
 DARK_LUM_THR = 160.0        # cd/m², 이 아래는 절대 휘도차, 위는 Michelson
 LUM_DIFF_THR = 20.0         # cd/m², "플래시 밝기 차이가 20cd/m² 이상"
 MICHELSON_THR = 1.0 / 17.0
 AREA_THR = 0.25             # "화면의 1/4 이상"
+AREA_EPS = 0.002            # 면적 관문의 리사이즈 보상 — 분석은 320px 축소본에서
+                            # 하는데 INTER_AREA 가 검출 영역 가장자리 화소를 안팎
+                            # 혼합값으로 만들어, 델타 여유가 1cd 급인 경계 전환은
+                            # 가장자리 한 줄이 문턱 아래로 밀린다. trace 실측:
+                            # 25.19% 설계 fail 이 24.95% 로 측정돼 25% 관문에서
+                            # 샜다(→보상 필요). 0.005 로 넓히면 24.6~24.7% 설계
+                            # pass 가 위반으로 뒤집혀 오탐 4건(→0.002 로 확정).
+                            # 둘레가 긴 다조각 패턴은 침식이 1.6% 까지 커져 이
+                            # 보상으로도 못 살린다 — 경계 코퍼스 검증은 원해상도
+                            # (--width 1920)로 돌리면 침식 자체가 사라진다.
 MAX_PER_SEC = 3             # "1초 동안 3회 초과"
 SUSTAIN_SEC = 5.0           # "5초 이상 지속되는 경우를 피하도록 권고"
 # ⑥ 시퀀스 분할 간격 — BT.1702-3 (11/2023) 원문이 두 값을 나눠 적는다.
@@ -83,12 +93,29 @@ DUV_THR = 0.20              # CIE 1976 UCS 색차 임계.
                             # ISO 9241-391 / WCAG 에만 상세가 있는 조항.
 
 
+# sRGB 조각별 EOTF (IEC 61966-2-1). 순수 2.4승(BT.1886)은 어두운 값에서
+# 델타를 과소평가한다 — trace 경계 fail 실측: 64↔109 가 순수승 18.8cd(<한도 20)
+# vs 조각별 20.3cd(>한도). 콘텐츠가 웹 sRGB 이므로 조각별이 원문이고,
+# 치료기(blazebvd)·EA IRIS 와도 같은 정의가 된다. 8bit 입력은 LUT 로 처리.
+_SRGB_X = np.arange(256, dtype=np.float32) / 255.0
+_SRGB_LUT = np.where(_SRGB_X <= 0.04045, _SRGB_X / 12.92,
+                     ((_SRGB_X + 0.055) / 1.055) ** EOTF_GAMMA).astype(np.float32)
+
+
 def decode_linear(bgr: np.ndarray) -> np.ndarray:
+    if bgr.dtype == np.uint8:
+        return _SRGB_LUT[bgr[..., ::-1]]
     rgb = bgr[..., ::-1].astype(np.float32) / 255.0
-    return np.power(rgb, EOTF_GAMMA, dtype=np.float32)
+    return np.where(rgb <= 0.04045, rgb / 12.92,
+                    np.power((rgb + 0.055) / 1.055, EOTF_GAMMA, dtype=np.float32))
 
 
 COHERENCE_FRAC = 0.05     # 국소 평균 창 크기 (프레임 폭 대비). 아래 주석 참조
+AGREE_FRAC = 0.5          # 공간 일관성 동의 문턱 — 국소 평균 델타가 문턱의 이
+                          # 비율 이상 & 같은 부호여야 유해 전환으로 인정한다.
+                          # 블록 플래시의 정중앙 경계 화소도 평균 델타가 절반은
+                          # 되므로(반은 블록 안) 0.5 면 경계 면적이 보존되고,
+                          # 팬/셰이크는 국소 상쇄로 평균 델타가 0 근처라 탈락.
 
 
 def luminance_cd(bgr: np.ndarray, coherent: bool = True) -> np.ndarray:
@@ -192,6 +219,12 @@ def grid_from_counter(counter, T: int, gw: int, gh: int) -> np.ndarray:
             np.maximum(acc[lo:hi], g, out=acc[lo:hi])
     return acc
 
+def _num(x):
+    """정수면 int, 아니면 소수 1자리 — 변화/2 계수라 3.5 같은 값이 생긴다."""
+    f = float(x)
+    return int(f) if f == int(f) else round(f, 1)
+
+
 class Counter:
     """대립 전환쌍 = 플래시 1회. 같은 시퀀스 안에서 1초에 3회 초과면 위반.
 
@@ -218,78 +251,126 @@ class Counter:
         self.area_thr = area_thr        # 면적 관문. 기본 25%, 보조 채널은 낮출 수 있다
         gap_s = SEQ_GAP_S_50 if round(fps) in (25, 50) else SEQ_GAP_S_60
         self.gap_frames = gap_s * fps
-        self.pending: tuple[int, int, np.ndarray] | None = None
-        self.edges: list[int] = []              # 플래시 선행엣지 프레임
-        self.masks: list[np.ndarray] = []       # 그 플래시에 관여한 화소 마스크
+        # 변화(composite change) = 같은 방향 연속 전환의 병합. 플래시 = 대립
+        # 변화 한 쌍이므로 1초 창 계수는 (변화 수)/2 다 — trace 코퍼스 실측:
+        # 교대 7전환을 비중첩 쌍으로 내림 계수하면 "3회 == 한도"로 새고,
+        # 3.5 로 세면 정답과 일치한다 (경계 미탐 원인 ③). 변화는 화소
+        # 동일성으로 **병렬 묶음**(cluster)에 담는다 — 두 영역이 엇박으로
+        # 점멸하면 서로 다른 묶음의 독립 시퀀스다. 종전의 선형 사슬은 이를
+        # 표현하지 못해 교대마다 시퀀스가 끊겼다 (trace inf01 미탐 원인).
+        self.clusters: list[dict] = []  # {"idx": [프레임], "dirs": [±1],
+                                        #  "masks": [마스크], "lastd": 팽창마스크}
+        self.n_changes = 0
         self.areas: list[float] = []            # 프레임별 순 방향 면적(보고용)
         self.n_frames = 0
 
-    def push(self, idx: int, mask_up: np.ndarray, mask_dn: np.ndarray) -> None:
-        # **순 방향성으로 판정한다.** 규격의 "화면의 1/4 이상 동시에 플래시"는
+    def push(self, idx: int, mask_up: np.ndarray, mask_dn: np.ndarray,
+             area_up: float = None, area_dn: float = None) -> None:
+        # **순 방향성이 1차 관문.** 규격의 "화면의 1/4 이상 동시에 플래시"는
         # 그 면적이 **같은 방향으로** 변했다는 뜻이다. 밝아진 면적과 어두워진
         # 면적을 각각 따로 보면 모션이 걸린다 — 실측에서 휙 돌리기는
         # 밝아짐 0.239 / 어두워짐 0.237 로 양쪽 다 25% 근처였다.
         # 차이를 취하면 모션은 상쇄되고(0.089) 진짜 점멸만 남는다(1.000).
-        au = float(mask_up.mean())
-        ad = float(mask_dn.mean())
+        # 예외 하나: **양방향이 동시에 관문을 넘고 서로 얽히지 않은** 경우 —
+        # 두 영역이 엇박으로 점멸하는 것이라 각 방향을 따로 등록한다
+        # (trace inf01). 얽혀 있으면(팽창 교집합이 큼) 모션이라 버린다.
+        # 면적은 가능하면 **축소 전 원해상도 값**(area_up/dn)으로 잰다 —
+        # 40px 격자 반올림이 25.2% 를 24.4% 로 깎아 정확히 25% 인 경계
+        # 표본이 관문에서 새는 것을 trace 로 실측했다.
+        au = float(mask_up.mean()) if area_up is None else float(area_up)
+        ad = float(mask_dn.mean()) if area_dn is None else float(area_dn)
         net = au - ad
         self.areas.append(abs(net))
         self.n_frames = idx + 1
 
-        tr = 0
-        if net > self.area_thr:
-            tr, mask = +1, mask_up
-        elif -net > self.area_thr:
-            tr, mask = -1, mask_dn
-        else:
-            return
+        regs = []
+        thr = self.area_thr - AREA_EPS
+        if au >= thr and ad >= thr:
+            ud = cv2.dilate(mask_up.astype(np.uint8), _SEQ_KERNEL) > 0
+            dd = cv2.dilate(mask_dn.astype(np.uint8), _SEQ_KERNEL) > 0
+            if float((ud & dd).mean()) <= 0.5 * min(au, ad):
+                regs = [(+1, mask_up), (-1, mask_dn)]
+        elif net >= thr:                # "1/4 이상" = 이상(>=).
+            regs = [(+1, mask_up)]      # 초과(>)로 재면 정확히 25% 인 경계
+        elif -net >= thr:               # 표본이 격자 양자화로 새어 나간다
+            regs = [(-1, mask_dn)]
+        for tr, m in regs:
+            self._register(idx, tr, m)
 
-        if self.pending is not None and self.pending[1] == -tr:
-            # 플래시 1회 완성 — 관여 화소는 두 전환의 교집합
-            self.edges.append(self.pending[0])
-            self.masks.append(self.pending[2] & mask)
-            self.pending = None
-        else:
-            self.pending = (idx, tr, mask)
+    def _register(self, idx: int, tr: int, m: np.ndarray) -> None:
+        """변화 하나를 화소 동일성이 맞는 묶음에 넣는다.
 
-    # ---------- 시퀀스 분할 (334ms 규칙 + 화소 동일성)
+        팽창 후 교집합 — "겹치는 영역이 면적 임계를 넘어야 한다"(Jordan 2025)는
+        문언 구조는 유지하고, 화소 정밀 일치 요구만 ±5% 허용오차로 완화한다.
+        직전 변화와 같은 방향이면 새 변화가 아니라 진행 중인 변화의 연장이다
+        (계단 상승: 209→223→236 은 밝아짐 '한 번') — 종전 코드는 pending 을
+        덮어써 전환을 잃었다.
+        """
+        md = cv2.dilate(m.astype(np.uint8), _SEQ_KERNEL) > 0
+        best, bov = None, 0.0
+        for cl in self.clusters:
+            ov = float((cl["lastd"] & md).mean())
+            if ov >= self.area_thr and ov > bov:
+                best, bov = cl, ov
+        if best is None:
+            self.clusters.append({"idx": [idx], "dirs": [tr],
+                                  "masks": [m.copy()], "lastd": md})
+            self.n_changes += 1
+        elif best["dirs"][-1] == tr:
+            best["masks"][-1] = best["masks"][-1] | m
+            best["lastd"] = cv2.dilate(best["masks"][-1].astype(np.uint8),
+                                       _SEQ_KERNEL) > 0
+        else:
+            best["idx"].append(idx)
+            best["dirs"].append(tr)
+            best["masks"].append(m.copy())
+            best["lastd"] = md
+            self.n_changes += 1
+
+    # ---------- 플래시(대립 변화쌍) 뷰 — 보고와 필터(grid_from_counter)용
+    def _pulses(self) -> list[tuple[int, np.ndarray]]:
+        out = []
+        for cl in self.clusters:
+            for i in range(0, len(cl["idx"]), 2):
+                m = cl["masks"][i]
+                if i + 1 < len(cl["idx"]):
+                    inter = m & cl["masks"][i + 1]
+                    m = inter if inter.any() else m
+                out.append((cl["idx"][i], m))
+        out.sort(key=lambda t: t[0])
+        return out
+
+    @property
+    def edges(self) -> list[int]:
+        return [e for e, _ in self._pulses()]
+
+    @property
+    def masks(self) -> list[np.ndarray]:
+        return [m for _, m in self._pulses()]
+
+    # ---------- 시퀀스 분할 (묶음별 → 334ms 규칙)
     def sequences(self) -> list[list[int]]:
+        """변화의 **프레임 인덱스** 시퀀스 목록."""
         seqs: list[list[int]] = []
-        cur: list[int] = []
-        inter: np.ndarray | None = None
-        for k, (e, m) in enumerate(zip(self.edges, self.masks)):
-            if not cur:
-                cur, inter = [k], m.copy()
-                continue
-            gap_ok = True
-            if self.sequence_rule:
-                gap_ok = (e - self.edges[cur[-1]]) <= self.gap_frames
-            # 팽창 후 교집합 — "겹치는 영역이 면적 임계를 넘어야 한다"(Jordan 2025)는
-            # 문언 구조는 유지하고, 화소 정밀 일치 요구만 ±5% 허용오차로 완화한다.
-            # 회귀: 31_two_regions_alt 적합 유지, 32_one_region_4hz 위반 유지,
-            # 오탐 대조군(25~27) 적합 유지, Test.mp4 위반 1.71s → 3.21s (0.67s~).
-            a = cv2.dilate(self.masks[cur[-1]].astype(np.uint8), _SEQ_KERNEL) > 0
-            b = cv2.dilate(m.astype(np.uint8), _SEQ_KERNEL) > 0
-            cand = a & b
-            overlap_ok = float(cand.mean()) > AREA_THR
-            if gap_ok and overlap_ok:
-                cur.append(k)
-                inter = cand
-            else:
+        for cl in self.clusters:
+            cur: list[int] = []
+            for e in cl["idx"]:
+                if cur and self.sequence_rule and e - cur[-1] > self.gap_frames:
+                    seqs.append(cur)
+                    cur = []
+                cur.append(e)
+            if cur:
                 seqs.append(cur)
-                cur, inter = [k], m.copy()
-        if cur:
-            seqs.append(cur)
         return seqs
 
     def _counts(self) -> np.ndarray:
-        """프레임별 '같은 시퀀스 안에서 직전 1초의 플래시 수' 최대값."""
-        c = np.zeros(max(self.n_frames, 1), int)
-        for seq in self.sequences():
-            es = [self.edges[k] for k in seq]
+        """프레임별 '같은 시퀀스 안에서 직전 1초의 변화 수 / 2' 최대값."""
+        c = np.zeros(max(self.n_frames, 1), np.float32)
+        for es in self.sequences():
+            arr = np.asarray(es)
             for e in es:
                 for f in range(e, min(e + self.win, len(c))):
-                    n = sum(1 for x in es if f - self.win < x <= f)
+                    n = float(((arr > f - self.win) & (arr <= f)).sum()) / 2.0
                     if n > c[f]:
                         c[f] = n
         return c
@@ -307,12 +388,15 @@ class Counter:
         WCAG 등에는 두 조항이 없으므로 이 값이 곧 WCAG 식 빈도다.
         **규격 판정(compliant)에는 넣지 않는다** — supplementary 로만 보고.
         """
-        c = np.zeros(max(self.n_frames, 1), int)
-        for e in self.edges:
-            for f in range(e, min(e + self.win, len(c))):
-                n = sum(1 for x in self.edges if f - self.win < x <= f)
-                if n > c[f]:
-                    c[f] = n
+        c = np.zeros(max(self.n_frames, 1), np.float32)
+        allc = np.sort(np.array([e for cl in self.clusters for e in cl["idx"]]
+                                or [0]))
+        for cl in self.clusters:
+            for e in cl["idx"]:
+                for f in range(e, min(e + self.win, len(c))):
+                    n = float(((allc > f - self.win) & (allc <= f)).sum()) / 2.0
+                    if n > c[f]:
+                        c[f] = n
         return c
 
     def raw_summary(self) -> dict:
@@ -330,7 +414,7 @@ class Counter:
             "rule": f"{self.name}(순수빈도)",
             "pass": bool(not v.any()),
             "violation_seconds": round(float(v.sum()) / self.fps, 2),
-            "max_per_sec": int(c.max()) if c.size else 0,
+            "max_per_sec": _num(c.max()) if c.size else 0,
             "limit_per_sec": MAX_PER_SEC,
             "segments": segs,
             "note": "시퀀스 규칙(334ms·화소 동일성) 미적용 1초 창 계수 = WCAG/ISO/NAB-J 식",
@@ -397,7 +481,7 @@ class Counter:
             v = min(c[i] / MAX_PER_SEC, self.areas[i] / AREA_THR)
             if v > best:
                 best, bi = v, i
-        return {"per_sec": int(c[bi]), "area_pct": round(self.areas[bi] * 100, 1),
+        return {"per_sec": _num(c[bi]), "area_pct": round(self.areas[bi] * 100, 1),
                 "closeness": round(float(best), 3)}
 
     def summary(self) -> dict:
@@ -409,7 +493,7 @@ class Counter:
             "rule": self.name,
             "pass": bool(not v.any()),
             "violation_seconds": round(float(v.sum()) / self.fps, 2),
-            "max_per_sec": int(c.max()) if c.size else 0,
+            "max_per_sec": _num(c.max()) if c.size else 0,
             "limit_per_sec": MAX_PER_SEC,
             "max_area_pct": round(float(a.max()) * 100, 1) if a.size else 0.0,
             "sustained_over_5s": sus,
@@ -513,7 +597,7 @@ def analyze(path, width: int = 320, with_pattern: bool = True,
         small = (cv2.resize(frame, (width, max(2, int(round(h0 * width / w0)))),
                             interpolation=cv2.INTER_AREA)
                  if w0 != width else frame)
-        lum = luminance_cd(small)
+        lum = luminance_cd(small, coherent=False)   # 비블러 정밀 휘도 (아래 참조)
         if pat_stream is not None:
             try:
                 pat_stream.push(small)
@@ -542,18 +626,43 @@ def analyze(path, width: int = 320, with_pattern: bool = True,
             mich = np.where(lb + ld > 0, d / np.maximum(lb + ld, 1e-6), 0.0)
             harmful = ((ld < DARK_LUM_THR) & (d >= LUM_DIFF_THR)) | \
                       ((ld >= DARK_LUM_THR) & (mich > MICHELSON_THR))
-            sg = np.sign(lum - prev_lum)
-            up_m = _shrink(harmful & (sg > 0))
-            dn_m = _shrink(harmful & (sg < 0))
-            flash.push(idx, up_m, dn_m)
+            # 공간 일관성 동의 — 모션 필터. 종전에는 휘도 자체를 국소 평균해
+            # 팬 오탐을 막았는데, 평균이 경계 델타(여유 ~1cd)를 침식해 trace
+            # 경계 fail 을 통째로 지웠다 (경계 미탐 원인 ①). 그래서 델타·면적은
+            # **비블러 정밀값**으로 재고, 모션 여부는 프레임 단위로 따로 묻는다:
+            # 방향별 유해 면적 중 "국소 평균 델타가 같은 부호로 문턱의
+            # AGREE_FRAC 이상"인 화소의 비율이 과반이어야 그 방향을 인정한다.
+            # 팬/셰이크는 국소 상쇄로 동의 비율이 0 근처라 방향째 탈락하고,
+            # 진짜 플래시는 코너 화소(평균 창의 1/4 만 블록 안)까지 면적에
+            # 남는다 — 화소를 잘라내면 코너 침식만으로 25% 경계가 샌다.
+            diff = lum - prev_lum
+            k = max(3, int(round(lum.shape[1] * COHERENCE_FRAC)) | 1)
+            db = cv2.blur(diff, (k, k))
+            tb = cv2.blur(lum + prev_lum, (k, k))
+            agree = (np.sign(db) == np.sign(diff)) & (
+                ((ld < DARK_LUM_THR) & (np.abs(db) >= AGREE_FRAC * LUM_DIFF_THR)) |
+                ((ld >= DARK_LUM_THR) &
+                 (np.abs(db) / np.maximum(tb, 1e-6) >= AGREE_FRAC * MICHELSON_THR)))
+            sg = np.sign(diff)
+            up_f = harmful & (sg > 0)
+            dn_f = harmful & (sg < 0)
+            au_f, ad_f = float(up_f.mean()), float(dn_f.mean())
+            if au_f > 0 and float((up_f & agree).mean()) < 0.5 * au_f:
+                up_f, au_f = np.zeros_like(up_f), 0.0    # 비일관 = 모션
+            if ad_f > 0 and float((dn_f & agree).mean()) < 0.5 * ad_f:
+                dn_f, ad_f = np.zeros_like(dn_f), 0.0
+            up_m, dn_m = _shrink(up_f), _shrink(dn_f)
+            flash.push(idx, up_m, dn_m, area_up=au_f, area_dn=ad_f)
             if supplementary:
-                flash_lo.push(idx, up_m, dn_m)
+                flash_lo.push(idx, up_m, dn_m, area_up=au_f, area_dn=ad_f)
 
             # ② 강렬한 빨간색 전환 — 채도 조건 + **Δu\'v\' >= 0.2** (ISO/WCAG 조항)
             duv = np.linalg.norm(uv - prev_uv, axis=-1)
             big = duv >= DUV_THR
-            red_c.push(idx, _shrink((red & ~prev_red) & big),
-                            _shrink((prev_red & ~red) & big))
+            r_in = (red & ~prev_red) & big
+            r_out = (prev_red & ~red) & big
+            red_c.push(idx, _shrink(r_in), _shrink(r_out),
+                       area_up=float(r_in.mean()), area_dn=float(r_out.mean()))
 
             # [보조] 적↔청 교대 — 규격 밖. Parra 2007 유발률 100% 근거.
             # 적 계열 <-> 청 계열의 실제 맞바꿈만 센다 (중점 통과가 아니라).
