@@ -72,8 +72,13 @@ python validation/make_sbs.py compare_릴스1.mp4 \
   "ORIGINAL=릴스1.mp4" "A (ours)=_ad_work/릴스1_A.mp4" "D ste=_ad_work/릴스1_D.mp4"
 ```
 
-예상(합성 실측 기준 가설): A 우세 유지. D_full 이 실사에서도 위반을 남기면
-"현재 가중치의 D 는 어떤 슬롯에도 넣지 않는다"가 최종 확정된다.
+**08-14 실사 2차 결과 반영** (`validation/ad_blazebvd_full.csv`, 팀 GPU 실측):
+anime27·cera 는 A 승, **travis 는 D-full 승** — A 가 화면전환 축을 못 넘긴
+클립을 D-full 이 통과시켰다 (단 헤일로는 21.7 로 A 의 4.5 보다 큼).
+→ D 의 자리가 확정됨: 기본 경로가 아니라 **"A 가 실패한 클립의 2차 시도"**
+슬롯. 파이프라인: A → 재검출 → (실패 시) D-full → 재검출. 남은 질문은
+travis 에서 A→D-full 체인이 D-full 단독보다 헤일로를 줄이는가 — 3파전
+하네스로 확인할 것.
 
 ## 3. D_full GPU 속도 실측
 
