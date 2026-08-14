@@ -1,0 +1,3956 @@
+[
+ {
+  "clip": "Db3U0CAIkY8",
+  "path": "data/s2_rand20\\Db3U0CAIkY8.mp4",
+  "bt": {
+   "verdict": "적합",
+   "tier": "여백없음",
+   "tier_why": [
+    "③(쌍수72%/면적249%)"
+   ],
+   "failed_rules": [],
+   "supplementary_flags": [],
+   "duration_s": 14.93,
+   "fps": 30.0,
+   "frames": 448,
+   "sustained_over_5s": false,
+   "rules": {
+    "flash": {
+     "rule": "플래시",
+     "pass": true,
+     "violation_seconds": 0.0,
+     "max_per_sec": 0,
+     "limit_per_sec": 3,
+     "max_area_pct": 0.0,
+     "sustained_over_5s": false,
+     "longest_run_s": 0.0,
+     "total_events": 0,
+     "n_sequences": 0,
+     "min_separation_frames": null,
+     "sequence_rule_applied": true,
+     "segments": [],
+     "area_segments": [],
+     "co_axes": {
+      "per_sec": 0,
+      "area_pct": 0.0,
+      "closeness": 0.0
+     }
+    },
+    "red": {
+     "rule": "적색",
+     "pass": true,
+     "violation_seconds": 0.0,
+     "max_per_sec": 0,
+     "limit_per_sec": 3,
+     "max_area_pct": 0.0,
+     "sustained_over_5s": false,
+     "longest_run_s": 0.0,
+     "total_events": 0,
+     "n_sequences": 0,
+     "min_separation_frames": null,
+     "sequence_rule_applied": true,
+     "segments": [],
+     "area_segments": [],
+     "co_axes": {
+      "per_sec": 0,
+      "area_pct": 0.0,
+      "closeness": 0.0
+     }
+    },
+    "pattern": {
+     "rule": "패턴",
+     "pass": true,
+     "co_axes": {
+      "pairs": 3.61,
+      "area_pct": 99.5,
+      "need_pairs": 5,
+      "need_area_pct": 40.0,
+      "closeness": 0.722
+     },
+     "violation_seconds": 0.0,
+     "max_pairs": 3.61,
+     "max_area_pct": 100.0,
+     "segments": [],
+     "_masks": null
+    },
+    "cut": {
+     "rule": "화면전환",
+     "pass": true,
+     "violation_seconds": 0.0,
+     "max_per_sec": 0,
+     "limit_per_sec": 3,
+     "total_cuts": 0,
+     "cuts_per_sec_mean": 0.0,
+     "sustained_over_5s": false,
+     "segments": [],
+     "cut_times": []
+    }
+   },
+   "supplementary": {
+    "rb": {
+     "rule": "적청교대",
+     "pass": true,
+     "violation_seconds": 0.0,
+     "max_per_sec": 0,
+     "limit_per_sec": 3,
+     "max_area_pct": 0.0,
+     "sustained_over_5s": false,
+     "longest_run_s": 0.0,
+     "total_events": 0,
+     "n_sequences": 0,
+     "min_separation_frames": null,
+     "sequence_rule_applied": true,
+     "segments": [],
+     "area_segments": [],
+     "co_axes": {
+      "per_sec": 0,
+      "area_pct": 0.0,
+      "closeness": 0.0
+     }
+    },
+    "flash_raw": {
+     "rule": "플래시(순수빈도)",
+     "pass": true,
+     "violation_seconds": 0.0,
+     "max_per_sec": 0,
+     "limit_per_sec": 3,
+     "segments": [],
+     "note": "시퀀스 규칙(334ms·화소 동일성) 미적용 1초 창 계수 = WCAG/ISO/NAB-J 식"
+    },
+    "red_raw": {
+     "rule": "적색(순수빈도)",
+     "pass": true,
+     "violation_seconds": 0.0,
+     "max_per_sec": 0,
+     "limit_per_sec": 3,
+     "segments": [],
+     "note": "시퀀스 규칙(334ms·화소 동일성) 미적용 1초 창 계수 = WCAG/ISO/NAB-J 식"
+    },
+    "flash_lo": {
+     "rule": "플래시(저면적10%)(순수빈도)",
+     "pass": true,
+     "violation_seconds": 0.0,
+     "max_per_sec": 0,
+     "limit_per_sec": 3,
+     "segments": [],
+     "note": "시퀀스 규칙(334ms·화소 동일성) 미적용 1초 창 계수 = WCAG/ISO/NAB-J 식"
+    }
+   },
+   "frame_separation": {
+    "required_frames": 10,
+    "observed_min_frames": null,
+    "pass": true,
+    "note": "이 조항은 초당 3회 한도를 프레임 수로 표현한 것 (ceil(fps/3))"
+   },
+   "violation_segments": []
+  },
+  "bt_sec": 18.5,
+  "pc": {
+   "verdict": "적합",
+   "raw_verdict": "PASS",
+   "failed_channels": [],
+   "warn_channels": [],
+   "channel_seconds": {
+    "LUM": 0.0,
+    "RGB": 0.0,
+    "RED": 0.0,
+    "RB": 0.0
+   },
+   "summary": {
+    "total_ms": 14933.3,
+    "violating_ms": 0,
+    "violating_ratio": 0.0,
+    "segments": 0,
+    "elapsed_sec": 20.13
+   },
+   "violations": [],
+   "warnings": [],
+   "video": {
+    "src_w": 1024,
+    "src_h": 576,
+    "ana_w": 427,
+    "ana_h": 240,
+    "fps": 30.0,
+    "frames": 448,
+    "duration_ms": 14933.3
+   }
+  },
+  "pc_sec": 20.1,
+  "agree": true
+ },
+ {
+  "clip": "Db3tmI-o5fF",
+  "path": "data/s2_rand20\\Db3tmI-o5fF.mp4",
+  "bt": {
+   "verdict": "적합",
+   "tier": "안전",
+   "tier_why": [],
+   "failed_rules": [],
+   "supplementary_flags": [],
+   "duration_s": 15.57,
+   "fps": 30.0,
+   "frames": 467,
+   "sustained_over_5s": false,
+   "rules": {
+    "flash": {
+     "rule": "플래시",
+     "pass": true,
+     "violation_seconds": 0.0,
+     "max_per_sec": 0,
+     "limit_per_sec": 3,
+     "max_area_pct": 0.9,
+     "sustained_over_5s": false,
+     "longest_run_s": 0.0,
+     "total_events": 0,
+     "n_sequences": 0,
+     "min_separation_frames": null,
+     "sequence_rule_applied": true,
+     "segments": [],
+     "area_segments": [],
+     "co_axes": {
+      "per_sec": 0,
+      "area_pct": 0.0,
+      "closeness": 0.0
+     }
+    },
+    "red": {
+     "rule": "적색",
+     "pass": true,
+     "violation_seconds": 0.0,
+     "max_per_sec": 0,
+     "limit_per_sec": 3,
+     "max_area_pct": 0.0,
+     "sustained_over_5s": false,
+     "longest_run_s": 0.0,
+     "total_events": 0,
+     "n_sequences": 0,
+     "min_separation_frames": null,
+     "sequence_rule_applied": true,
+     "segments": [],
+     "area_segments": [],
+     "co_axes": {
+      "per_sec": 0,
+      "area_pct": 0.0,
+      "closeness": 0.0
+     }
+    },
+    "pattern": {
+     "rule": "패턴",
+     "pass": true,
+     "co_axes": {
+      "pairs": 2.24,
+      "area_pct": 63.4,
+      "need_pairs": 5,
+      "need_area_pct": 40.0,
+      "closeness": 0.448
+     },
+     "violation_seconds": 0.0,
+     "max_pairs": 2.24,
+     "max_area_pct": 69.3,
+     "segments": [],
+     "_masks": null
+    },
+    "cut": {
+     "rule": "화면전환",
+     "pass": true,
+     "violation_seconds": 0.0,
+     "max_per_sec": 0,
+     "limit_per_sec": 3,
+     "total_cuts": 0,
+     "cuts_per_sec_mean": 0.0,
+     "sustained_over_5s": false,
+     "segments": [],
+     "cut_times": []
+    }
+   },
+   "supplementary": {
+    "rb": {
+     "rule": "적청교대",
+     "pass": true,
+     "violation_seconds": 0.0,
+     "max_per_sec": 0,
+     "limit_per_sec": 3,
+     "max_area_pct": 0.0,
+     "sustained_over_5s": false,
+     "longest_run_s": 0.0,
+     "total_events": 0,
+     "n_sequences": 0,
+     "min_separation_frames": null,
+     "sequence_rule_applied": true,
+     "segments": [],
+     "area_segments": [],
+     "co_axes": {
+      "per_sec": 0,
+      "area_pct": 0.0,
+      "closeness": 0.0
+     }
+    },
+    "flash_raw": {
+     "rule": "플래시(순수빈도)",
+     "pass": true,
+     "violation_seconds": 0.0,
+     "max_per_sec": 0,
+     "limit_per_sec": 3,
+     "segments": [],
+     "note": "시퀀스 규칙(334ms·화소 동일성) 미적용 1초 창 계수 = WCAG/ISO/NAB-J 식"
+    },
+    "red_raw": {
+     "rule": "적색(순수빈도)",
+     "pass": true,
+     "violation_seconds": 0.0,
+     "max_per_sec": 0,
+     "limit_per_sec": 3,
+     "segments": [],
+     "note": "시퀀스 규칙(334ms·화소 동일성) 미적용 1초 창 계수 = WCAG/ISO/NAB-J 식"
+    },
+    "flash_lo": {
+     "rule": "플래시(저면적10%)(순수빈도)",
+     "pass": true,
+     "violation_seconds": 0.0,
+     "max_per_sec": 0,
+     "limit_per_sec": 3,
+     "segments": [],
+     "note": "시퀀스 규칙(334ms·화소 동일성) 미적용 1초 창 계수 = WCAG/ISO/NAB-J 식"
+    }
+   },
+   "frame_separation": {
+    "required_frames": 10,
+    "observed_min_frames": null,
+    "pass": true,
+    "note": "이 조항은 초당 3회 한도를 프레임 수로 표현한 것 (ceil(fps/3))"
+   },
+   "violation_segments": []
+  },
+  "bt_sec": 71.0,
+  "pc": {
+   "verdict": "적합",
+   "raw_verdict": "PASS",
+   "failed_channels": [],
+   "warn_channels": [],
+   "channel_seconds": {
+    "LUM": 0.0,
+    "RGB": 0.0,
+    "RED": 0.0,
+    "RB": 0.0
+   },
+   "summary": {
+    "total_ms": 15566.7,
+    "violating_ms": 0,
+    "violating_ratio": 0.0,
+    "segments": 0,
+    "elapsed_sec": 22.12
+   },
+   "violations": [],
+   "warnings": [],
+   "video": {
+    "src_w": 720,
+    "src_h": 1280,
+    "ana_w": 240,
+    "ana_h": 427,
+    "fps": 30.0,
+    "frames": 467,
+    "duration_ms": 15566.7
+   }
+  },
+  "pc_sec": 22.1,
+  "agree": true
+ },
+ {
+  "clip": "Db4El3qOiBq",
+  "path": "data/s2_rand20\\Db4El3qOiBq.mp4",
+  "bt": {
+   "verdict": "적합",
+   "tier": "안전",
+   "tier_why": [],
+   "failed_rules": [],
+   "supplementary_flags": [],
+   "duration_s": 16.1,
+   "fps": 30.0,
+   "frames": 483,
+   "sustained_over_5s": false,
+   "rules": {
+    "flash": {
+     "rule": "플래시",
+     "pass": true,
+     "violation_seconds": 0.0,
+     "max_per_sec": 0,
+     "limit_per_sec": 3,
+     "max_area_pct": 10.7,
+     "sustained_over_5s": false,
+     "longest_run_s": 0.0,
+     "total_events": 0,
+     "n_sequences": 0,
+     "min_separation_frames": null,
+     "sequence_rule_applied": true,
+     "segments": [],
+     "area_segments": [],
+     "co_axes": {
+      "per_sec": 0,
+      "area_pct": 0.0,
+      "closeness": 0.0
+     }
+    },
+    "red": {
+     "rule": "적색",
+     "pass": true,
+     "violation_seconds": 0.0,
+     "max_per_sec": 0,
+     "limit_per_sec": 3,
+     "max_area_pct": 0.0,
+     "sustained_over_5s": false,
+     "longest_run_s": 0.0,
+     "total_events": 0,
+     "n_sequences": 0,
+     "min_separation_frames": null,
+     "sequence_rule_applied": true,
+     "segments": [],
+     "area_segments": [],
+     "co_axes": {
+      "per_sec": 0,
+      "area_pct": 0.0,
+      "closeness": 0.0
+     }
+    },
+    "pattern": {
+     "rule": "패턴",
+     "pass": true,
+     "co_axes": {
+      "pairs": 2.24,
+      "area_pct": 61.0,
+      "need_pairs": 5,
+      "need_area_pct": 40.0,
+      "closeness": 0.448
+     },
+     "violation_seconds": 0.0,
+     "max_pairs": 2.24,
+     "max_area_pct": 64.7,
+     "segments": [],
+     "_masks": null
+    },
+    "cut": {
+     "rule": "화면전환",
+     "pass": true,
+     "violation_seconds": 0.0,
+     "max_per_sec": 0,
+     "limit_per_sec": 3,
+     "total_cuts": 0,
+     "cuts_per_sec_mean": 0.0,
+     "sustained_over_5s": false,
+     "segments": [],
+     "cut_times": []
+    }
+   },
+   "supplementary": {
+    "rb": {
+     "rule": "적청교대",
+     "pass": true,
+     "violation_seconds": 0.0,
+     "max_per_sec": 0,
+     "limit_per_sec": 3,
+     "max_area_pct": 0.0,
+     "sustained_over_5s": false,
+     "longest_run_s": 0.0,
+     "total_events": 0,
+     "n_sequences": 0,
+     "min_separation_frames": null,
+     "sequence_rule_applied": true,
+     "segments": [],
+     "area_segments": [],
+     "co_axes": {
+      "per_sec": 0,
+      "area_pct": 0.0,
+      "closeness": 0.0
+     }
+    },
+    "flash_raw": {
+     "rule": "플래시(순수빈도)",
+     "pass": true,
+     "violation_seconds": 0.0,
+     "max_per_sec": 0,
+     "limit_per_sec": 3,
+     "segments": [],
+     "note": "시퀀스 규칙(334ms·화소 동일성) 미적용 1초 창 계수 = WCAG/ISO/NAB-J 식"
+    },
+    "red_raw": {
+     "rule": "적색(순수빈도)",
+     "pass": true,
+     "violation_seconds": 0.0,
+     "max_per_sec": 0,
+     "limit_per_sec": 3,
+     "segments": [],
+     "note": "시퀀스 규칙(334ms·화소 동일성) 미적용 1초 창 계수 = WCAG/ISO/NAB-J 식"
+    },
+    "flash_lo": {
+     "rule": "플래시(저면적10%)(순수빈도)",
+     "pass": true,
+     "violation_seconds": 0.0,
+     "max_per_sec": 0,
+     "limit_per_sec": 3,
+     "segments": [],
+     "note": "시퀀스 규칙(334ms·화소 동일성) 미적용 1초 창 계수 = WCAG/ISO/NAB-J 식"
+    }
+   },
+   "frame_separation": {
+    "required_frames": 10,
+    "observed_min_frames": null,
+    "pass": true,
+    "note": "이 조항은 초당 3회 한도를 프레임 수로 표현한 것 (ceil(fps/3))"
+   },
+   "violation_segments": []
+  },
+  "bt_sec": 70.8,
+  "pc": {
+   "verdict": "적합",
+   "raw_verdict": "PASS",
+   "failed_channels": [],
+   "warn_channels": [],
+   "channel_seconds": {
+    "LUM": 0.0,
+    "RGB": 0.0,
+    "RED": 0.0,
+    "RB": 0.0
+   },
+   "summary": {
+    "total_ms": 16100.0,
+    "violating_ms": 0,
+    "violating_ratio": 0.0,
+    "segments": 0,
+    "elapsed_sec": 21.3
+   },
+   "violations": [],
+   "warnings": [],
+   "video": {
+    "src_w": 720,
+    "src_h": 1280,
+    "ana_w": 240,
+    "ana_h": 427,
+    "fps": 30.0,
+    "frames": 483,
+    "duration_ms": 16100.0
+   }
+  },
+  "pc_sec": 21.3,
+  "agree": true
+ },
+ {
+  "clip": "Db3RVcavBn3",
+  "path": "data/s2_rand20\\Db3RVcavBn3.mp4",
+  "bt": {
+   "verdict": "적합",
+   "tier": "여백없음",
+   "tier_why": [
+    "③(쌍수80%/면적82%)"
+   ],
+   "failed_rules": [],
+   "supplementary_flags": [],
+   "duration_s": 35.03,
+   "fps": 30.0,
+   "frames": 1051,
+   "sustained_over_5s": false,
+   "rules": {
+    "flash": {
+     "rule": "플래시",
+     "pass": true,
+     "violation_seconds": 0.0,
+     "max_per_sec": 0,
+     "limit_per_sec": 3,
+     "max_area_pct": 16.9,
+     "sustained_over_5s": false,
+     "longest_run_s": 0.0,
+     "total_events": 0,
+     "n_sequences": 0,
+     "min_separation_frames": null,
+     "sequence_rule_applied": true,
+     "segments": [],
+     "area_segments": [],
+     "co_axes": {
+      "per_sec": 0,
+      "area_pct": 3.0,
+      "closeness": 0.0
+     }
+    },
+    "red": {
+     "rule": "적색",
+     "pass": true,
+     "violation_seconds": 0.0,
+     "max_per_sec": 0,
+     "limit_per_sec": 3,
+     "max_area_pct": 0.0,
+     "sustained_over_5s": false,
+     "longest_run_s": 0.0,
+     "total_events": 0,
+     "n_sequences": 0,
+     "min_separation_frames": null,
+     "sequence_rule_applied": true,
+     "segments": [],
+     "area_segments": [],
+     "co_axes": {
+      "per_sec": 0,
+      "area_pct": 0.0,
+      "closeness": 0.0
+     }
+    },
+    "pattern": {
+     "rule": "패턴",
+     "pass": true,
+     "co_axes": {
+      "pairs": 4.0,
+      "area_pct": 32.8,
+      "need_pairs": 5,
+      "need_area_pct": 40.0,
+      "closeness": 0.8
+     },
+     "violation_seconds": 0.0,
+     "max_pairs": 4.0,
+     "max_area_pct": 36.0,
+     "segments": [],
+     "_masks": null
+    },
+    "cut": {
+     "rule": "화면전환",
+     "pass": true,
+     "violation_seconds": 0.0,
+     "max_per_sec": 0,
+     "limit_per_sec": 3,
+     "total_cuts": 0,
+     "cuts_per_sec_mean": 0.0,
+     "sustained_over_5s": false,
+     "segments": [],
+     "cut_times": []
+    }
+   },
+   "supplementary": {
+    "rb": {
+     "rule": "적청교대",
+     "pass": true,
+     "violation_seconds": 0.0,
+     "max_per_sec": 0,
+     "limit_per_sec": 3,
+     "max_area_pct": 0.0,
+     "sustained_over_5s": false,
+     "longest_run_s": 0.0,
+     "total_events": 0,
+     "n_sequences": 0,
+     "min_separation_frames": null,
+     "sequence_rule_applied": true,
+     "segments": [],
+     "area_segments": [],
+     "co_axes": {
+      "per_sec": 0,
+      "area_pct": 0.0,
+      "closeness": 0.0
+     }
+    },
+    "flash_raw": {
+     "rule": "플래시(순수빈도)",
+     "pass": true,
+     "violation_seconds": 0.0,
+     "max_per_sec": 0,
+     "limit_per_sec": 3,
+     "segments": [],
+     "note": "시퀀스 규칙(334ms·화소 동일성) 미적용 1초 창 계수 = WCAG/ISO/NAB-J 식"
+    },
+    "red_raw": {
+     "rule": "적색(순수빈도)",
+     "pass": true,
+     "violation_seconds": 0.0,
+     "max_per_sec": 0,
+     "limit_per_sec": 3,
+     "segments": [],
+     "note": "시퀀스 규칙(334ms·화소 동일성) 미적용 1초 창 계수 = WCAG/ISO/NAB-J 식"
+    },
+    "flash_lo": {
+     "rule": "플래시(저면적10%)(순수빈도)",
+     "pass": true,
+     "violation_seconds": 0.0,
+     "max_per_sec": 0,
+     "limit_per_sec": 3,
+     "segments": [],
+     "note": "시퀀스 규칙(334ms·화소 동일성) 미적용 1초 창 계수 = WCAG/ISO/NAB-J 식"
+    }
+   },
+   "frame_separation": {
+    "required_frames": 10,
+    "observed_min_frames": null,
+    "pass": true,
+    "note": "이 조항은 초당 3회 한도를 프레임 수로 표현한 것 (ceil(fps/3))"
+   },
+   "violation_segments": []
+  },
+  "bt_sec": 155.7,
+  "pc": {
+   "verdict": "적합",
+   "raw_verdict": "PASS",
+   "failed_channels": [],
+   "warn_channels": [],
+   "channel_seconds": {
+    "LUM": 0.0,
+    "RGB": 0.0,
+    "RED": 0.0,
+    "RB": 0.0
+   },
+   "summary": {
+    "total_ms": 35033.3,
+    "violating_ms": 0,
+    "violating_ratio": 0.0,
+    "segments": 0,
+    "elapsed_sec": 45.72
+   },
+   "violations": [],
+   "warnings": [],
+   "video": {
+    "src_w": 720,
+    "src_h": 1280,
+    "ana_w": 240,
+    "ana_h": 427,
+    "fps": 30.0,
+    "frames": 1051,
+    "duration_ms": 35033.3
+   }
+  },
+  "pc_sec": 45.7,
+  "agree": true
+ },
+ {
+  "clip": "Db32IzEyT-y",
+  "path": "data/s2_rand20\\Db32IzEyT-y.mp4",
+  "bt": {
+   "verdict": "적합",
+   "tier": "여백없음",
+   "tier_why": [
+    "③(쌍수80%/면적145%)"
+   ],
+   "failed_rules": [],
+   "supplementary_flags": [],
+   "duration_s": 44.9,
+   "fps": 30.0,
+   "frames": 1347,
+   "sustained_over_5s": false,
+   "rules": {
+    "flash": {
+     "rule": "플래시",
+     "pass": true,
+     "violation_seconds": 0.0,
+     "max_per_sec": 0,
+     "limit_per_sec": 3,
+     "max_area_pct": 48.4,
+     "sustained_over_5s": false,
+     "longest_run_s": 0.0,
+     "total_events": 0,
+     "n_sequences": 0,
+     "min_separation_frames": null,
+     "sequence_rule_applied": true,
+     "segments": [],
+     "area_segments": [
+      [
+       14.9,
+       14.93
+      ]
+     ],
+     "co_axes": {
+      "per_sec": 0,
+      "area_pct": 0.0,
+      "closeness": 0.0
+     }
+    },
+    "red": {
+     "rule": "적색",
+     "pass": true,
+     "violation_seconds": 0.0,
+     "max_per_sec": 0,
+     "limit_per_sec": 3,
+     "max_area_pct": 1.4,
+     "sustained_over_5s": false,
+     "longest_run_s": 0.0,
+     "total_events": 0,
+     "n_sequences": 0,
+     "min_separation_frames": null,
+     "sequence_rule_applied": true,
+     "segments": [],
+     "area_segments": [],
+     "co_axes": {
+      "per_sec": 0,
+      "area_pct": 0.0,
+      "closeness": 0.0
+     }
+    },
+    "pattern": {
+     "rule": "패턴",
+     "pass": true,
+     "co_axes": {
+      "pairs": 4.0,
+      "area_pct": 58.1,
+      "need_pairs": 5,
+      "need_area_pct": 40.0,
+      "closeness": 0.8
+     },
+     "violation_seconds": 0.0,
+     "max_pairs": 4.0,
+     "max_area_pct": 99.2,
+     "segments": [],
+     "_masks": null
+    },
+    "cut": {
+     "rule": "화면전환",
+     "pass": true,
+     "violation_seconds": 0.0,
+     "max_per_sec": 1,
+     "limit_per_sec": 3,
+     "total_cuts": 7,
+     "cuts_per_sec_mean": 0.16,
+     "sustained_over_5s": false,
+     "segments": [],
+     "cut_times": [
+      1.63,
+      4.33,
+      7.03,
+      14.93,
+      25.6,
+      30.8,
+      39.43
+     ]
+    }
+   },
+   "supplementary": {
+    "rb": {
+     "rule": "적청교대",
+     "pass": true,
+     "violation_seconds": 0.0,
+     "max_per_sec": 0,
+     "limit_per_sec": 3,
+     "max_area_pct": 0.0,
+     "sustained_over_5s": false,
+     "longest_run_s": 0.0,
+     "total_events": 0,
+     "n_sequences": 0,
+     "min_separation_frames": null,
+     "sequence_rule_applied": true,
+     "segments": [],
+     "area_segments": [],
+     "co_axes": {
+      "per_sec": 0,
+      "area_pct": 0.0,
+      "closeness": 0.0
+     }
+    },
+    "flash_raw": {
+     "rule": "플래시(순수빈도)",
+     "pass": true,
+     "violation_seconds": 0.0,
+     "max_per_sec": 0,
+     "limit_per_sec": 3,
+     "segments": [],
+     "note": "시퀀스 규칙(334ms·화소 동일성) 미적용 1초 창 계수 = WCAG/ISO/NAB-J 식"
+    },
+    "red_raw": {
+     "rule": "적색(순수빈도)",
+     "pass": true,
+     "violation_seconds": 0.0,
+     "max_per_sec": 0,
+     "limit_per_sec": 3,
+     "segments": [],
+     "note": "시퀀스 규칙(334ms·화소 동일성) 미적용 1초 창 계수 = WCAG/ISO/NAB-J 식"
+    },
+    "flash_lo": {
+     "rule": "플래시(저면적10%)(순수빈도)",
+     "pass": true,
+     "violation_seconds": 0.0,
+     "max_per_sec": 1,
+     "limit_per_sec": 3,
+     "segments": [],
+     "note": "시퀀스 규칙(334ms·화소 동일성) 미적용 1초 창 계수 = WCAG/ISO/NAB-J 식"
+    }
+   },
+   "frame_separation": {
+    "required_frames": 10,
+    "observed_min_frames": null,
+    "pass": true,
+    "note": "이 조항은 초당 3회 한도를 프레임 수로 표현한 것 (ceil(fps/3))"
+   },
+   "violation_segments": []
+  },
+  "bt_sec": 204.4,
+  "pc": {
+   "verdict": "적합",
+   "raw_verdict": "PASS",
+   "failed_channels": [],
+   "warn_channels": [],
+   "channel_seconds": {
+    "LUM": 0.0,
+    "RGB": 0.0,
+    "RED": 0.0,
+    "RB": 0.0
+   },
+   "summary": {
+    "total_ms": 44900.0,
+    "violating_ms": 0,
+    "violating_ratio": 0.0,
+    "segments": 0,
+    "elapsed_sec": 66.44
+   },
+   "violations": [],
+   "warnings": [],
+   "video": {
+    "src_w": 720,
+    "src_h": 1280,
+    "ana_w": 240,
+    "ana_h": 427,
+    "fps": 30.0,
+    "frames": 1347,
+    "duration_ms": 44900.0
+   }
+  },
+  "pc_sec": 66.4,
+  "agree": true
+ },
+ {
+  "clip": "Db4RJg4iPw9",
+  "path": "data/s2_rand20\\Db4RJg4iPw9.mp4",
+  "bt": {
+   "verdict": "적합",
+   "tier": "안전",
+   "tier_why": [],
+   "failed_rules": [],
+   "supplementary_flags": [],
+   "duration_s": 22.68,
+   "fps": 25.0,
+   "frames": 567,
+   "sustained_over_5s": false,
+   "rules": {
+    "flash": {
+     "rule": "플래시",
+     "pass": true,
+     "violation_seconds": 0.0,
+     "max_per_sec": 0,
+     "limit_per_sec": 3,
+     "max_area_pct": 0.1,
+     "sustained_over_5s": false,
+     "longest_run_s": 0.0,
+     "total_events": 0,
+     "n_sequences": 0,
+     "min_separation_frames": null,
+     "sequence_rule_applied": true,
+     "segments": [],
+     "area_segments": [],
+     "co_axes": {
+      "per_sec": 0,
+      "area_pct": 0.0,
+      "closeness": 0.0
+     }
+    },
+    "red": {
+     "rule": "적색",
+     "pass": true,
+     "violation_seconds": 0.0,
+     "max_per_sec": 0,
+     "limit_per_sec": 3,
+     "max_area_pct": 0.0,
+     "sustained_over_5s": false,
+     "longest_run_s": 0.0,
+     "total_events": 0,
+     "n_sequences": 0,
+     "min_separation_frames": null,
+     "sequence_rule_applied": true,
+     "segments": [],
+     "area_segments": [],
+     "co_axes": {
+      "per_sec": 0,
+      "area_pct": 0.0,
+      "closeness": 0.0
+     }
+    },
+    "pattern": {
+     "rule": "패턴",
+     "pass": true,
+     "co_axes": {
+      "pairs": 2.0,
+      "area_pct": 68.6,
+      "need_pairs": 5,
+      "need_area_pct": 40.0,
+      "closeness": 0.4
+     },
+     "violation_seconds": 0.0,
+     "max_pairs": 2.0,
+     "max_area_pct": 70.8,
+     "segments": [],
+     "_masks": null
+    },
+    "cut": {
+     "rule": "화면전환",
+     "pass": true,
+     "violation_seconds": 0.0,
+     "max_per_sec": 0,
+     "limit_per_sec": 3,
+     "total_cuts": 0,
+     "cuts_per_sec_mean": 0.0,
+     "sustained_over_5s": false,
+     "segments": [],
+     "cut_times": []
+    }
+   },
+   "supplementary": {
+    "rb": {
+     "rule": "적청교대",
+     "pass": true,
+     "violation_seconds": 0.0,
+     "max_per_sec": 0,
+     "limit_per_sec": 3,
+     "max_area_pct": 0.0,
+     "sustained_over_5s": false,
+     "longest_run_s": 0.0,
+     "total_events": 0,
+     "n_sequences": 0,
+     "min_separation_frames": null,
+     "sequence_rule_applied": true,
+     "segments": [],
+     "area_segments": [],
+     "co_axes": {
+      "per_sec": 0,
+      "area_pct": 0.0,
+      "closeness": 0.0
+     }
+    },
+    "flash_raw": {
+     "rule": "플래시(순수빈도)",
+     "pass": true,
+     "violation_seconds": 0.0,
+     "max_per_sec": 0,
+     "limit_per_sec": 3,
+     "segments": [],
+     "note": "시퀀스 규칙(334ms·화소 동일성) 미적용 1초 창 계수 = WCAG/ISO/NAB-J 식"
+    },
+    "red_raw": {
+     "rule": "적색(순수빈도)",
+     "pass": true,
+     "violation_seconds": 0.0,
+     "max_per_sec": 0,
+     "limit_per_sec": 3,
+     "segments": [],
+     "note": "시퀀스 규칙(334ms·화소 동일성) 미적용 1초 창 계수 = WCAG/ISO/NAB-J 식"
+    },
+    "flash_lo": {
+     "rule": "플래시(저면적10%)(순수빈도)",
+     "pass": true,
+     "violation_seconds": 0.0,
+     "max_per_sec": 0,
+     "limit_per_sec": 3,
+     "segments": [],
+     "note": "시퀀스 규칙(334ms·화소 동일성) 미적용 1초 창 계수 = WCAG/ISO/NAB-J 식"
+    }
+   },
+   "frame_separation": {
+    "required_frames": 9,
+    "observed_min_frames": null,
+    "pass": true,
+    "note": "이 조항은 초당 3회 한도를 프레임 수로 표현한 것 (ceil(fps/3))"
+   },
+   "violation_segments": []
+  },
+  "bt_sec": 87.6,
+  "pc": {
+   "verdict": "적합",
+   "raw_verdict": "PASS",
+   "failed_channels": [],
+   "warn_channels": [],
+   "channel_seconds": {
+    "LUM": 0.0,
+    "RGB": 0.0,
+    "RED": 0.0,
+    "RB": 0.0
+   },
+   "summary": {
+    "total_ms": 22680.0,
+    "violating_ms": 0,
+    "violating_ratio": 0.0,
+    "segments": 0,
+    "elapsed_sec": 24.91
+   },
+   "violations": [],
+   "warnings": [],
+   "video": {
+    "src_w": 480,
+    "src_h": 854,
+    "ana_w": 240,
+    "ana_h": 427,
+    "fps": 25.0,
+    "frames": 567,
+    "duration_ms": 22680.0
+   }
+  },
+  "pc_sec": 24.9,
+  "agree": true
+ },
+ {
+  "clip": "Db4KspvNBoy",
+  "path": "data/s2_rand20\\Db4KspvNBoy.mp4",
+  "bt": {
+   "verdict": "적합",
+   "tier": "여백없음",
+   "tier_why": [
+    "③(쌍수63%/면적118%)"
+   ],
+   "failed_rules": [],
+   "supplementary_flags": [],
+   "duration_s": 36.9,
+   "fps": 30.0,
+   "frames": 1107,
+   "sustained_over_5s": false,
+   "rules": {
+    "flash": {
+     "rule": "플래시",
+     "pass": true,
+     "violation_seconds": 0.0,
+     "max_per_sec": 0,
+     "limit_per_sec": 3,
+     "max_area_pct": 21.8,
+     "sustained_over_5s": false,
+     "longest_run_s": 0.0,
+     "total_events": 0,
+     "n_sequences": 0,
+     "min_separation_frames": null,
+     "sequence_rule_applied": true,
+     "segments": [],
+     "area_segments": [],
+     "co_axes": {
+      "per_sec": 0,
+      "area_pct": 0.0,
+      "closeness": 0.0
+     }
+    },
+    "red": {
+     "rule": "적색",
+     "pass": true,
+     "violation_seconds": 0.0,
+     "max_per_sec": 0,
+     "limit_per_sec": 3,
+     "max_area_pct": 0.0,
+     "sustained_over_5s": false,
+     "longest_run_s": 0.0,
+     "total_events": 0,
+     "n_sequences": 0,
+     "min_separation_frames": null,
+     "sequence_rule_applied": true,
+     "segments": [],
+     "area_segments": [],
+     "co_axes": {
+      "per_sec": 0,
+      "area_pct": 0.0,
+      "closeness": 0.0
+     }
+    },
+    "pattern": {
+     "rule": "패턴",
+     "pass": true,
+     "co_axes": {
+      "pairs": 3.16,
+      "area_pct": 47.2,
+      "need_pairs": 5,
+      "need_area_pct": 40.0,
+      "closeness": 0.632
+     },
+     "violation_seconds": 0.0,
+     "max_pairs": 6.08,
+     "max_area_pct": 91.8,
+     "segments": [],
+     "_masks": null
+    },
+    "cut": {
+     "rule": "화면전환",
+     "pass": true,
+     "violation_seconds": 0.0,
+     "max_per_sec": 1,
+     "limit_per_sec": 3,
+     "total_cuts": 1,
+     "cuts_per_sec_mean": 0.03,
+     "sustained_over_5s": false,
+     "segments": [],
+     "cut_times": [
+      33.0
+     ]
+    }
+   },
+   "supplementary": {
+    "rb": {
+     "rule": "적청교대",
+     "pass": true,
+     "violation_seconds": 0.0,
+     "max_per_sec": 0,
+     "limit_per_sec": 3,
+     "max_area_pct": 0.0,
+     "sustained_over_5s": false,
+     "longest_run_s": 0.0,
+     "total_events": 0,
+     "n_sequences": 0,
+     "min_separation_frames": null,
+     "sequence_rule_applied": true,
+     "segments": [],
+     "area_segments": [],
+     "co_axes": {
+      "per_sec": 0,
+      "area_pct": 0.0,
+      "closeness": 0.0
+     }
+    },
+    "flash_raw": {
+     "rule": "플래시(순수빈도)",
+     "pass": true,
+     "violation_seconds": 0.0,
+     "max_per_sec": 0,
+     "limit_per_sec": 3,
+     "segments": [],
+     "note": "시퀀스 규칙(334ms·화소 동일성) 미적용 1초 창 계수 = WCAG/ISO/NAB-J 식"
+    },
+    "red_raw": {
+     "rule": "적색(순수빈도)",
+     "pass": true,
+     "violation_seconds": 0.0,
+     "max_per_sec": 0,
+     "limit_per_sec": 3,
+     "segments": [],
+     "note": "시퀀스 규칙(334ms·화소 동일성) 미적용 1초 창 계수 = WCAG/ISO/NAB-J 식"
+    },
+    "flash_lo": {
+     "rule": "플래시(저면적10%)(순수빈도)",
+     "pass": true,
+     "violation_seconds": 0.0,
+     "max_per_sec": 0,
+     "limit_per_sec": 3,
+     "segments": [],
+     "note": "시퀀스 규칙(334ms·화소 동일성) 미적용 1초 창 계수 = WCAG/ISO/NAB-J 식"
+    }
+   },
+   "frame_separation": {
+    "required_frames": 10,
+    "observed_min_frames": null,
+    "pass": true,
+    "note": "이 조항은 초당 3회 한도를 프레임 수로 표현한 것 (ceil(fps/3))"
+   },
+   "violation_segments": []
+  },
+  "bt_sec": 163.0,
+  "pc": {
+   "verdict": "적합",
+   "raw_verdict": "PASS",
+   "failed_channels": [],
+   "warn_channels": [],
+   "channel_seconds": {
+    "LUM": 0.0,
+    "RGB": 0.0,
+    "RED": 0.0,
+    "RB": 0.0
+   },
+   "summary": {
+    "total_ms": 36900.0,
+    "violating_ms": 0,
+    "violating_ratio": 0.0,
+    "segments": 0,
+    "elapsed_sec": 58.2
+   },
+   "violations": [],
+   "warnings": [],
+   "video": {
+    "src_w": 720,
+    "src_h": 1280,
+    "ana_w": 240,
+    "ana_h": 427,
+    "fps": 30.0,
+    "frames": 1107,
+    "duration_ms": 36900.0
+   }
+  },
+  "pc_sec": 58.2,
+  "agree": true
+ },
+ {
+  "clip": "Db4AcVhIFh6",
+  "path": "data/s2_rand20\\Db4AcVhIFh6.mp4",
+  "bt": {
+   "verdict": "적합",
+   "tier": "여백없음",
+   "tier_why": [
+    "③(쌍수80%/면적163%)"
+   ],
+   "failed_rules": [],
+   "supplementary_flags": [],
+   "duration_s": 63.1,
+   "fps": 30.0,
+   "frames": 1893,
+   "sustained_over_5s": false,
+   "rules": {
+    "flash": {
+     "rule": "플래시",
+     "pass": true,
+     "violation_seconds": 0.0,
+     "max_per_sec": 0,
+     "limit_per_sec": 3,
+     "max_area_pct": 11.1,
+     "sustained_over_5s": false,
+     "longest_run_s": 0.0,
+     "total_events": 0,
+     "n_sequences": 0,
+     "min_separation_frames": null,
+     "sequence_rule_applied": true,
+     "segments": [],
+     "area_segments": [],
+     "co_axes": {
+      "per_sec": 0,
+      "area_pct": 0.0,
+      "closeness": 0.0
+     }
+    },
+    "red": {
+     "rule": "적색",
+     "pass": true,
+     "violation_seconds": 0.0,
+     "max_per_sec": 0,
+     "limit_per_sec": 3,
+     "max_area_pct": 1.7,
+     "sustained_over_5s": false,
+     "longest_run_s": 0.0,
+     "total_events": 0,
+     "n_sequences": 0,
+     "min_separation_frames": null,
+     "sequence_rule_applied": true,
+     "segments": [],
+     "area_segments": [],
+     "co_axes": {
+      "per_sec": 0,
+      "area_pct": 0.0,
+      "closeness": 0.0
+     }
+    },
+    "pattern": {
+     "rule": "패턴",
+     "pass": true,
+     "co_axes": {
+      "pairs": 4.0,
+      "area_pct": 65.1,
+      "need_pairs": 5,
+      "need_area_pct": 40.0,
+      "closeness": 0.8
+     },
+     "violation_seconds": 0.0,
+     "max_pairs": 5.1,
+     "max_area_pct": 80.1,
+     "segments": [],
+     "_masks": null
+    },
+    "cut": {
+     "rule": "화면전환",
+     "pass": true,
+     "violation_seconds": 0.0,
+     "max_per_sec": 1,
+     "limit_per_sec": 3,
+     "total_cuts": 16,
+     "cuts_per_sec_mean": 0.25,
+     "sustained_over_5s": false,
+     "segments": [],
+     "cut_times": [
+      21.27,
+      23.7,
+      27.83,
+      30.27,
+      32.83,
+      34.87,
+      40.37,
+      41.67,
+      43.4,
+      45.9,
+      47.93,
+      50.43,
+      52.47,
+      54.97,
+      57.03,
+      61.23
+     ]
+    }
+   },
+   "supplementary": {
+    "rb": {
+     "rule": "적청교대",
+     "pass": true,
+     "violation_seconds": 0.0,
+     "max_per_sec": 0,
+     "limit_per_sec": 3,
+     "max_area_pct": 0.0,
+     "sustained_over_5s": false,
+     "longest_run_s": 0.0,
+     "total_events": 0,
+     "n_sequences": 0,
+     "min_separation_frames": null,
+     "sequence_rule_applied": true,
+     "segments": [],
+     "area_segments": [],
+     "co_axes": {
+      "per_sec": 0,
+      "area_pct": 0.0,
+      "closeness": 0.0
+     }
+    },
+    "flash_raw": {
+     "rule": "플래시(순수빈도)",
+     "pass": true,
+     "violation_seconds": 0.0,
+     "max_per_sec": 0,
+     "limit_per_sec": 3,
+     "segments": [],
+     "note": "시퀀스 규칙(334ms·화소 동일성) 미적용 1초 창 계수 = WCAG/ISO/NAB-J 식"
+    },
+    "red_raw": {
+     "rule": "적색(순수빈도)",
+     "pass": true,
+     "violation_seconds": 0.0,
+     "max_per_sec": 0,
+     "limit_per_sec": 3,
+     "segments": [],
+     "note": "시퀀스 규칙(334ms·화소 동일성) 미적용 1초 창 계수 = WCAG/ISO/NAB-J 식"
+    },
+    "flash_lo": {
+     "rule": "플래시(저면적10%)(순수빈도)",
+     "pass": true,
+     "violation_seconds": 0.0,
+     "max_per_sec": 0,
+     "limit_per_sec": 3,
+     "segments": [],
+     "note": "시퀀스 규칙(334ms·화소 동일성) 미적용 1초 창 계수 = WCAG/ISO/NAB-J 식"
+    }
+   },
+   "frame_separation": {
+    "required_frames": 10,
+    "observed_min_frames": null,
+    "pass": true,
+    "note": "이 조항은 초당 3회 한도를 프레임 수로 표현한 것 (ceil(fps/3))"
+   },
+   "violation_segments": []
+  },
+  "bt_sec": 291.8,
+  "pc": {
+   "verdict": "적합",
+   "raw_verdict": "PASS",
+   "failed_channels": [],
+   "warn_channels": [],
+   "channel_seconds": {
+    "LUM": 0.0,
+    "RGB": 0.0,
+    "RED": 0.0,
+    "RB": 0.0
+   },
+   "summary": {
+    "total_ms": 63100.0,
+    "violating_ms": 0,
+    "violating_ratio": 0.0,
+    "segments": 0,
+    "elapsed_sec": 103.12
+   },
+   "violations": [],
+   "warnings": [],
+   "video": {
+    "src_w": 708,
+    "src_h": 1258,
+    "ana_w": 240,
+    "ana_h": 426,
+    "fps": 30.0,
+    "frames": 1893,
+    "duration_ms": 63100.0
+   }
+  },
+  "pc_sec": 103.1,
+  "agree": true
+ },
+ {
+  "clip": "Db4N_guM1Wy",
+  "path": "data/s2_rand20\\Db4N_guM1Wy.mp4",
+  "bt": {
+   "verdict": "적합",
+   "tier": "안전",
+   "tier_why": [],
+   "failed_rules": [],
+   "supplementary_flags": [],
+   "duration_s": 47.81,
+   "fps": 29.97,
+   "frames": 1433,
+   "sustained_over_5s": false,
+   "rules": {
+    "flash": {
+     "rule": "플래시",
+     "pass": true,
+     "violation_seconds": 0.0,
+     "max_per_sec": 0,
+     "limit_per_sec": 3,
+     "max_area_pct": 1.5,
+     "sustained_over_5s": false,
+     "longest_run_s": 0.0,
+     "total_events": 0,
+     "n_sequences": 0,
+     "min_separation_frames": null,
+     "sequence_rule_applied": true,
+     "segments": [],
+     "area_segments": [],
+     "co_axes": {
+      "per_sec": 0,
+      "area_pct": 0.0,
+      "closeness": 0.0
+     }
+    },
+    "red": {
+     "rule": "적색",
+     "pass": true,
+     "violation_seconds": 0.0,
+     "max_per_sec": 0,
+     "limit_per_sec": 3,
+     "max_area_pct": 0.0,
+     "sustained_over_5s": false,
+     "longest_run_s": 0.0,
+     "total_events": 0,
+     "n_sequences": 0,
+     "min_separation_frames": null,
+     "sequence_rule_applied": true,
+     "segments": [],
+     "area_segments": [],
+     "co_axes": {
+      "per_sec": 0,
+      "area_pct": 0.0,
+      "closeness": 0.0
+     }
+    },
+    "pattern": {
+     "rule": "패턴",
+     "pass": true,
+     "co_axes": {
+      "pairs": 2.0,
+      "area_pct": 9.6,
+      "need_pairs": 5,
+      "need_area_pct": 40.0,
+      "closeness": 0.24
+     },
+     "violation_seconds": 0.0,
+     "max_pairs": 3.0,
+     "max_area_pct": 9.6,
+     "segments": [],
+     "_masks": null
+    },
+    "cut": {
+     "rule": "화면전환",
+     "pass": true,
+     "violation_seconds": 0.0,
+     "max_per_sec": 0,
+     "limit_per_sec": 3,
+     "total_cuts": 0,
+     "cuts_per_sec_mean": 0.0,
+     "sustained_over_5s": false,
+     "segments": [],
+     "cut_times": []
+    }
+   },
+   "supplementary": {
+    "rb": {
+     "rule": "적청교대",
+     "pass": true,
+     "violation_seconds": 0.0,
+     "max_per_sec": 0,
+     "limit_per_sec": 3,
+     "max_area_pct": 0.0,
+     "sustained_over_5s": false,
+     "longest_run_s": 0.0,
+     "total_events": 0,
+     "n_sequences": 0,
+     "min_separation_frames": null,
+     "sequence_rule_applied": true,
+     "segments": [],
+     "area_segments": [],
+     "co_axes": {
+      "per_sec": 0,
+      "area_pct": 0.0,
+      "closeness": 0.0
+     }
+    },
+    "flash_raw": {
+     "rule": "플래시(순수빈도)",
+     "pass": true,
+     "violation_seconds": 0.0,
+     "max_per_sec": 0,
+     "limit_per_sec": 3,
+     "segments": [],
+     "note": "시퀀스 규칙(334ms·화소 동일성) 미적용 1초 창 계수 = WCAG/ISO/NAB-J 식"
+    },
+    "red_raw": {
+     "rule": "적색(순수빈도)",
+     "pass": true,
+     "violation_seconds": 0.0,
+     "max_per_sec": 0,
+     "limit_per_sec": 3,
+     "segments": [],
+     "note": "시퀀스 규칙(334ms·화소 동일성) 미적용 1초 창 계수 = WCAG/ISO/NAB-J 식"
+    },
+    "flash_lo": {
+     "rule": "플래시(저면적10%)(순수빈도)",
+     "pass": true,
+     "violation_seconds": 0.0,
+     "max_per_sec": 0,
+     "limit_per_sec": 3,
+     "segments": [],
+     "note": "시퀀스 규칙(334ms·화소 동일성) 미적용 1초 창 계수 = WCAG/ISO/NAB-J 식"
+    }
+   },
+   "frame_separation": {
+    "required_frames": 10,
+    "observed_min_frames": null,
+    "pass": true,
+    "note": "이 조항은 초당 3회 한도를 프레임 수로 표현한 것 (ceil(fps/3))"
+   },
+   "violation_segments": []
+  },
+  "bt_sec": 219.7,
+  "pc": {
+   "verdict": "적합",
+   "raw_verdict": "PASS",
+   "failed_channels": [],
+   "warn_channels": [],
+   "channel_seconds": {
+    "LUM": 0.0,
+    "RGB": 0.0,
+    "RED": 0.0,
+    "RB": 0.0
+   },
+   "summary": {
+    "total_ms": 47814.5,
+    "violating_ms": 0,
+    "violating_ratio": 0.0,
+    "segments": 0,
+    "elapsed_sec": 76.94
+   },
+   "violations": [],
+   "warnings": [],
+   "video": {
+    "src_w": 720,
+    "src_h": 1280,
+    "ana_w": 240,
+    "ana_h": 427,
+    "fps": 29.97,
+    "frames": 1433,
+    "duration_ms": 47814.5
+   }
+  },
+  "pc_sec": 76.9,
+  "agree": true
+ },
+ {
+  "clip": "Db4Sor9OcyL",
+  "path": "data/s2_rand20\\Db4Sor9OcyL.mp4",
+  "bt": {
+   "verdict": "위반",
+   "tier": "위반",
+   "tier_why": [
+    "플래시",
+    "화면전환"
+   ],
+   "failed_rules": [
+    "플래시",
+    "화면전환"
+   ],
+   "supplementary_flags": [
+    "플래시(순수빈도)",
+    "플래시(저면적10%)(순수빈도)"
+   ],
+   "duration_s": 33.7,
+   "fps": 30.0,
+   "frames": 1011,
+   "sustained_over_5s": false,
+   "rules": {
+    "flash": {
+     "rule": "플래시",
+     "pass": false,
+     "violation_seconds": 0.73,
+     "max_per_sec": 4,
+     "limit_per_sec": 3,
+     "max_area_pct": 100.0,
+     "sustained_over_5s": false,
+     "longest_run_s": 0.9,
+     "total_events": 12,
+     "n_sequences": 6,
+     "min_separation_frames": 2,
+     "sequence_rule_applied": true,
+     "segments": [
+      [
+       17.67,
+       18.4
+      ]
+     ],
+     "area_segments": [
+      [
+       3.2,
+       3.23
+      ],
+      [
+       8.43,
+       8.47
+      ],
+      [
+       17.27,
+       17.3
+      ],
+      [
+       17.33,
+       17.4
+      ],
+      [
+       17.43,
+       17.5
+      ],
+      [
+       17.53,
+       17.67
+      ],
+      [
+       21.67,
+       21.77
+      ],
+      [
+       21.8,
+       21.9
+      ],
+      [
+       25.5,
+       25.6
+      ],
+      [
+       25.63,
+       25.67
+      ],
+      [
+       25.7,
+       25.77
+      ],
+      [
+       25.97,
+       26.0
+      ],
+      [
+       28.93,
+       29.17
+      ],
+      [
+       30.9,
+       31.07
+      ],
+      [
+       31.1,
+       31.13
+      ]
+     ],
+     "co_axes": {
+      "per_sec": 3,
+      "area_pct": 54.6,
+      "closeness": 1.0
+     }
+    },
+    "red": {
+     "rule": "적색",
+     "pass": true,
+     "violation_seconds": 0.0,
+     "max_per_sec": 0,
+     "limit_per_sec": 3,
+     "max_area_pct": 2.0,
+     "sustained_over_5s": false,
+     "longest_run_s": 0.0,
+     "total_events": 0,
+     "n_sequences": 0,
+     "min_separation_frames": null,
+     "sequence_rule_applied": true,
+     "segments": [],
+     "area_segments": [],
+     "co_axes": {
+      "per_sec": 0,
+      "area_pct": 0.0,
+      "closeness": 0.0
+     }
+    },
+    "pattern": {
+     "rule": "패턴",
+     "pass": true,
+     "co_axes": {
+      "pairs": 3.0,
+      "area_pct": 74.0,
+      "need_pairs": 5,
+      "need_area_pct": 40.0,
+      "closeness": 0.6
+     },
+     "violation_seconds": 0.0,
+     "max_pairs": 4.47,
+     "max_area_pct": 93.8,
+     "segments": [],
+     "_masks": null
+    },
+    "cut": {
+     "rule": "화면전환",
+     "pass": false,
+     "violation_seconds": 1.8,
+     "max_per_sec": 6,
+     "limit_per_sec": 3,
+     "total_cuts": 20,
+     "cuts_per_sec_mean": 0.59,
+     "sustained_over_5s": false,
+     "segments": [
+      [
+       17.57,
+       18.47
+      ],
+      [
+       25.77,
+       26.67
+      ]
+     ],
+     "cut_times": [
+      3.23,
+      6.83,
+      8.47,
+      11.97,
+      17.3,
+      17.4,
+      17.47,
+      17.53,
+      17.6,
+      17.67,
+      21.83,
+      25.53,
+      25.6,
+      25.67,
+      25.73,
+      26.0,
+      26.07,
+      30.93,
+      31.07,
+      31.17
+     ]
+    },
+    "_sep": {
+     "rule": "프레임간격",
+     "segments": [
+      [
+       17.4,
+       18.5
+      ],
+      [
+       17.5,
+       18.6
+      ],
+      [
+       17.6,
+       18.67
+      ],
+      [
+       21.77,
+       22.9
+      ],
+      [
+       29.03,
+       30.17
+      ]
+     ]
+    }
+   },
+   "supplementary": {
+    "rb": {
+     "rule": "적청교대",
+     "pass": true,
+     "violation_seconds": 0.0,
+     "max_per_sec": 0,
+     "limit_per_sec": 3,
+     "max_area_pct": 0.0,
+     "sustained_over_5s": false,
+     "longest_run_s": 0.0,
+     "total_events": 0,
+     "n_sequences": 0,
+     "min_separation_frames": null,
+     "sequence_rule_applied": true,
+     "segments": [],
+     "area_segments": [],
+     "co_axes": {
+      "per_sec": 0,
+      "area_pct": 0.0,
+      "closeness": 0.0
+     }
+    },
+    "flash_raw": {
+     "rule": "플래시(순수빈도)",
+     "pass": false,
+     "violation_seconds": 0.73,
+     "max_per_sec": 4,
+     "limit_per_sec": 3,
+     "segments": [
+      [
+       17.67,
+       18.4
+      ]
+     ],
+     "note": "시퀀스 규칙(334ms·화소 동일성) 미적용 1초 창 계수 = WCAG/ISO/NAB-J 식"
+    },
+    "red_raw": {
+     "rule": "적색(순수빈도)",
+     "pass": true,
+     "violation_seconds": 0.0,
+     "max_per_sec": 0,
+     "limit_per_sec": 3,
+     "segments": [],
+     "note": "시퀀스 규칙(334ms·화소 동일성) 미적용 1초 창 계수 = WCAG/ISO/NAB-J 식"
+    },
+    "flash_lo": {
+     "rule": "플래시(저면적10%)(순수빈도)",
+     "pass": false,
+     "violation_seconds": 0.8,
+     "max_per_sec": 5,
+     "limit_per_sec": 3,
+     "segments": [
+      [
+       17.6,
+       18.4
+      ]
+     ],
+     "note": "시퀀스 규칙(334ms·화소 동일성) 미적용 1초 창 계수 = WCAG/ISO/NAB-J 식"
+    }
+   },
+   "frame_separation": {
+    "required_frames": 10,
+    "observed_min_frames": 2,
+    "pass": false,
+    "note": "이 조항은 초당 3회 한도를 프레임 수로 표현한 것 (ceil(fps/3))"
+   },
+   "violation_segments": [
+    {
+     "start_s": 17.4,
+     "end_s": 18.5,
+     "rule": "프레임간격"
+    },
+    {
+     "start_s": 17.5,
+     "end_s": 18.6,
+     "rule": "프레임간격"
+    },
+    {
+     "start_s": 17.57,
+     "end_s": 18.47,
+     "rule": "화면전환"
+    },
+    {
+     "start_s": 17.6,
+     "end_s": 18.67,
+     "rule": "프레임간격"
+    },
+    {
+     "start_s": 17.67,
+     "end_s": 18.4,
+     "rule": "플래시"
+    },
+    {
+     "start_s": 21.77,
+     "end_s": 22.9,
+     "rule": "프레임간격"
+    },
+    {
+     "start_s": 25.77,
+     "end_s": 26.67,
+     "rule": "화면전환"
+    },
+    {
+     "start_s": 29.03,
+     "end_s": 30.17,
+     "rule": "프레임간격"
+    }
+   ]
+  },
+  "bt_sec": 179.5,
+  "pc": {
+   "verdict": "적합",
+   "raw_verdict": "PASS",
+   "failed_channels": [],
+   "warn_channels": [],
+   "channel_seconds": {
+    "LUM": 0.0,
+    "RGB": 0.0,
+    "RED": 0.0,
+    "RB": 0.0
+   },
+   "summary": {
+    "total_ms": 33700.0,
+    "violating_ms": 0,
+    "violating_ratio": 0.0,
+    "segments": 0,
+    "elapsed_sec": 57.02
+   },
+   "violations": [],
+   "warnings": [],
+   "video": {
+    "src_w": 720,
+    "src_h": 1280,
+    "ana_w": 240,
+    "ana_h": 427,
+    "fps": 30.0,
+    "frames": 1011,
+    "duration_ms": 33700.0
+   }
+  },
+  "pc_sec": 57.0,
+  "agree": false
+ },
+ {
+  "clip": "Db4bFuguKZf",
+  "path": "data/s2_rand20\\Db4bFuguKZf.mp4",
+  "bt": {
+   "verdict": "적합",
+   "tier": "여백없음",
+   "tier_why": [
+    "③(쌍수438%/면적269%)"
+   ],
+   "failed_rules": [],
+   "supplementary_flags": [],
+   "duration_s": 15.13,
+   "fps": 30.0,
+   "frames": 454,
+   "sustained_over_5s": false,
+   "rules": {
+    "flash": {
+     "rule": "플래시",
+     "pass": true,
+     "violation_seconds": 0.0,
+     "max_per_sec": 0,
+     "limit_per_sec": 3,
+     "max_area_pct": 13.8,
+     "sustained_over_5s": false,
+     "longest_run_s": 0.0,
+     "total_events": 0,
+     "n_sequences": 0,
+     "min_separation_frames": null,
+     "sequence_rule_applied": true,
+     "segments": [],
+     "area_segments": [],
+     "co_axes": {
+      "per_sec": 0,
+      "area_pct": 0.1,
+      "closeness": 0.0
+     }
+    },
+    "red": {
+     "rule": "적색",
+     "pass": true,
+     "violation_seconds": 0.0,
+     "max_per_sec": 0,
+     "limit_per_sec": 3,
+     "max_area_pct": 4.0,
+     "sustained_over_5s": false,
+     "longest_run_s": 0.0,
+     "total_events": 0,
+     "n_sequences": 0,
+     "min_separation_frames": null,
+     "sequence_rule_applied": true,
+     "segments": [],
+     "area_segments": [],
+     "co_axes": {
+      "per_sec": 0,
+      "area_pct": 0.0,
+      "closeness": 0.0
+     }
+    },
+    "pattern": {
+     "rule": "패턴",
+     "pass": true,
+     "co_axes": {
+      "pairs": 35.0,
+      "area_pct": 67.3,
+      "need_pairs": 8,
+      "need_area_pct": 25.0,
+      "closeness": 2.69
+     },
+     "violation_seconds": 0.0,
+     "max_pairs": 35.0,
+     "max_area_pct": 98.4,
+     "segments": [],
+     "_masks": null
+    },
+    "cut": {
+     "rule": "화면전환",
+     "pass": true,
+     "violation_seconds": 0.0,
+     "max_per_sec": 0,
+     "limit_per_sec": 3,
+     "total_cuts": 0,
+     "cuts_per_sec_mean": 0.0,
+     "sustained_over_5s": false,
+     "segments": [],
+     "cut_times": []
+    }
+   },
+   "supplementary": {
+    "rb": {
+     "rule": "적청교대",
+     "pass": true,
+     "violation_seconds": 0.0,
+     "max_per_sec": 0,
+     "limit_per_sec": 3,
+     "max_area_pct": 0.0,
+     "sustained_over_5s": false,
+     "longest_run_s": 0.0,
+     "total_events": 0,
+     "n_sequences": 0,
+     "min_separation_frames": null,
+     "sequence_rule_applied": true,
+     "segments": [],
+     "area_segments": [],
+     "co_axes": {
+      "per_sec": 0,
+      "area_pct": 0.0,
+      "closeness": 0.0
+     }
+    },
+    "flash_raw": {
+     "rule": "플래시(순수빈도)",
+     "pass": true,
+     "violation_seconds": 0.0,
+     "max_per_sec": 0,
+     "limit_per_sec": 3,
+     "segments": [],
+     "note": "시퀀스 규칙(334ms·화소 동일성) 미적용 1초 창 계수 = WCAG/ISO/NAB-J 식"
+    },
+    "red_raw": {
+     "rule": "적색(순수빈도)",
+     "pass": true,
+     "violation_seconds": 0.0,
+     "max_per_sec": 0,
+     "limit_per_sec": 3,
+     "segments": [],
+     "note": "시퀀스 규칙(334ms·화소 동일성) 미적용 1초 창 계수 = WCAG/ISO/NAB-J 식"
+    },
+    "flash_lo": {
+     "rule": "플래시(저면적10%)(순수빈도)",
+     "pass": true,
+     "violation_seconds": 0.0,
+     "max_per_sec": 0,
+     "limit_per_sec": 3,
+     "segments": [],
+     "note": "시퀀스 규칙(334ms·화소 동일성) 미적용 1초 창 계수 = WCAG/ISO/NAB-J 식"
+    }
+   },
+   "frame_separation": {
+    "required_frames": 10,
+    "observed_min_frames": null,
+    "pass": true,
+    "note": "이 조항은 초당 3회 한도를 프레임 수로 표현한 것 (ceil(fps/3))"
+   },
+   "violation_segments": []
+  },
+  "bt_sec": 80.6,
+  "pc": {
+   "verdict": "위반",
+   "raw_verdict": "FAIL",
+   "failed_channels": [
+    "LUM"
+   ],
+   "warn_channels": [
+    "RGB"
+   ],
+   "channel_seconds": {
+    "LUM": 0.2,
+    "RGB": 0.73,
+    "RED": 0.0,
+    "RB": 0.0
+   },
+   "summary": {
+    "total_ms": 15133.3,
+    "violating_ms": 200.0,
+    "violating_ratio": 0.01322,
+    "segments": 1,
+    "elapsed_sec": 26.31
+   },
+   "violations": [
+    {
+     "channel": "LUM",
+     "label": "휘도",
+     "start": "00:00:03.800",
+     "end": "00:00:04.000",
+     "duration_ms": 200.0,
+     "measured": {
+      "flashes_per_sec": 10,
+      "area_ratio": 0.2664,
+      "delta": 0.9837
+     },
+     "threshold": {
+      "flashes_per_sec": 3.0,
+      "area_ratio": 0.25,
+      "delta": 0.1
+     },
+     "exceedance": {
+      "rate": 3.33,
+      "area": 1.07
+     },
+     "remediation": {
+      "required_gain": 0.0915
+     }
+    }
+   ],
+   "warnings": [
+    {
+     "channel": "RGB",
+     "label": "RGB 채널별",
+     "start": "00:00:03.666",
+     "end": "00:00:04.066",
+     "duration_ms": 400.0,
+     "measured": {
+      "flashes_per_sec": 11,
+      "area_ratio": 0.3331,
+      "delta": 0.9925
+     },
+     "threshold": {
+      "flashes_per_sec": 3.0,
+      "area_ratio": 0.25,
+      "delta": 0.1
+     },
+     "exceedance": {
+      "rate": 3.67,
+      "area": 1.33
+     },
+     "remediation": {
+      "required_gain": 0.0907
+     }
+    },
+    {
+     "channel": "RGB",
+     "label": "RGB 채널별",
+     "start": "00:00:06.866",
+     "end": "00:00:07.200",
+     "duration_ms": 333.3,
+     "measured": {
+      "flashes_per_sec": 9,
+      "area_ratio": 0.3194,
+      "delta": 0.984
+     },
+     "threshold": {
+      "flashes_per_sec": 3.0,
+      "area_ratio": 0.25,
+      "delta": 0.1
+     },
+     "exceedance": {
+      "rate": 3.0,
+      "area": 1.28
+     },
+     "remediation": {
+      "required_gain": 0.0915
+     }
+    }
+   ],
+   "video": {
+    "src_w": 720,
+    "src_h": 1280,
+    "ana_w": 240,
+    "ana_h": 427,
+    "fps": 30.0,
+    "frames": 454,
+    "duration_ms": 15133.3
+   }
+  },
+  "pc_sec": 26.3,
+  "agree": false
+ },
+ {
+  "clip": "Db4afDPIFbY",
+  "path": "data/s2_rand20\\Db4afDPIFbY.mp4",
+  "bt": {
+   "verdict": "적합",
+   "tier": "여백없음",
+   "tier_why": [
+    "①(빈도67%/면적273%)",
+    "③(쌍수72%/면적130%)"
+   ],
+   "failed_rules": [],
+   "supplementary_flags": [],
+   "duration_s": 22.13,
+   "fps": 30.0,
+   "frames": 664,
+   "sustained_over_5s": false,
+   "rules": {
+    "flash": {
+     "rule": "플래시",
+     "pass": true,
+     "violation_seconds": 0.0,
+     "max_per_sec": 2,
+     "limit_per_sec": 3,
+     "max_area_pct": 95.3,
+     "sustained_over_5s": false,
+     "longest_run_s": 0.0,
+     "total_events": 12,
+     "n_sequences": 7,
+     "min_separation_frames": 2,
+     "sequence_rule_applied": true,
+     "segments": [],
+     "area_segments": [
+      [
+       3.1,
+       3.13
+      ],
+      [
+       3.17,
+       3.27
+      ],
+      [
+       5.07,
+       5.2
+      ],
+      [
+       7.37,
+       7.5
+      ],
+      [
+       9.83,
+       9.97
+      ],
+      [
+       16.53,
+       16.67
+      ],
+      [
+       19.3,
+       19.33
+      ],
+      [
+       19.37,
+       19.4
+      ],
+      [
+       19.47,
+       19.63
+      ]
+     ],
+     "co_axes": {
+      "per_sec": 2,
+      "area_pct": 68.2,
+      "closeness": 0.667
+     }
+    },
+    "red": {
+     "rule": "적색",
+     "pass": true,
+     "violation_seconds": 0.0,
+     "max_per_sec": 0,
+     "limit_per_sec": 3,
+     "max_area_pct": 0.6,
+     "sustained_over_5s": false,
+     "longest_run_s": 0.0,
+     "total_events": 0,
+     "n_sequences": 0,
+     "min_separation_frames": null,
+     "sequence_rule_applied": true,
+     "segments": [],
+     "area_segments": [],
+     "co_axes": {
+      "per_sec": 0,
+      "area_pct": 0.0,
+      "closeness": 0.0
+     }
+    },
+    "pattern": {
+     "rule": "패턴",
+     "pass": true,
+     "co_axes": {
+      "pairs": 3.61,
+      "area_pct": 51.9,
+      "need_pairs": 5,
+      "need_area_pct": 40.0,
+      "closeness": 0.722
+     },
+     "violation_seconds": 0.0,
+     "max_pairs": 39.0,
+     "max_area_pct": 72.7,
+     "segments": [],
+     "_masks": null
+    },
+    "cut": {
+     "rule": "화면전환",
+     "pass": true,
+     "violation_seconds": 0.0,
+     "max_per_sec": 2,
+     "limit_per_sec": 3,
+     "total_cuts": 9,
+     "cuts_per_sec_mean": 0.41,
+     "sustained_over_5s": false,
+     "segments": [],
+     "cut_times": [
+      0.1,
+      3.13,
+      3.23,
+      5.1,
+      7.4,
+      9.87,
+      16.57,
+      16.63,
+      19.53
+     ]
+    },
+    "_sep": {
+     "rule": "프레임간격",
+     "segments": [
+      [
+       3.2,
+       4.27
+      ],
+      [
+       5.13,
+       6.2
+      ],
+      [
+       7.43,
+       8.5
+      ],
+      [
+       9.9,
+       10.97
+      ],
+      [
+       16.6,
+       17.67
+      ],
+      [
+       19.4,
+       20.57
+      ]
+     ]
+    }
+   },
+   "supplementary": {
+    "rb": {
+     "rule": "적청교대",
+     "pass": true,
+     "violation_seconds": 0.0,
+     "max_per_sec": 0,
+     "limit_per_sec": 3,
+     "max_area_pct": 0.4,
+     "sustained_over_5s": false,
+     "longest_run_s": 0.0,
+     "total_events": 0,
+     "n_sequences": 0,
+     "min_separation_frames": null,
+     "sequence_rule_applied": true,
+     "segments": [],
+     "area_segments": [],
+     "co_axes": {
+      "per_sec": 0,
+      "area_pct": 0.0,
+      "closeness": 0.0
+     }
+    },
+    "flash_raw": {
+     "rule": "플래시(순수빈도)",
+     "pass": true,
+     "violation_seconds": 0.0,
+     "max_per_sec": 2,
+     "limit_per_sec": 3,
+     "segments": [],
+     "note": "시퀀스 규칙(334ms·화소 동일성) 미적용 1초 창 계수 = WCAG/ISO/NAB-J 식"
+    },
+    "red_raw": {
+     "rule": "적색(순수빈도)",
+     "pass": true,
+     "violation_seconds": 0.0,
+     "max_per_sec": 0,
+     "limit_per_sec": 3,
+     "segments": [],
+     "note": "시퀀스 규칙(334ms·화소 동일성) 미적용 1초 창 계수 = WCAG/ISO/NAB-J 식"
+    },
+    "flash_lo": {
+     "rule": "플래시(저면적10%)(순수빈도)",
+     "pass": true,
+     "violation_seconds": 0.0,
+     "max_per_sec": 3,
+     "limit_per_sec": 3,
+     "segments": [],
+     "note": "시퀀스 규칙(334ms·화소 동일성) 미적용 1초 창 계수 = WCAG/ISO/NAB-J 식"
+    }
+   },
+   "frame_separation": {
+    "required_frames": 10,
+    "observed_min_frames": 2,
+    "pass": false,
+    "note": "이 조항은 초당 3회 한도를 프레임 수로 표현한 것 (ceil(fps/3))"
+   },
+   "violation_segments": [
+    {
+     "start_s": 3.2,
+     "end_s": 4.27,
+     "rule": "프레임간격"
+    },
+    {
+     "start_s": 5.13,
+     "end_s": 6.2,
+     "rule": "프레임간격"
+    },
+    {
+     "start_s": 7.43,
+     "end_s": 8.5,
+     "rule": "프레임간격"
+    },
+    {
+     "start_s": 9.9,
+     "end_s": 10.97,
+     "rule": "프레임간격"
+    },
+    {
+     "start_s": 16.6,
+     "end_s": 17.67,
+     "rule": "프레임간격"
+    },
+    {
+     "start_s": 19.4,
+     "end_s": 20.57,
+     "rule": "프레임간격"
+    }
+   ]
+  },
+  "bt_sec": 118.6,
+  "pc": {
+   "verdict": "적합",
+   "raw_verdict": "PASS",
+   "failed_channels": [],
+   "warn_channels": [
+    "RGB"
+   ],
+   "channel_seconds": {
+    "LUM": 0.0,
+    "RGB": 0.13,
+    "RED": 0.0,
+    "RB": 0.0
+   },
+   "summary": {
+    "total_ms": 22133.3,
+    "violating_ms": 0,
+    "violating_ratio": 0.0,
+    "segments": 0,
+    "elapsed_sec": 39.43
+   },
+   "violations": [],
+   "warnings": [
+    {
+     "channel": "RGB",
+     "label": "RGB 채널별",
+     "start": "00:00:19.800",
+     "end": "00:00:19.933",
+     "duration_ms": 133.3,
+     "measured": {
+      "flashes_per_sec": 10,
+      "area_ratio": 0.2869,
+      "delta": 0.8615
+     },
+     "threshold": {
+      "flashes_per_sec": 3.0,
+      "area_ratio": 0.25,
+      "delta": 0.1
+     },
+     "exceedance": {
+      "rate": 3.33,
+      "area": 1.15
+     },
+     "remediation": {
+      "required_gain": 0.1045
+     }
+    }
+   ],
+   "video": {
+    "src_w": 716,
+    "src_h": 1274,
+    "ana_w": 240,
+    "ana_h": 427,
+    "fps": 30.0,
+    "frames": 664,
+    "duration_ms": 22133.3
+   }
+  },
+  "pc_sec": 39.4,
+  "agree": true
+ },
+ {
+  "clip": "Db4XZ1vRDr9",
+  "path": "data/s2_rand20\\Db4XZ1vRDr9.mp4",
+  "bt": {
+   "verdict": "적합",
+   "tier": "여백없음",
+   "tier_why": [
+    "③(쌍수100%/면적178%)"
+   ],
+   "failed_rules": [],
+   "supplementary_flags": [],
+   "duration_s": 65.2,
+   "fps": 30.0,
+   "frames": 1956,
+   "sustained_over_5s": false,
+   "rules": {
+    "flash": {
+     "rule": "플래시",
+     "pass": true,
+     "violation_seconds": 0.0,
+     "max_per_sec": 1,
+     "limit_per_sec": 3,
+     "max_area_pct": 53.4,
+     "sustained_over_5s": false,
+     "longest_run_s": 0.0,
+     "total_events": 1,
+     "n_sequences": 1,
+     "min_separation_frames": null,
+     "sequence_rule_applied": true,
+     "segments": [],
+     "area_segments": [
+      [
+       39.0,
+       39.03
+      ],
+      [
+       42.43,
+       42.47
+      ],
+      [
+       51.1,
+       51.13
+      ]
+     ],
+     "co_axes": {
+      "per_sec": 1,
+      "area_pct": 3.9,
+      "closeness": 0.155
+     }
+    },
+    "red": {
+     "rule": "적색",
+     "pass": true,
+     "violation_seconds": 0.0,
+     "max_per_sec": 0,
+     "limit_per_sec": 3,
+     "max_area_pct": 1.9,
+     "sustained_over_5s": false,
+     "longest_run_s": 0.0,
+     "total_events": 0,
+     "n_sequences": 0,
+     "min_separation_frames": null,
+     "sequence_rule_applied": true,
+     "segments": [],
+     "area_segments": [],
+     "co_axes": {
+      "per_sec": 0,
+      "area_pct": 0.0,
+      "closeness": 0.0
+     }
+    },
+    "pattern": {
+     "rule": "패턴",
+     "pass": true,
+     "co_axes": {
+      "pairs": 5.0,
+      "area_pct": 71.0,
+      "need_pairs": 5,
+      "need_area_pct": 40.0,
+      "closeness": 1.0
+     },
+     "violation_seconds": 0.0,
+     "max_pairs": 6.0,
+     "max_area_pct": 97.7,
+     "segments": [],
+     "_masks": null
+    },
+    "cut": {
+     "rule": "화면전환",
+     "pass": true,
+     "violation_seconds": 0.0,
+     "max_per_sec": 1,
+     "limit_per_sec": 3,
+     "total_cuts": 8,
+     "cuts_per_sec_mean": 0.12,
+     "sustained_over_5s": false,
+     "segments": [],
+     "cut_times": [
+      9.87,
+      18.4,
+      25.23,
+      30.5,
+      39.03,
+      42.47,
+      51.13,
+      63.33
+     ]
+    }
+   },
+   "supplementary": {
+    "rb": {
+     "rule": "적청교대",
+     "pass": true,
+     "violation_seconds": 0.0,
+     "max_per_sec": 0,
+     "limit_per_sec": 3,
+     "max_area_pct": 0.7,
+     "sustained_over_5s": false,
+     "longest_run_s": 0.0,
+     "total_events": 0,
+     "n_sequences": 0,
+     "min_separation_frames": null,
+     "sequence_rule_applied": true,
+     "segments": [],
+     "area_segments": [],
+     "co_axes": {
+      "per_sec": 0,
+      "area_pct": 0.0,
+      "closeness": 0.0
+     }
+    },
+    "flash_raw": {
+     "rule": "플래시(순수빈도)",
+     "pass": true,
+     "violation_seconds": 0.0,
+     "max_per_sec": 1,
+     "limit_per_sec": 3,
+     "segments": [],
+     "note": "시퀀스 규칙(334ms·화소 동일성) 미적용 1초 창 계수 = WCAG/ISO/NAB-J 식"
+    },
+    "red_raw": {
+     "rule": "적색(순수빈도)",
+     "pass": true,
+     "violation_seconds": 0.0,
+     "max_per_sec": 0,
+     "limit_per_sec": 3,
+     "segments": [],
+     "note": "시퀀스 규칙(334ms·화소 동일성) 미적용 1초 창 계수 = WCAG/ISO/NAB-J 식"
+    },
+    "flash_lo": {
+     "rule": "플래시(저면적10%)(순수빈도)",
+     "pass": true,
+     "violation_seconds": 0.0,
+     "max_per_sec": 1,
+     "limit_per_sec": 3,
+     "segments": [],
+     "note": "시퀀스 규칙(334ms·화소 동일성) 미적용 1초 창 계수 = WCAG/ISO/NAB-J 식"
+    }
+   },
+   "frame_separation": {
+    "required_frames": 10,
+    "observed_min_frames": null,
+    "pass": true,
+    "note": "이 조항은 초당 3회 한도를 프레임 수로 표현한 것 (ceil(fps/3))"
+   },
+   "violation_segments": []
+  },
+  "bt_sec": 186.7,
+  "pc": {
+   "verdict": "적합",
+   "raw_verdict": "PASS",
+   "failed_channels": [],
+   "warn_channels": [],
+   "channel_seconds": {
+    "LUM": 0.0,
+    "RGB": 0.0,
+    "RED": 0.0,
+    "RB": 0.0
+   },
+   "summary": {
+    "total_ms": 65200.0,
+    "violating_ms": 0,
+    "violating_ratio": 0.0,
+    "segments": 0,
+    "elapsed_sec": 75.37
+   },
+   "violations": [],
+   "warnings": [],
+   "video": {
+    "src_w": 720,
+    "src_h": 850,
+    "ana_w": 240,
+    "ana_h": 283,
+    "fps": 30.0,
+    "frames": 1956,
+    "duration_ms": 65200.0
+   }
+  },
+  "pc_sec": 75.4,
+  "agree": true
+ },
+ {
+  "clip": "Db4hQ2CotZZ",
+  "path": "data/s2_rand20\\Db4hQ2CotZZ.mp4",
+  "bt": {
+   "verdict": "적합",
+   "tier": "안전",
+   "tier_why": [],
+   "failed_rules": [],
+   "supplementary_flags": [],
+   "duration_s": 16.03,
+   "fps": 30.0,
+   "frames": 481,
+   "sustained_over_5s": false,
+   "rules": {
+    "flash": {
+     "rule": "플래시",
+     "pass": true,
+     "violation_seconds": 0.0,
+     "max_per_sec": 0,
+     "limit_per_sec": 3,
+     "max_area_pct": 0.0,
+     "sustained_over_5s": false,
+     "longest_run_s": 0.0,
+     "total_events": 0,
+     "n_sequences": 0,
+     "min_separation_frames": null,
+     "sequence_rule_applied": true,
+     "segments": [],
+     "area_segments": [],
+     "co_axes": {
+      "per_sec": 0,
+      "area_pct": 0.0,
+      "closeness": 0.0
+     }
+    },
+    "red": {
+     "rule": "적색",
+     "pass": true,
+     "violation_seconds": 0.0,
+     "max_per_sec": 0,
+     "limit_per_sec": 3,
+     "max_area_pct": 0.0,
+     "sustained_over_5s": false,
+     "longest_run_s": 0.0,
+     "total_events": 0,
+     "n_sequences": 0,
+     "min_separation_frames": null,
+     "sequence_rule_applied": true,
+     "segments": [],
+     "area_segments": [],
+     "co_axes": {
+      "per_sec": 0,
+      "area_pct": 0.0,
+      "closeness": 0.0
+     }
+    },
+    "pattern": {
+     "rule": "패턴",
+     "pass": true,
+     "co_axes": {
+      "pairs": 2.0,
+      "area_pct": 67.4,
+      "need_pairs": 5,
+      "need_area_pct": 40.0,
+      "closeness": 0.4
+     },
+     "violation_seconds": 0.0,
+     "max_pairs": 2.0,
+     "max_area_pct": 67.5,
+     "segments": [],
+     "_masks": null
+    },
+    "cut": {
+     "rule": "화면전환",
+     "pass": true,
+     "violation_seconds": 0.0,
+     "max_per_sec": 0,
+     "limit_per_sec": 3,
+     "total_cuts": 0,
+     "cuts_per_sec_mean": 0.0,
+     "sustained_over_5s": false,
+     "segments": [],
+     "cut_times": []
+    }
+   },
+   "supplementary": {
+    "rb": {
+     "rule": "적청교대",
+     "pass": true,
+     "violation_seconds": 0.0,
+     "max_per_sec": 0,
+     "limit_per_sec": 3,
+     "max_area_pct": 8.3,
+     "sustained_over_5s": false,
+     "longest_run_s": 0.0,
+     "total_events": 0,
+     "n_sequences": 0,
+     "min_separation_frames": null,
+     "sequence_rule_applied": true,
+     "segments": [],
+     "area_segments": [],
+     "co_axes": {
+      "per_sec": 0,
+      "area_pct": 0.0,
+      "closeness": 0.0
+     }
+    },
+    "flash_raw": {
+     "rule": "플래시(순수빈도)",
+     "pass": true,
+     "violation_seconds": 0.0,
+     "max_per_sec": 0,
+     "limit_per_sec": 3,
+     "segments": [],
+     "note": "시퀀스 규칙(334ms·화소 동일성) 미적용 1초 창 계수 = WCAG/ISO/NAB-J 식"
+    },
+    "red_raw": {
+     "rule": "적색(순수빈도)",
+     "pass": true,
+     "violation_seconds": 0.0,
+     "max_per_sec": 0,
+     "limit_per_sec": 3,
+     "segments": [],
+     "note": "시퀀스 규칙(334ms·화소 동일성) 미적용 1초 창 계수 = WCAG/ISO/NAB-J 식"
+    },
+    "flash_lo": {
+     "rule": "플래시(저면적10%)(순수빈도)",
+     "pass": true,
+     "violation_seconds": 0.0,
+     "max_per_sec": 0,
+     "limit_per_sec": 3,
+     "segments": [],
+     "note": "시퀀스 규칙(334ms·화소 동일성) 미적용 1초 창 계수 = WCAG/ISO/NAB-J 식"
+    }
+   },
+   "frame_separation": {
+    "required_frames": 10,
+    "observed_min_frames": null,
+    "pass": true,
+    "note": "이 조항은 초당 3회 한도를 프레임 수로 표현한 것 (ceil(fps/3))"
+   },
+   "violation_segments": []
+  },
+  "bt_sec": 77.9,
+  "pc": {
+   "verdict": "적합",
+   "raw_verdict": "PASS",
+   "failed_channels": [],
+   "warn_channels": [],
+   "channel_seconds": {
+    "LUM": 0.0,
+    "RGB": 0.0,
+    "RED": 0.0,
+    "RB": 0.0
+   },
+   "summary": {
+    "total_ms": 16033.3,
+    "violating_ms": 0,
+    "violating_ratio": 0.0,
+    "segments": 0,
+    "elapsed_sec": 20.81
+   },
+   "violations": [],
+   "warnings": [],
+   "video": {
+    "src_w": 720,
+    "src_h": 1280,
+    "ana_w": 240,
+    "ana_h": 427,
+    "fps": 30.0,
+    "frames": 481,
+    "duration_ms": 16033.3
+   }
+  },
+  "pc_sec": 20.8,
+  "agree": true
+ },
+ {
+  "clip": "Db4TkhjBnlg",
+  "path": "data/s2_rand20\\Db4TkhjBnlg.mp4",
+  "bt": {
+   "verdict": "적합",
+   "tier": "여백없음",
+   "tier_why": [
+    "③(쌍수80%/면적108%)"
+   ],
+   "failed_rules": [],
+   "supplementary_flags": [],
+   "duration_s": 56.2,
+   "fps": 30.0,
+   "frames": 1686,
+   "sustained_over_5s": false,
+   "rules": {
+    "flash": {
+     "rule": "플래시",
+     "pass": true,
+     "violation_seconds": 0.0,
+     "max_per_sec": 0,
+     "limit_per_sec": 3,
+     "max_area_pct": 31.0,
+     "sustained_over_5s": false,
+     "longest_run_s": 0.0,
+     "total_events": 0,
+     "n_sequences": 0,
+     "min_separation_frames": null,
+     "sequence_rule_applied": true,
+     "segments": [],
+     "area_segments": [
+      [
+       55.43,
+       55.47
+      ]
+     ],
+     "co_axes": {
+      "per_sec": 0,
+      "area_pct": 0.0,
+      "closeness": 0.0
+     }
+    },
+    "red": {
+     "rule": "적색",
+     "pass": true,
+     "violation_seconds": 0.0,
+     "max_per_sec": 0,
+     "limit_per_sec": 3,
+     "max_area_pct": 0.4,
+     "sustained_over_5s": false,
+     "longest_run_s": 0.0,
+     "total_events": 0,
+     "n_sequences": 0,
+     "min_separation_frames": null,
+     "sequence_rule_applied": true,
+     "segments": [],
+     "area_segments": [],
+     "co_axes": {
+      "per_sec": 0,
+      "area_pct": 0.0,
+      "closeness": 0.0
+     }
+    },
+    "pattern": {
+     "rule": "패턴",
+     "pass": true,
+     "co_axes": {
+      "pairs": 4.0,
+      "area_pct": 43.4,
+      "need_pairs": 5,
+      "need_area_pct": 40.0,
+      "closeness": 0.8
+     },
+     "violation_seconds": 0.0,
+     "max_pairs": 4.0,
+     "max_area_pct": 43.7,
+     "segments": [],
+     "_masks": null
+    },
+    "cut": {
+     "rule": "화면전환",
+     "pass": true,
+     "violation_seconds": 0.0,
+     "max_per_sec": 0,
+     "limit_per_sec": 3,
+     "total_cuts": 0,
+     "cuts_per_sec_mean": 0.0,
+     "sustained_over_5s": false,
+     "segments": [],
+     "cut_times": []
+    }
+   },
+   "supplementary": {
+    "rb": {
+     "rule": "적청교대",
+     "pass": true,
+     "violation_seconds": 0.0,
+     "max_per_sec": 0,
+     "limit_per_sec": 3,
+     "max_area_pct": 0.0,
+     "sustained_over_5s": false,
+     "longest_run_s": 0.0,
+     "total_events": 0,
+     "n_sequences": 0,
+     "min_separation_frames": null,
+     "sequence_rule_applied": true,
+     "segments": [],
+     "area_segments": [],
+     "co_axes": {
+      "per_sec": 0,
+      "area_pct": 0.0,
+      "closeness": 0.0
+     }
+    },
+    "flash_raw": {
+     "rule": "플래시(순수빈도)",
+     "pass": true,
+     "violation_seconds": 0.0,
+     "max_per_sec": 0,
+     "limit_per_sec": 3,
+     "segments": [],
+     "note": "시퀀스 규칙(334ms·화소 동일성) 미적용 1초 창 계수 = WCAG/ISO/NAB-J 식"
+    },
+    "red_raw": {
+     "rule": "적색(순수빈도)",
+     "pass": true,
+     "violation_seconds": 0.0,
+     "max_per_sec": 0,
+     "limit_per_sec": 3,
+     "segments": [],
+     "note": "시퀀스 규칙(334ms·화소 동일성) 미적용 1초 창 계수 = WCAG/ISO/NAB-J 식"
+    },
+    "flash_lo": {
+     "rule": "플래시(저면적10%)(순수빈도)",
+     "pass": true,
+     "violation_seconds": 0.0,
+     "max_per_sec": 1,
+     "limit_per_sec": 3,
+     "segments": [],
+     "note": "시퀀스 규칙(334ms·화소 동일성) 미적용 1초 창 계수 = WCAG/ISO/NAB-J 식"
+    }
+   },
+   "frame_separation": {
+    "required_frames": 10,
+    "observed_min_frames": null,
+    "pass": true,
+    "note": "이 조항은 초당 3회 한도를 프레임 수로 표현한 것 (ceil(fps/3))"
+   },
+   "violation_segments": []
+  },
+  "bt_sec": 288.0,
+  "pc": {
+   "verdict": "적합",
+   "raw_verdict": "PASS",
+   "failed_channels": [],
+   "warn_channels": [],
+   "channel_seconds": {
+    "LUM": 0.0,
+    "RGB": 0.0,
+    "RED": 0.0,
+    "RB": 0.0
+   },
+   "summary": {
+    "total_ms": 56200.0,
+    "violating_ms": 0,
+    "violating_ratio": 0.0,
+    "segments": 0,
+    "elapsed_sec": 83.14
+   },
+   "violations": [],
+   "warnings": [],
+   "video": {
+    "src_w": 720,
+    "src_h": 1280,
+    "ana_w": 240,
+    "ana_h": 427,
+    "fps": 30.0,
+    "frames": 1686,
+    "duration_ms": 56200.0
+   }
+  },
+  "pc_sec": 83.1,
+  "agree": true
+ },
+ {
+  "clip": "Db4eEO7t3TQ",
+  "path": "data/s2_rand20\\Db4eEO7t3TQ.mp4",
+  "bt": {
+   "verdict": "적합",
+   "tier": "안전",
+   "tier_why": [],
+   "failed_rules": [],
+   "supplementary_flags": [],
+   "duration_s": 27.67,
+   "fps": 30.0,
+   "frames": 830,
+   "sustained_over_5s": false,
+   "rules": {
+    "flash": {
+     "rule": "플래시",
+     "pass": true,
+     "violation_seconds": 0.0,
+     "max_per_sec": 0,
+     "limit_per_sec": 3,
+     "max_area_pct": 3.9,
+     "sustained_over_5s": false,
+     "longest_run_s": 0.0,
+     "total_events": 0,
+     "n_sequences": 0,
+     "min_separation_frames": null,
+     "sequence_rule_applied": true,
+     "segments": [],
+     "area_segments": [],
+     "co_axes": {
+      "per_sec": 0,
+      "area_pct": 0.0,
+      "closeness": 0.0
+     }
+    },
+    "red": {
+     "rule": "적색",
+     "pass": true,
+     "violation_seconds": 0.0,
+     "max_per_sec": 0,
+     "limit_per_sec": 3,
+     "max_area_pct": 0.0,
+     "sustained_over_5s": false,
+     "longest_run_s": 0.0,
+     "total_events": 0,
+     "n_sequences": 0,
+     "min_separation_frames": null,
+     "sequence_rule_applied": true,
+     "segments": [],
+     "area_segments": [],
+     "co_axes": {
+      "per_sec": 0,
+      "area_pct": 0.0,
+      "closeness": 0.0
+     }
+    },
+    "pattern": {
+     "rule": "패턴",
+     "pass": true,
+     "co_axes": {
+      "pairs": 2.0,
+      "area_pct": 38.6,
+      "need_pairs": 5,
+      "need_area_pct": 40.0,
+      "closeness": 0.4
+     },
+     "violation_seconds": 0.0,
+     "max_pairs": 2.0,
+     "max_area_pct": 42.1,
+     "segments": [],
+     "_masks": null
+    },
+    "cut": {
+     "rule": "화면전환",
+     "pass": true,
+     "violation_seconds": 0.0,
+     "max_per_sec": 0,
+     "limit_per_sec": 3,
+     "total_cuts": 0,
+     "cuts_per_sec_mean": 0.0,
+     "sustained_over_5s": false,
+     "segments": [],
+     "cut_times": []
+    }
+   },
+   "supplementary": {
+    "rb": {
+     "rule": "적청교대",
+     "pass": true,
+     "violation_seconds": 0.0,
+     "max_per_sec": 0,
+     "limit_per_sec": 3,
+     "max_area_pct": 0.0,
+     "sustained_over_5s": false,
+     "longest_run_s": 0.0,
+     "total_events": 0,
+     "n_sequences": 0,
+     "min_separation_frames": null,
+     "sequence_rule_applied": true,
+     "segments": [],
+     "area_segments": [],
+     "co_axes": {
+      "per_sec": 0,
+      "area_pct": 0.0,
+      "closeness": 0.0
+     }
+    },
+    "flash_raw": {
+     "rule": "플래시(순수빈도)",
+     "pass": true,
+     "violation_seconds": 0.0,
+     "max_per_sec": 0,
+     "limit_per_sec": 3,
+     "segments": [],
+     "note": "시퀀스 규칙(334ms·화소 동일성) 미적용 1초 창 계수 = WCAG/ISO/NAB-J 식"
+    },
+    "red_raw": {
+     "rule": "적색(순수빈도)",
+     "pass": true,
+     "violation_seconds": 0.0,
+     "max_per_sec": 0,
+     "limit_per_sec": 3,
+     "segments": [],
+     "note": "시퀀스 규칙(334ms·화소 동일성) 미적용 1초 창 계수 = WCAG/ISO/NAB-J 식"
+    },
+    "flash_lo": {
+     "rule": "플래시(저면적10%)(순수빈도)",
+     "pass": true,
+     "violation_seconds": 0.0,
+     "max_per_sec": 0,
+     "limit_per_sec": 3,
+     "segments": [],
+     "note": "시퀀스 규칙(334ms·화소 동일성) 미적용 1초 창 계수 = WCAG/ISO/NAB-J 식"
+    }
+   },
+   "frame_separation": {
+    "required_frames": 10,
+    "observed_min_frames": null,
+    "pass": true,
+    "note": "이 조항은 초당 3회 한도를 프레임 수로 표현한 것 (ceil(fps/3))"
+   },
+   "violation_segments": []
+  },
+  "bt_sec": 137.0,
+  "pc": {
+   "verdict": "적합",
+   "raw_verdict": "PASS",
+   "failed_channels": [],
+   "warn_channels": [],
+   "channel_seconds": {
+    "LUM": 0.0,
+    "RGB": 0.0,
+    "RED": 0.0,
+    "RB": 0.0
+   },
+   "summary": {
+    "total_ms": 27666.7,
+    "violating_ms": 0,
+    "violating_ratio": 0.0,
+    "segments": 0,
+    "elapsed_sec": 41.26
+   },
+   "violations": [],
+   "warnings": [],
+   "video": {
+    "src_w": 720,
+    "src_h": 1280,
+    "ana_w": 240,
+    "ana_h": 427,
+    "fps": 30.0,
+    "frames": 830,
+    "duration_ms": 27666.7
+   }
+  },
+  "pc_sec": 41.3,
+  "agree": true
+ },
+ {
+  "clip": "Db4gpb0x49y",
+  "path": "data/s2_rand20\\Db4gpb0x49y.mp4",
+  "bt": {
+   "verdict": "적합",
+   "tier": "여백없음",
+   "tier_why": [
+    "③(쌍수82%/면적118%)"
+   ],
+   "failed_rules": [],
+   "supplementary_flags": [],
+   "duration_s": 60.9,
+   "fps": 21.0,
+   "frames": 1279,
+   "sustained_over_5s": false,
+   "rules": {
+    "flash": {
+     "rule": "플래시",
+     "pass": true,
+     "violation_seconds": 0.0,
+     "max_per_sec": 1,
+     "limit_per_sec": 3,
+     "max_area_pct": 56.8,
+     "sustained_over_5s": false,
+     "longest_run_s": 0.0,
+     "total_events": 3,
+     "n_sequences": 3,
+     "min_separation_frames": 42,
+     "sequence_rule_applied": true,
+     "segments": [],
+     "area_segments": [
+      [
+       38.81,
+       38.86
+      ],
+      [
+       41.71,
+       41.76
+      ],
+      [
+       44.1,
+       44.14
+      ],
+      [
+       45.1,
+       45.14
+      ],
+      [
+       46.1,
+       46.14
+      ],
+      [
+       56.43,
+       56.48
+      ],
+      [
+       59.43,
+       59.48
+      ]
+     ],
+     "co_axes": {
+      "per_sec": 1,
+      "area_pct": 50.7,
+      "closeness": 0.333
+     }
+    },
+    "red": {
+     "rule": "적색",
+     "pass": true,
+     "violation_seconds": 0.0,
+     "max_per_sec": 0,
+     "limit_per_sec": 3,
+     "max_area_pct": 0.0,
+     "sustained_over_5s": false,
+     "longest_run_s": 0.0,
+     "total_events": 0,
+     "n_sequences": 0,
+     "min_separation_frames": null,
+     "sequence_rule_applied": true,
+     "segments": [],
+     "area_segments": [],
+     "co_axes": {
+      "per_sec": 0,
+      "area_pct": 0.0,
+      "closeness": 0.0
+     }
+    },
+    "pattern": {
+     "rule": "패턴",
+     "pass": true,
+     "co_axes": {
+      "pairs": 4.12,
+      "area_pct": 47.3,
+      "need_pairs": 5,
+      "need_area_pct": 40.0,
+      "closeness": 0.824
+     },
+     "violation_seconds": 0.0,
+     "max_pairs": 4.12,
+     "max_area_pct": 69.8,
+     "segments": [],
+     "_masks": null
+    },
+    "cut": {
+     "rule": "화면전환",
+     "pass": true,
+     "violation_seconds": 0.0,
+     "max_per_sec": 2,
+     "limit_per_sec": 3,
+     "total_cuts": 12,
+     "cuts_per_sec_mean": 0.2,
+     "sustained_over_5s": false,
+     "segments": [],
+     "cut_times": [
+      36.71,
+      38.86,
+      41.76,
+      45.14,
+      46.14,
+      51.76,
+      53.43,
+      55.38,
+      56.48,
+      57.05,
+      57.95,
+      59.48
+     ]
+    }
+   },
+   "supplementary": {
+    "rb": {
+     "rule": "적청교대",
+     "pass": true,
+     "violation_seconds": 0.0,
+     "max_per_sec": 0,
+     "limit_per_sec": 3,
+     "max_area_pct": 0.0,
+     "sustained_over_5s": false,
+     "longest_run_s": 0.0,
+     "total_events": 0,
+     "n_sequences": 0,
+     "min_separation_frames": null,
+     "sequence_rule_applied": true,
+     "segments": [],
+     "area_segments": [],
+     "co_axes": {
+      "per_sec": 0,
+      "area_pct": 0.0,
+      "closeness": 0.0
+     }
+    },
+    "flash_raw": {
+     "rule": "플래시(순수빈도)",
+     "pass": true,
+     "violation_seconds": 0.0,
+     "max_per_sec": 1,
+     "limit_per_sec": 3,
+     "segments": [],
+     "note": "시퀀스 규칙(334ms·화소 동일성) 미적용 1초 창 계수 = WCAG/ISO/NAB-J 식"
+    },
+    "red_raw": {
+     "rule": "적색(순수빈도)",
+     "pass": true,
+     "violation_seconds": 0.0,
+     "max_per_sec": 0,
+     "limit_per_sec": 3,
+     "segments": [],
+     "note": "시퀀스 규칙(334ms·화소 동일성) 미적용 1초 창 계수 = WCAG/ISO/NAB-J 식"
+    },
+    "flash_lo": {
+     "rule": "플래시(저면적10%)(순수빈도)",
+     "pass": true,
+     "violation_seconds": 0.0,
+     "max_per_sec": 1,
+     "limit_per_sec": 3,
+     "segments": [],
+     "note": "시퀀스 규칙(334ms·화소 동일성) 미적용 1초 창 계수 = WCAG/ISO/NAB-J 식"
+    }
+   },
+   "frame_separation": {
+    "required_frames": 7,
+    "observed_min_frames": 42,
+    "pass": true,
+    "note": "이 조항은 초당 3회 한도를 프레임 수로 표현한 것 (ceil(fps/3))"
+   },
+   "violation_segments": []
+  },
+  "bt_sec": 183.7,
+  "pc": {
+   "verdict": "적합",
+   "raw_verdict": "PASS",
+   "failed_channels": [],
+   "warn_channels": [],
+   "channel_seconds": {
+    "LUM": 0.0,
+    "RGB": 0.0,
+    "RED": 0.0,
+    "RB": 0.0
+   },
+   "summary": {
+    "total_ms": 60904.8,
+    "violating_ms": 0,
+    "violating_ratio": 0.0,
+    "segments": 0,
+    "elapsed_sec": 37.55
+   },
+   "violations": [],
+   "warnings": [],
+   "video": {
+    "src_w": 576,
+    "src_h": 1024,
+    "ana_w": 240,
+    "ana_h": 427,
+    "fps": 21.0,
+    "frames": 1279,
+    "duration_ms": 60904.8
+   }
+  },
+  "pc_sec": 37.6,
+  "agree": true
+ },
+ {
+  "clip": "Db4m3JCRdHb",
+  "path": "data/s2_rand20\\Db4m3JCRdHb.mp4",
+  "bt": {
+   "verdict": "적합",
+   "tier": "여백없음",
+   "tier_why": [
+    "③(쌍수60%/면적176%)"
+   ],
+   "failed_rules": [],
+   "supplementary_flags": [],
+   "duration_s": 34.93,
+   "fps": 30.0,
+   "frames": 1048,
+   "sustained_over_5s": false,
+   "rules": {
+    "flash": {
+     "rule": "플래시",
+     "pass": true,
+     "violation_seconds": 0.0,
+     "max_per_sec": 1,
+     "limit_per_sec": 3,
+     "max_area_pct": 55.5,
+     "sustained_over_5s": false,
+     "longest_run_s": 0.0,
+     "total_events": 2,
+     "n_sequences": 2,
+     "min_separation_frames": 71,
+     "sequence_rule_applied": true,
+     "segments": [],
+     "area_segments": [
+      [
+       0.6,
+       0.63
+      ],
+      [
+       1.17,
+       1.2
+      ],
+      [
+       1.77,
+       1.8
+      ],
+      [
+       2.97,
+       3.0
+      ],
+      [
+       12.27,
+       12.3
+      ]
+     ],
+     "co_axes": {
+      "per_sec": 1,
+      "area_pct": 43.7,
+      "closeness": 0.333
+     }
+    },
+    "red": {
+     "rule": "적색",
+     "pass": true,
+     "violation_seconds": 0.0,
+     "max_per_sec": 0,
+     "limit_per_sec": 3,
+     "max_area_pct": 0.9,
+     "sustained_over_5s": false,
+     "longest_run_s": 0.0,
+     "total_events": 0,
+     "n_sequences": 0,
+     "min_separation_frames": null,
+     "sequence_rule_applied": true,
+     "segments": [],
+     "area_segments": [],
+     "co_axes": {
+      "per_sec": 0,
+      "area_pct": 0.0,
+      "closeness": 0.0
+     }
+    },
+    "pattern": {
+     "rule": "패턴",
+     "pass": true,
+     "co_axes": {
+      "pairs": 3.0,
+      "area_pct": 70.2,
+      "need_pairs": 5,
+      "need_area_pct": 40.0,
+      "closeness": 0.6
+     },
+     "violation_seconds": 0.0,
+     "max_pairs": 3.0,
+     "max_area_pct": 74.4,
+     "segments": [],
+     "_masks": null
+    },
+    "cut": {
+     "rule": "화면전환",
+     "pass": true,
+     "violation_seconds": 0.0,
+     "max_per_sec": 2,
+     "limit_per_sec": 3,
+     "total_cuts": 13,
+     "cuts_per_sec_mean": 0.37,
+     "sustained_over_5s": false,
+     "segments": [],
+     "cut_times": [
+      0.63,
+      1.2,
+      1.8,
+      3.0,
+      3.6,
+      4.2,
+      8.33,
+      12.3,
+      16.1,
+      19.73,
+      23.73,
+      26.6,
+      31.4
+     ]
+    }
+   },
+   "supplementary": {
+    "rb": {
+     "rule": "적청교대",
+     "pass": true,
+     "violation_seconds": 0.0,
+     "max_per_sec": 0,
+     "limit_per_sec": 3,
+     "max_area_pct": 0.6,
+     "sustained_over_5s": false,
+     "longest_run_s": 0.0,
+     "total_events": 0,
+     "n_sequences": 0,
+     "min_separation_frames": null,
+     "sequence_rule_applied": true,
+     "segments": [],
+     "area_segments": [],
+     "co_axes": {
+      "per_sec": 0,
+      "area_pct": 0.0,
+      "closeness": 0.0
+     }
+    },
+    "flash_raw": {
+     "rule": "플래시(순수빈도)",
+     "pass": true,
+     "violation_seconds": 0.0,
+     "max_per_sec": 1,
+     "limit_per_sec": 3,
+     "segments": [],
+     "note": "시퀀스 규칙(334ms·화소 동일성) 미적용 1초 창 계수 = WCAG/ISO/NAB-J 식"
+    },
+    "red_raw": {
+     "rule": "적색(순수빈도)",
+     "pass": true,
+     "violation_seconds": 0.0,
+     "max_per_sec": 0,
+     "limit_per_sec": 3,
+     "segments": [],
+     "note": "시퀀스 규칙(334ms·화소 동일성) 미적용 1초 창 계수 = WCAG/ISO/NAB-J 식"
+    },
+    "flash_lo": {
+     "rule": "플래시(저면적10%)(순수빈도)",
+     "pass": true,
+     "violation_seconds": 0.0,
+     "max_per_sec": 1,
+     "limit_per_sec": 3,
+     "segments": [],
+     "note": "시퀀스 규칙(334ms·화소 동일성) 미적용 1초 창 계수 = WCAG/ISO/NAB-J 식"
+    }
+   },
+   "frame_separation": {
+    "required_frames": 10,
+    "observed_min_frames": 71,
+    "pass": true,
+    "note": "이 조항은 초당 3회 한도를 프레임 수로 표현한 것 (ceil(fps/3))"
+   },
+   "violation_segments": []
+  },
+  "bt_sec": 146.5,
+  "pc": {
+   "verdict": "적합",
+   "raw_verdict": "PASS",
+   "failed_channels": [],
+   "warn_channels": [
+    "RGB"
+   ],
+   "channel_seconds": {
+    "LUM": 0.0,
+    "RGB": 0.2,
+    "RED": 0.0,
+    "RB": 0.0
+   },
+   "summary": {
+    "total_ms": 34933.3,
+    "violating_ms": 0,
+    "violating_ratio": 0.0,
+    "segments": 0,
+    "elapsed_sec": 35.5
+   },
+   "violations": [],
+   "warnings": [
+    {
+     "channel": "RGB",
+     "label": "RGB 채널별",
+     "start": "00:00:27.533",
+     "end": "00:00:27.733",
+     "duration_ms": 200.0,
+     "measured": {
+      "flashes_per_sec": 12,
+      "area_ratio": 0.2693,
+      "delta": 0.8285
+     },
+     "threshold": {
+      "flashes_per_sec": 3.0,
+      "area_ratio": 0.25,
+      "delta": 0.1
+     },
+     "exceedance": {
+      "rate": 4.0,
+      "area": 1.08
+     },
+     "remediation": {
+      "required_gain": 0.1086
+     }
+    }
+   ],
+   "video": {
+    "src_w": 720,
+    "src_h": 1280,
+    "ana_w": 240,
+    "ana_h": 427,
+    "fps": 30.0,
+    "frames": 1048,
+    "duration_ms": 34933.3
+   }
+  },
+  "pc_sec": 35.5,
+  "agree": true
+ },
+ {
+  "clip": "Db4nCSlsNBD",
+  "path": "data/s2_rand20\\Db4nCSlsNBD.mp4",
+  "bt": {
+   "verdict": "적합",
+   "tier": "여백없음",
+   "tier_why": [
+    "③(쌍수63%/면적229%)"
+   ],
+   "failed_rules": [],
+   "supplementary_flags": [],
+   "duration_s": 30.13,
+   "fps": 30.0,
+   "frames": 904,
+   "sustained_over_5s": false,
+   "rules": {
+    "flash": {
+     "rule": "플래시",
+     "pass": true,
+     "violation_seconds": 0.0,
+     "max_per_sec": 0,
+     "limit_per_sec": 3,
+     "max_area_pct": 27.3,
+     "sustained_over_5s": false,
+     "longest_run_s": 0.0,
+     "total_events": 0,
+     "n_sequences": 0,
+     "min_separation_frames": null,
+     "sequence_rule_applied": true,
+     "segments": [],
+     "area_segments": [
+      [
+       18.63,
+       18.67
+      ]
+     ],
+     "co_axes": {
+      "per_sec": 0,
+      "area_pct": 0.0,
+      "closeness": 0.0
+     }
+    },
+    "red": {
+     "rule": "적색",
+     "pass": true,
+     "violation_seconds": 0.0,
+     "max_per_sec": 0,
+     "limit_per_sec": 3,
+     "max_area_pct": 0.0,
+     "sustained_over_5s": false,
+     "longest_run_s": 0.0,
+     "total_events": 0,
+     "n_sequences": 0,
+     "min_separation_frames": null,
+     "sequence_rule_applied": true,
+     "segments": [],
+     "area_segments": [],
+     "co_axes": {
+      "per_sec": 0,
+      "area_pct": 0.0,
+      "closeness": 0.0
+     }
+    },
+    "pattern": {
+     "rule": "패턴",
+     "pass": true,
+     "co_axes": {
+      "pairs": 3.16,
+      "area_pct": 91.6,
+      "need_pairs": 5,
+      "need_area_pct": 40.0,
+      "closeness": 0.632
+     },
+     "violation_seconds": 0.0,
+     "max_pairs": 5.0,
+     "max_area_pct": 96.1,
+     "segments": [],
+     "_masks": null
+    },
+    "cut": {
+     "rule": "화면전환",
+     "pass": true,
+     "violation_seconds": 0.0,
+     "max_per_sec": 1,
+     "limit_per_sec": 3,
+     "total_cuts": 4,
+     "cuts_per_sec_mean": 0.13,
+     "sustained_over_5s": false,
+     "segments": [],
+     "cut_times": [
+      7.17,
+      8.67,
+      18.67,
+      28.8
+     ]
+    }
+   },
+   "supplementary": {
+    "rb": {
+     "rule": "적청교대",
+     "pass": true,
+     "violation_seconds": 0.0,
+     "max_per_sec": 0,
+     "limit_per_sec": 3,
+     "max_area_pct": 0.0,
+     "sustained_over_5s": false,
+     "longest_run_s": 0.0,
+     "total_events": 0,
+     "n_sequences": 0,
+     "min_separation_frames": null,
+     "sequence_rule_applied": true,
+     "segments": [],
+     "area_segments": [],
+     "co_axes": {
+      "per_sec": 0,
+      "area_pct": 0.0,
+      "closeness": 0.0
+     }
+    },
+    "flash_raw": {
+     "rule": "플래시(순수빈도)",
+     "pass": true,
+     "violation_seconds": 0.0,
+     "max_per_sec": 0,
+     "limit_per_sec": 3,
+     "segments": [],
+     "note": "시퀀스 규칙(334ms·화소 동일성) 미적용 1초 창 계수 = WCAG/ISO/NAB-J 식"
+    },
+    "red_raw": {
+     "rule": "적색(순수빈도)",
+     "pass": true,
+     "violation_seconds": 0.0,
+     "max_per_sec": 0,
+     "limit_per_sec": 3,
+     "segments": [],
+     "note": "시퀀스 규칙(334ms·화소 동일성) 미적용 1초 창 계수 = WCAG/ISO/NAB-J 식"
+    },
+    "flash_lo": {
+     "rule": "플래시(저면적10%)(순수빈도)",
+     "pass": true,
+     "violation_seconds": 0.0,
+     "max_per_sec": 1,
+     "limit_per_sec": 3,
+     "segments": [],
+     "note": "시퀀스 규칙(334ms·화소 동일성) 미적용 1초 창 계수 = WCAG/ISO/NAB-J 식"
+    }
+   },
+   "frame_separation": {
+    "required_frames": 10,
+    "observed_min_frames": null,
+    "pass": true,
+    "note": "이 조항은 초당 3회 한도를 프레임 수로 표현한 것 (ceil(fps/3))"
+   },
+   "violation_segments": []
+  },
+  "bt_sec": 98.4,
+  "pc": {
+   "verdict": "적합",
+   "raw_verdict": "PASS",
+   "failed_channels": [],
+   "warn_channels": [],
+   "channel_seconds": {
+    "LUM": 0.0,
+    "RGB": 0.0,
+    "RED": 0.0,
+    "RB": 0.0
+   },
+   "summary": {
+    "total_ms": 30133.3,
+    "violating_ms": 0,
+    "violating_ratio": 0.0,
+    "segments": 0,
+    "elapsed_sec": 22.51
+   },
+   "violations": [],
+   "warnings": [],
+   "video": {
+    "src_w": 704,
+    "src_h": 1250,
+    "ana_w": 240,
+    "ana_h": 426,
+    "fps": 30.0,
+    "frames": 904,
+    "duration_ms": 30133.3
+   }
+  },
+  "pc_sec": 22.5,
+  "agree": true
+ }
+]
