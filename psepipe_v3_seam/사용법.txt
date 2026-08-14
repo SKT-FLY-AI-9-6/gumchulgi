@@ -90,3 +90,27 @@ PSE 검출·보정 파이프라인 — 사용법
   ModuleNotFoundError: 파일이 한 폴더에 다 있는지 확인
   ffmpeg 관련 오류: ffmpeg -version 이 되는지 확인
   한글 깨짐(Windows): chcp 65001 을 먼저 실행
+
+7) 편두통 축 검사 (WARN 전용) — pse_migraine.py
+------------------------------------------------------------------------
+  PSE 규격과 별도로, 편두통 환자에게 불편을 줄 수 있는 자극을 검사합니다.
+  표준이 없는 축이라 판정(FAIL)에는 섞지 않고 **경고와 점수만** 냅니다.
+
+      python pse_migraine.py --tier t5 영상.mp4      # 단독 실행
+      python tier.py --migraine t5 영상.mp4          # 규격 판정과 함께
+
+  축 구성
+      M1 정적 패턴   1–4cpd(t5)/1–8cpd(t4) 줄무늬, Michelson 대비
+                     10%(t5)/30%(t4) 이상  [문헌: Wilkins 1984]
+      M2 색상        청색 지속 노출(t5), 색도분리 플리커 Δu'v'
+                     [문헌→가설: Noseda 2016, Haigh 2019]
+
+  티어
+      t4  편두통 기본  (평균적 편두통 환자 보호선)
+      t5  편두통 보수  (만성·조짐 동반 고민감군 보호선)
+
+  주의
+      · cpd 는 시청 거리에 의존 — 기본 가정은 "스마트폰 30cm, 화면 세로
+        25도" (--view-deg 로 조절). t4 의 8cpd 상한까지 보려면 --width 640.
+      · 임계 중 [가설] 표기는 환자 설문으로 검증 전까지 참고용.
+      · 셀프테스트:  python pse_migraine.py --selftest

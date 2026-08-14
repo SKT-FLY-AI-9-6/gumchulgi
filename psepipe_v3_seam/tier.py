@@ -31,6 +31,9 @@ if __name__ == "__main__":
     ap.add_argument("--width", type=int, default=320)
     ap.add_argument("--no-pattern", action="store_true", help="패턴 검사 생략 (빠름)")
     ap.add_argument("--no-cut", action="store_true", help="화면전환 검사 생략")
+    ap.add_argument("--migraine", choices=["t4", "t5"], default=None,
+                    help="편두통 축(M1 정적패턴·M2 색상)도 검사 — WARN 전용, "
+                         "3단계 판정에는 반영하지 않는다 (pse_migraine.py)")
     a = ap.parse_args()
 
     print(f"{'영상':<34}{'판정':<12} 근거")
@@ -52,3 +55,13 @@ if __name__ == "__main__":
                 if l:
                     print(f"      {n:<8}{m:8.1f} / {l:6.1f} = {m/l*100:5.0f}%"
                           f"   작동기 {act}")
+        if a.migraine:
+            # 별도 디코드로 돈다 (규격 판정과 뒤섞이지 않도록 의도적 분리).
+            # 속도가 문제가 되면 pse_migraine.Stream 을 BT.analyze 루프에
+            # pat_stream 과 나란히 끼우는 것이 다음 단계다.
+            import pse_migraine
+            try:
+                mr = pse_migraine.analyze(c, tier=a.migraine, width=a.width)
+                print(pse_migraine.brief(mr))
+            except Exception as exc:
+                print(f"      MIGRAINE 오류: {type(exc).__name__}: {exc}")
