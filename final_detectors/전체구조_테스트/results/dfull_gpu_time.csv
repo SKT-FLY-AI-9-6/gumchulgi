@@ -1,0 +1,4 @@
+﻿clip,w,h,frames,sec_video,sec_wall_gpu,ms_per_frame,fps,ok
+cera_khin,360,640,507,16.9,189.1,373.0,2.68,True
+travis_fein,638,360,931,38.8,345.9,371.6,2.69,True
+anime,646,360,1767,58.9,601.5,340.4,2.94,True
