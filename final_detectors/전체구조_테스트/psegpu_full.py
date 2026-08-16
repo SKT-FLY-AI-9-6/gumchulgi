@@ -365,9 +365,28 @@ class FullFilterGPU:
         # 감마 부호화 0~1. 선형광과 컷 판정용 그레이가 **둘 다** 여기서 나온다 —
         # uint8->float 전해상도 변환을 두 번 하지 않으려고 중간값을 붙잡아 둔다.
         xe = self.d_in.to(dt) / 255.0
-        lin = torch.where(xe <= 0.04045, xe / 12.92,
-                          ((xe + 0.055) / 1.055).pow(2.4)).permute(2, 0, 1).unsqueeze(0)
-        lin_s = F.interpolate(lin, size=(self.ah, self.aw), mode="area")
+        xe3 = xe.permute(2, 0, 1).unsqueeze(0)
+        lin = torch.where(xe3 <= 0.04045, xe3 / 12.92, ((xe3 + 0.055) / 1.055).pow(2.4))
+
+        # 검출 입력은 CPU 기준판 경로를 그대로 재현한다:
+        #     bgr_small = cv2.resize(bgr, INTER_AREA)   ->  PC._LIN[bgr_small]
+        # 즉 **감마 도메인에서 축소한 뒤 선형화**한다. 여기서 순서를 바꾸면
+        # (선형화 후 축소) 밝은 줄무늬 에너지가 더 남아 값이 커진다.
+        #
+        # 더 중요한 건 리샘플러다. torch 의 mode="area" 는 adaptive_avg_pool2d 라
+        # **정수 경계**로 구간을 나누는데, cv2.INTER_AREA 는 0.75 배 같은 비정수
+        # 배율에서 **분수 가중치**로 면적평균을 낸다. 고대비 줄무늬(14번)에서
+        # 화소별 오차가 임계 theta_lum(0.10)의 2~3 배까지 벌어졌다.
+        # 14번 f0 기준 CPU 대비 오차 (임계 0.10 을 넘는 화소 비율):
+        #     선형 area 0.284 (3.75%) / 감마 area 0.214 (6.67%)
+        #     감마 bicubic+AA 0.054 (0.00%)  <- 채택
+        # 그 오차가 검출 마스크를 0.750 -> 0.875 로 부풀렸고, 안전한 원본을
+        # 위반으로 만드는 데까지 갔다.
+        xe_s = F.interpolate(xe3, size=(self.ah, self.aw), mode="bicubic",
+                             align_corners=False, antialias=True).clamp(0, 1)
+        xe_s = torch.round(xe_s * 255.0) / 255.0     # CPU 는 uint8 을 거친다
+        lin_s = torch.where(xe_s <= 0.04045, xe_s / 12.92,
+                            ((xe_s + 0.055) / 1.055).pow(2.4))
         gray_s = (lin_s * self.wY).sum(1, keepdim=True)[0, 0]
 
         # 컷 판정만 감마 도메인에서 (CPU 기준판과 같은 자). _cut_gate 주석 참고.
