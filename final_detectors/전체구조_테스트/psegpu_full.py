@@ -412,6 +412,31 @@ class FullFilterGPU:
         if self.k_fea is not None:
             a = blur(a, self.k_fea)
         a = a.clamp(0, 1) * float(np.clip(c.strength, 0, 1))
+
+        # 국소 구조 게이트 — 움직임은 통과, 점멸만 누른다 (Cfg.coh_gate 주석 참고)
+        #
+        # 판별자는 **국소 정규화 상관(NCC)** 이다. 컷 게이트가 전역에서 하는 일을
+        # 창 단위로 한다:
+        #   플래시  밝기 레벨만 바뀌고 구조는 그대로  -> 정규화하면 상관 ~ 1
+        #   움직임  구조 자체가 이동한다              -> 상관 낮음
+        # 부호 일관성(sign(Δ) 평균)으로 먼저 해봤는데 실패했다 — 공간적으로
+        # 복잡한 점멸을 움직임으로 오인해 제거율이 92.8% -> 60.0% 로 무너졌다
+        # (TXeDgXiytM0 99%->0%, Y76O5wY7EcM 65%->0%).
+        if c.coh_gate > 0 and self.prev_gray is not None:
+            k = int(c.coh_win) | 1
+            cur = gray_s.view(1, 1, self.ah, self.aw)
+            pre = self.prev_gray.view(1, 1, self.ah, self.aw)
+
+            def box(x):
+                return F.avg_pool2d(x, k, stride=1, padding=k // 2)
+
+            mc, mp = box(cur), box(pre)
+            vc = (box(cur * cur) - mc * mc).clamp_min(1e-8)
+            vp = (box(pre * pre) - mp * mp).clamp_min(1e-8)
+            cov = box(cur * pre) - mc * mp
+            ncc = (cov / (vc.sqrt() * vp.sqrt())).clamp(0.0, 1.0)
+            a = a * (1.0 - c.coh_gate * (1.0 - ncc))
+
         a = (1 - c.alpha_smooth) * self.alpha_prev + c.alpha_smooth * a
         self.alpha_prev = a
         A = F.interpolate(a, size=(self.H, self.W), mode="bilinear",
