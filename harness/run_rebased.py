@@ -25,9 +25,8 @@ import psegpu_full as PGF
 import pse_bt1702 as BT
 import seam
 
-S1 = r"C:/Users/dltmd/Downloads/pse_detectors final/pse_detectors/data/s1_flagged"
-EX = (r"C:/Users/dltmd/Downloads/psepipe_v3_seam/gumchulgi-fix-ste-report-consistency"
-      r"/gumchulgi-fix-ste-report-consistency/data/explore_100")
+S1 = os.environ.get("PSE_FLAGGED", "data/s1_flagged")
+EX = os.environ.get("PSE_EXPLORE", "data/explore_100")
 
 CLIPS = [(S1, "Db2LyhvyHI5"), (S1, "Db2BKAWvAXs"), (S1, "Db155zGxJRf"),
          (S1, "Db2D03pxZjy"),

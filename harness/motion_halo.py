@@ -8,7 +8,7 @@
 import csv, os, sys
 import cv2, numpy as np
 
-D = r"C:/Users/dltmd/Downloads/psepipe_v3_seam/gumchulgi-fix-ste-report-consistency/gumchulgi-fix-ste-report-consistency/data/explore_100"
+D = os.environ.get("PSE_EXPLORE", "data/explore_100")
 rows = list(csv.DictReader(open("results_reels_3way.csv", encoding="utf-8-sig")))
 
 def motion(path, step=4, cap_n=140):

@@ -9,7 +9,7 @@ sys.path.insert(0, os.getcwd())
 import cv2
 import pselive3 as P3, psegpu_full as PGF, pse_bt1702 as BT, seam
 
-SRC = r"C:/Users/dltmd/Downloads/pse_detectors final/pse_detectors/data/s1_flagged"
+SRC = os.environ.get("PSE_FLAGGED", "data/s1_flagged")
 OUT, CSVP = "out_ab", "results_fix_ab.csv"
 CFGS = (("기준", {}), ("워프", {"warp_alpha": True}),
         ("순방향", {"net_directional": True}),

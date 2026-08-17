@@ -28,9 +28,7 @@ import cv2
 import pse_bt1702 as BT
 import seam
 
-BLAZE = os.environ.get(
-    "BLAZEBVD_HOME",
-    r"C:\Users\dltmd\Downloads\gumchulgi-Kim-Moon\gumchulgi-blazebvd\blazebvd-training")
+BLAZE = os.environ.get("BLAZEBVD_HOME", "../blazebvd-training")
 OUT = "out"
 CSV_PATH = "results_reels_3way.csv"
 

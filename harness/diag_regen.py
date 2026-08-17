@@ -9,9 +9,8 @@ sys.path.insert(0, os.getcwd())
 import numpy as np
 import pselive3 as P3, psegpu_full as PGF, pse_bt1702 as BT
 
-CERA = r"C:/Users/dltmd/Downloads/cera_640.mp4"
-TOG = (r"C:/Users/dltmd/Downloads/pse_detectors final/pse_detectors"
-       r"/data/s1_flagged/Db2LyhvyHI5.mp4")
+CERA = os.environ.get("PSE_CERA", "cera_640.mp4")
+TOG = os.path.join(os.environ.get("PSE_FLAGGED", "data/s1_flagged"), "Db2LyhvyHI5.mp4")
 
 print("=" * 66)
 print("① GPU 회귀 — 순 방향성을 켜도 진짜 플래시를 놓치지 않는가")

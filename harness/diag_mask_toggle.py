@@ -8,8 +8,7 @@ sys.path.insert(0, os.getcwd())
 import numpy as np
 import pselive3 as P3, psegpu_full as PGF
 
-SRC = (r"C:/Users/dltmd/Downloads/pse_detectors final/pse_detectors"
-       r"/data/s1_flagged/Db2LyhvyHI5.mp4")
+SRC = os.path.join(os.environ.get("PSE_FLAGGED", "data/s1_flagged"), "Db2LyhvyHI5.mp4")
 
 def trace(**kw):
     rec = []

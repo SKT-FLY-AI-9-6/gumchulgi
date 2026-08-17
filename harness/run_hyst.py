@@ -14,7 +14,7 @@ sys.path.insert(0, os.getcwd())
 import numpy as np, cv2
 import pselive3 as P3, psegpu_full as PGF, pse_bt1702 as BT, seam
 
-S = r"C:/Users/dltmd/Downloads/pse_detectors final/pse_detectors/data/s1_flagged"
+S = os.environ.get("PSE_FLAGGED", "data/s1_flagged")
 CLIPS = ["Db2LyhvyHI5",   # 역행 (22.74 -> 26.93)
          "Db2BKAWvAXs",   # 최대 승리 (52.44 -> 1.12)
          "Db155zGxJRf",   # 큰 승리 (47.26 -> 27.62)
