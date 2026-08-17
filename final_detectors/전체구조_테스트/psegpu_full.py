@@ -242,6 +242,65 @@ def translate_gpu(x, dx, dy, gate):
                          align_corners=True)
 
 
+def block_flow(prev_g, cur_g, radius: int, step: int, block: int, min_gain: float):
+    """블록매칭 국소 움직임장. (dx, dy) 를 분석 해상도 맵으로 돌려준다.
+
+    전역 평행이동 워프는 화면 전체가 같이 움직일 때만 맞다. 배경은 고정인데
+    사람만 움직이면 그 움직임이 보상되지 않고 슬루 제한에 걸려 **잔상**이 된다.
+    여기서 국소 벡터를 구해 prev 를 화소별로 끌어오면
+        d = lin - warp_local(prev)
+    에서 움직임 성분이 상쇄되고 점멸 성분만 남는다.
+
+    호스트 동기화가 없어야 하므로 후보 변위를 전부 쌓아 argmin 을 취한다.
+    **잘못된 벡터는 잔상보다 나쁜 아티팩트를 만든다.** 그래서 무변위 대비
+    SAD 가 min_gain 이상 좋아진 블록만 채택하고 나머지는 0 으로 둔다.
+    """
+    h, w = prev_g.shape
+    p = prev_g.view(1, 1, h, w)
+    c = cur_g.view(1, 1, h, w)
+    offs = list(range(-radius, radius + 1, step))
+    costs, vecs = [], []
+    for dy in offs:
+        for dx in offs:
+            sh = torch.roll(p, shifts=(dy, dx), dims=(2, 3))
+            sad = F.avg_pool2d((c - sh).abs(), block, stride=block)
+            costs.append(sad)
+            vecs.append((dx, dy))
+    C = torch.cat(costs, dim=1)                     # (1, K, hb, wb)
+    best = C.argmin(dim=1, keepdim=True)
+    zero_i = vecs.index((0, 0))
+    cost_zero = C[:, zero_i:zero_i + 1]
+    cost_best = C.gather(1, best)
+    # 무변위보다 뚜렷하게 좋을 때만 신뢰한다
+    ok = (cost_best < cost_zero * (1.0 - min_gain)).to(prev_g.dtype)
+
+    dxs = torch.tensor([v[0] for v in vecs], device=prev_g.device,
+                       dtype=prev_g.dtype)
+    dys = torch.tensor([v[1] for v in vecs], device=prev_g.device,
+                       dtype=prev_g.dtype)
+    fx = dxs[best.squeeze(1)].unsqueeze(1) * ok
+    fy = dys[best.squeeze(1)].unsqueeze(1) * ok
+    fx = F.interpolate(fx, size=(h, w), mode="bilinear", align_corners=False)
+    fy = F.interpolate(fy, size=(h, w), mode="bilinear", align_corners=False)
+    return fx, fy
+
+
+def warp_flow(x, fx, fy):
+    """화소별 (fx, fy) 만큼 x 를 끌어온다. fx/fy 는 x 와 같은 해상도로 맞춰진다."""
+    n, c, h, w = x.shape
+    if fx.shape[-2:] != (h, w):
+        fx = F.interpolate(fx, size=(h, w), mode="bilinear", align_corners=False)
+        fy = F.interpolate(fy, size=(h, w), mode="bilinear", align_corners=False)
+    ys, xs = torch.meshgrid(
+        torch.arange(h, device=x.device, dtype=x.dtype),
+        torch.arange(w, device=x.device, dtype=x.dtype), indexing="ij")
+    gx = (xs.view(1, 1, h, w) - fx) / max(w - 1, 1) * 2.0 - 1.0
+    gy = (ys.view(1, 1, h, w) - fy) / max(h - 1, 1) * 2.0 - 1.0
+    grid = torch.cat([gx, gy], dim=1).permute(0, 2, 3, 1)
+    return F.grid_sample(x, grid, mode="bilinear", padding_mode="border",
+                         align_corners=True)
+
+
 # ══════════════════════════════════════════════════════════════════════════════
 @dataclass
 class OptF:
@@ -294,7 +353,8 @@ class FullFilterGPU:
         self.cut_gap_n = float(max(0, int(round(c.cut_min_gap_s * fps))))
         self.since_cut = torch.full((), 1e9, device=self.dev, dtype=self.dt)
         self.n = 0
-        self.stats = {"armed": 0, "warped": 0.0, "cuts": 0.0, "mean_area": 0.0}
+        self.stats = {"armed": 0, "warped": 0.0, "cuts": 0.0, "mean_area": 0.0,
+                      "lmc_px": 0.0}
 
         self.h_in = torch.empty((self.H, self.W, 3), dtype=torch.uint8, pin_memory=True)
         self.h_out = torch.empty((self.H, self.W, 3), dtype=torch.uint8, pin_memory=True)
@@ -459,6 +519,18 @@ class FullFilterGPU:
             prevw = translate_gpu(self.prev, dx * sc, dy * sc, ok)
         else:
             prevw = self.prev
+
+        # ---- 국소 움직임 보상 (Cfg.local_mc 주석 참고)
+        # 전역 워프 뒤에 남은 **국소** 움직임을 블록매칭으로 마저 걷어낸다.
+        # d 에서 움직임이 빠지면 슬루 제한이 점멸 성분에만 걸려 잔상이 준다.
+        if c.local_mc:
+            pg = self.prev_gray
+            fx, fy = block_flow(pg, gray_s, int(c.lmc_radius), int(c.lmc_step),
+                                int(c.lmc_block), float(c.lmc_min_gain))
+            sc2 = self.W / float(self.aw)
+            prevw = warp_flow(prevw, fx * sc2, fy * sc2)
+            self.stats["lmc_px"] += float((fx.abs() + fy.abs()).mean())
+
         self.prev_gray = gray_s
 
         # ---- 컷이면 리셋 (분기 대신 게이트)
