@@ -291,6 +291,8 @@ class FullFilterGPU:
         self.prev_gray = None
         self.prev_ncc = None
         self.prev_flat = torch.ones((), device=self.dev, dtype=self.dt)
+        self.cut_gap_n = float(max(0, int(round(c.cut_min_gap_s * fps))))
+        self.since_cut = torch.full((), 1e9, device=self.dev, dtype=self.dt)
         self.n = 0
         self.stats = {"armed": 0, "warped": 0.0, "cuts": 0.0, "mean_area": 0.0}
 
@@ -345,6 +347,11 @@ class FullFilterGPU:
             ncc = (gn * self.prev_ncc).mean()
             valid = (1.0 - flat) * (1.0 - self.prev_flat)
             cut = ((ncc < c.cut_thresh).to(self.dt)) * valid
+        # 불응기 — 컷 직후 cut_gap_n 프레임은 컷을 인정하지 않는다.
+        # (Cfg.cut_min_gap_s 주석 참고) 호스트 분기 없이 스칼라 텐서로 센다.
+        allowed = (self.since_cut >= self.cut_gap_n).to(self.dt)
+        cut = cut * allowed
+        self.since_cut = (1.0 - cut) * (self.since_cut + 1.0)
         self.prev_ncc = gn
         self.prev_flat = flat
         return cut

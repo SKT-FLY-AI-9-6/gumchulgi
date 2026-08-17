@@ -131,6 +131,18 @@ class Cfg:
     # ---- 컷 리셋
     cut_thresh: float = 0.45
     flat_sd: float = 6.0
+    # **불응기** — 컷 직후 이만큼은 추가 컷을 인정하지 않는다.
+    # 지뢰 2 의 재발이다. 히스토그램에서 NCC 로 바꿔 한 번 막았지만 실사의
+    # 강한 점멸 + 빠른 편집에서는 NCC 도 뚫린다. 실측(유튜브 실사 40초 클립,
+    # 1000~1200 프레임):
+    #   실패군 7편  컷 278~1106  제거율 0~41%   <- 초당 25회 컷을 주장한다
+    #   성공군      컷 0         제거율 100%
+    # 위반량·규칙 조합·마스크(0.997)·무장률(100%)이 같은데 컷 수만 다르고
+    # 결과가 100% 대 0% 로 갈렸다. 컷마다 prev 가 리셋되니 시간축 평활이
+    # 한 번도 누적되지 못한 것이다.
+    # 근거는 물리적 사실이다 — 아무리 빠른 편집도 초당 5회를 넘지 않는다.
+    # 대가: 진짜 컷이 이 간격 안에 연달아 오면 한 번을 놓쳐 잔상이 남는다.
+    cut_min_gap_s: float = 0.2
     # ---- 실행
     short_side: int = 240
     strength: float = 1.0
@@ -169,6 +181,8 @@ class LiveFilter3:
         self._prev_ncc = None
         self._prev_flat = True
         self._prev_gray = None
+        self._cut_gap_n = max(0, int(round(c.cut_min_gap_s * fps)))
+        self._since_cut = 10 ** 9        # 첫 컷은 막지 않는다
         self.n = 0
         # ---- 자기감시: **출력에도 같은 검출기를 돌린다**
         # 인과적 필터는 원본보다 나빠질 수 있다(14번 흐르는 줄무늬 1.26s -> 6.86s).
@@ -230,6 +244,10 @@ class LiveFilter3:
         cut = False
         if self._prev_ncc is not None and not flat and not self._prev_flat:
             cut = float((gn * self._prev_ncc).mean()) < self.c.cut_thresh
+        # 불응기 (Cfg.cut_min_gap_s 주석 참고)
+        if cut and self._since_cut < self._cut_gap_n:
+            cut = False
+        self._since_cut = 0 if cut else self._since_cut + 1
         self._prev_ncc = gn
         self._prev_flat = flat
         return cut
