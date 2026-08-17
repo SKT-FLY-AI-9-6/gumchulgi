@@ -122,17 +122,6 @@ class Cfg:
     # 광범위하게 깎인다 (01번 80%->46%, 02번 94%->65%). 그래서 채택하지 않았다.
     alpha_smooth: float = 0.5
     hold_s: float = 0.25
-    # ---- 실사 릴스 70편(2026-08-17)에서 드러난 두 문제의 시험 수정 [기본 off]
-    # warp_alpha: prevV 와 검출기 링은 워프하는데 **알파만 워프하지 않는다.**
-    #   alpha_smooth 로 직전 알파를 같은 화소 좌표에서 섞으므로, 카메라가
-    #   움직이면 지난 마스크가 이미 지나간 내용 위에 얹혀 잔상이 된다.
-    warp_alpha: bool = False
-    # net_directional: 화소 단위로는 팬과 플래시가 구분되지 않는다. 팬은 밝아진
-    #   면적과 어두워진 면적이 거의 같아서(실측 0.239 / 0.237) 한쪽만 보면
-    #   arm_area(0.20) 를 넘긴다. pse_bt1702 는 순 방향성 |up-dn| 로 이걸
-    #   상쇄시켜 모션 0.089 vs 점멸 1.000 으로 갈랐다. 같은 관문을 필터에도 건다.
-    #   PeakValley.step 은 이미 (up, delta, down|up) 을 주므로 재료가 있다.
-    net_directional: bool = False
     # ---- 질감 복원
     detail_sigma: float = 2.0       # >0 이면 레벨만 제한, 밝기 고역은 현재 프레임에서
     # ---- 움직임 보상
@@ -142,6 +131,42 @@ class Cfg:
     # ---- 컷 리셋
     cut_thresh: float = 0.45
     flat_sd: float = 6.0
+    # **불응기** — 컷 직후 이만큼은 추가 컷을 인정하지 않는다.
+    # 지뢰 2 의 재발이다. 히스토그램에서 NCC 로 바꿔 한 번 막았지만 실사의
+    # 강한 점멸 + 빠른 편집에서는 NCC 도 뚫린다. 실측(유튜브 실사 40초 클립,
+    # 1000~1200 프레임):
+    #   실패군 7편  컷 278~1106  제거율 0~41%   <- 초당 25회 컷을 주장한다
+    #   성공군      컷 0         제거율 100%
+    # 위반량·규칙 조합·마스크(0.997)·무장률(100%)이 같은데 컷 수만 다르고
+    # 결과가 100% 대 0% 로 갈렸다. 컷마다 prev 가 리셋되니 시간축 평활이
+    # 한 번도 누적되지 못한 것이다.
+    # 근거는 물리적 사실이다 — 아무리 빠른 편집도 초당 5회를 넘지 않는다.
+    # 대가: 진짜 컷이 이 간격 안에 연달아 오면 한 번을 놓쳐 잔상이 남는다.
+    cut_min_gap_s: float = 0.2
+    # ---- 실사 릴스에서 드러난 **검출 쪽** 문제의 수정 [전부 기본 off]
+    # 위 불응기가 "필터가 안 켜지는" 문제였다면, 아래는 "필터가 잘못 켜지는"
+    # 문제다. 경로가 달라 서로 간섭하지 않는다.
+    #
+    # net_directional: 화소 단위로는 팬과 플래시가 구분되지 않는다. 팬은 밝아진
+    #   면적과 어두워진 면적이 거의 같아서(pse_bt1702 실측 0.239 / 0.237) 한쪽만
+    #   보면 arm_area(0.20)를 넘긴다. 심판은 순 방향성 |up-dn| 로 이걸 상쇄시켜
+    #   모션 0.089 vs 점멸 1.000 으로 갈랐다. 같은 관문을 필터에도 건다.
+    #   psecore 의 움직임 보상은 전역 평행이동만 막아 줌·회전·피사체 움직임에
+    #   뚫린다(psecore 주석 "국소 물체 움직임은 보상되지 않는다").
+    #   PeakValley.step 이 이미 (up, delta, down|up) 을 주므로 재료는 있었다.
+    net_directional: bool = False
+    # 관문이 임계 근처에서 진동하면 마스크가 깜빡여 **없던 경계가 반복 생성**된다.
+    # Db2LyhvyHI5 실측: 토글 5 -> 13회, 헤일로 22.74 -> 26.93 으로 역행했다.
+    # 마스크 면적은 오히려 줄었는데(0.2662->0.2269) 헤일로가 늘었다 — 헤일로가
+    # 재는 것이 면적이 아니라 "새로 생긴 경계"이기 때문이다.
+    #   net_hyst : 이미 열려 있으면 arm_area × 이 값에서만 닫는다 (1.0 = 없음)
+    #   net_hold : 한 번 열리면 hold_s 동안 열어 둔다 (마스크 hold 와 같은 기전)
+    net_hyst: float = 1.0
+    net_hold: bool = False
+    # warp_alpha: prevV 와 검출기 링은 워프하는데 알파만 워프하지 않는다.
+    #   카메라가 움직이면 지난 마스크가 이미 지나간 내용 위에 얹힌다.
+    #   **실측 -1% 라 채택 근거가 없다.** 기전 확인용으로 남긴다.
+    warp_alpha: bool = False
     # ---- 실행
     short_side: int = 240
     strength: float = 1.0
@@ -180,6 +205,8 @@ class LiveFilter3:
         self._prev_ncc = None
         self._prev_flat = True
         self._prev_gray = None
+        self._cut_gap_n = max(0, int(round(c.cut_min_gap_s * fps)))
+        self._since_cut = 10 ** 9        # 첫 컷은 막지 않는다
         self.n = 0
         # ---- 자기감시: **출력에도 같은 검출기를 돌린다**
         # 인과적 필터는 원본보다 나빠질 수 있다(14번 흐르는 줄무늬 1.26s -> 6.86s).
@@ -196,6 +223,8 @@ class LiveFilter3:
         self.stats = {"armed": 0, "cuts": 0, "warped": 0, "mean_area": 0.0,
                       "alpha_raised": 0.0, "gain_sum": 0.0, "gain_min": 1.0,
                       "net": 0.0, "net_blocked": 0}
+        self.net_open = False        # 순 방향성 관문 상태 (히스테리시스용)
+        self.net_cnt = 0             # net_hold 잔여 프레임
 
     # ------------------------------------------------------------------ 검출
     def _mask(self, bgr_small):
@@ -239,8 +268,15 @@ class LiveFilter3:
         if c.net_directional and hot.any():
             au, _ = PC.area_wcag(up_any, self.win_px)
             ad, _ = PC.area_wcag(dn_any, self.win_px)
-            self.stats["net"] = abs(au - ad)
-            if abs(au - ad) < c.arm_area:
+            d = abs(au - ad)
+            self.stats["net"] = d
+            thr = c.arm_area * (c.net_hyst if self.net_open else 1.0)
+            keep = d >= thr
+            self.net_open = keep
+            if c.net_hold:
+                self.net_cnt = self.hold_n if keep else max(self.net_cnt - 1, 0)
+                keep = self.net_cnt > 0
+            if not keep:
                 hot = np.zeros_like(hot)
                 self.stats["net_blocked"] += 1
         self.hold[hot] = self.hold_n
@@ -257,6 +293,10 @@ class LiveFilter3:
         cut = False
         if self._prev_ncc is not None and not flat and not self._prev_flat:
             cut = float((gn * self._prev_ncc).mean()) < self.c.cut_thresh
+        # 불응기 (Cfg.cut_min_gap_s 주석 참고)
+        if cut and self._since_cut < self._cut_gap_n:
+            cut = False
+        self._since_cut = 0 if cut else self._since_cut + 1
         self._prev_ncc = gn
         self._prev_flat = flat
         return cut
@@ -318,9 +358,8 @@ class LiveFilter3:
         if self.alpha is not None and self.alpha.shape == a.shape:
             prev_a = self.alpha
             if c.warp_alpha and (dx or dy):
-                # prevV·검출기 링과 **같은 이동량**으로 끌어온다. 새로 드러난
-                # 가장자리는 마스크가 없어야 하므로 0 으로 채운다 (REPLICATE 로
-                # 하면 없던 마스크가 화면 밖에서 번져 들어온다).
+                # prevV·검출기 링과 같은 이동량으로 끌어온다. 새로 드러난
+                # 가장자리는 마스크가 없어야 하므로 0 으로 채운다.
                 prev_a = cv2.warpAffine(
                     prev_a, np.float32([[1, 0, dx], [0, 1, dy]]),
                     (prev_a.shape[1], prev_a.shape[0]),

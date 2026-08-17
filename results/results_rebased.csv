@@ -1,0 +1,17 @@
+﻿clip,set,before,config,after,halo,mask,net_blocked,cuts,toggles,frames,worse
+Db2LyhvyHI5,s1_flagged,적합,기준,적합,22.5,0.2662,0,2,5,304,
+Db2LyhvyHI5,s1_flagged,적합,순방향,적합,26.727,0.2269,234,2,13,304,
+Db2BKAWvAXs,s1_flagged,화면전환,기준,적합,54.447,0.7148,0,16,3,1734,
+Db2BKAWvAXs,s1_flagged,화면전환,순방향,적합,2.267,0.0449,1706,16,16,1734,
+Db155zGxJRf,s1_flagged,화면전환,기준,적합,54.034,0.6218,0,17,3,719,
+Db155zGxJRf,s1_flagged,화면전환,순방향,적합,32.125,0.3118,643,17,35,719,
+Db2D03pxZjy,s1_flagged,플래시,기준,적합,9.846,0.4067,0,2,4,444,
+Db2D03pxZjy,s1_flagged,플래시,순방향,적합,5.933,0.2652,356,2,2,444,
+DbhPStxi7eE,explore_100,적합,기준,패턴,37.142,0.2268,0,0,1,502,악화
+DbhPStxi7eE,explore_100,적합,순방향,적합,0.0,0.0,502,0,0,502,
+DZ3fRSEvFoi,explore_100,적합,기준,패턴,46.041,0.3594,0,0,4,967,악화
+DZ3fRSEvFoi,explore_100,적합,순방향,적합,0.0,0.0,967,0,0,967,
+DbvE_Zohmv6,explore_100,적합,기준,패턴,41.825,0.6588,0,3,1,769,악화
+DbvE_Zohmv6,explore_100,적합,순방향,적합,4.528,0.0266,764,3,10,769,
+Dbs05gpxSuY,explore_100,적합,기준,패턴,18.906,0.1186,0,24,36,2577,악화
+Dbs05gpxSuY,explore_100,적합,순방향,적합,3.649,0.0369,2406,24,114,2577,

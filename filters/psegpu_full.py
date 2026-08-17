@@ -295,9 +295,13 @@ class FullFilterGPU:
         self.prev_gray = None
         self.prev_ncc = None
         self.prev_flat = torch.ones((), device=self.dev, dtype=self.dt)
+        self.cut_gap_n = float(max(0, int(round(c.cut_min_gap_s * fps))))
+        self.since_cut = torch.full((), 1e9, device=self.dev, dtype=self.dt)
         self.n = 0
         self.stats = {"armed": 0, "warped": 0.0, "cuts": 0.0, "mean_area": 0.0,
                       "net_blocked": 0.0}
+        self.net_open = torch.zeros((), dtype=torch.bool, device=self.dev)
+        self.net_cnt = torch.zeros((), dtype=torch.int32, device=self.dev)
 
         self.h_in = torch.empty((self.H, self.W, 3), dtype=torch.uint8, pin_memory=True)
         self.h_out = torch.empty((self.H, self.W, 3), dtype=torch.uint8, pin_memory=True)
@@ -326,7 +330,17 @@ class FullFilterGPU:
         if getattr(c, "net_directional", False):
             au = max_box_frac(up_any.view(1, 1, self.ah, self.aw), self.win_px).max()
             ad = max_box_frac(dn_any.view(1, 1, self.ah, self.aw), self.win_px).max()
-            keep = ((au - ad).abs() >= c.arm_area)
+            d = (au - ad).abs()
+            thr = torch.where(self.net_open,
+                              torch.full_like(d, c.arm_area * c.net_hyst),
+                              torch.full_like(d, c.arm_area))
+            keep = d >= thr
+            self.net_open = keep
+            if c.net_hold:
+                self.net_cnt = torch.where(
+                    keep, torch.full_like(self.net_cnt, self.hold_n),
+                    (self.net_cnt - 1).clamp_min(0))
+                keep = self.net_cnt > 0
             self.stats["net_blocked"] += float(~keep)
             hot = hot & keep
         self.hold = torch.where(hot, torch.full_like(self.hold, self.hold_n),
@@ -361,6 +375,11 @@ class FullFilterGPU:
             ncc = (gn * self.prev_ncc).mean()
             valid = (1.0 - flat) * (1.0 - self.prev_flat)
             cut = ((ncc < c.cut_thresh).to(self.dt)) * valid
+        # 불응기 — 컷 직후 cut_gap_n 프레임은 컷을 인정하지 않는다.
+        # (Cfg.cut_min_gap_s 주석 참고) 호스트 분기 없이 스칼라 텐서로 센다.
+        allowed = (self.since_cut >= self.cut_gap_n).to(self.dt)
+        cut = cut * allowed
+        self.since_cut = (1.0 - cut) * (self.since_cut + 1.0)
         self.prev_ncc = gn
         self.prev_flat = flat
         return cut
@@ -411,9 +430,8 @@ class FullFilterGPU:
         self.n += 1
         self.stats["mean_area"] += float(M.float().mean())
 
-        # ---- 움직임을 **알파보다 먼저** 추정한다.
-        # 원래는 알파 뒤에 있었는데, warp_alpha 가 dx·dy 를 알파 혼합 시점에
-        # 필요로 한다. CPU 기준판도 "움직임 추정을 검출보다 먼저" 한다.
+        # ---- 움직임을 **알파보다 먼저** 추정한다 (warp_alpha 가 dx·dy 를
+        # 알파 혼합 시점에 필요로 한다). CPU 기준판도 같은 순서다.
         mdx = mdy = mok = None
         if c.motion_comp and self.prev_gray is not None:
             mdx, mdy, ratio = phase_corr(self.prev_gray, gray_s)
@@ -435,9 +453,7 @@ class FullFilterGPU:
         a = a.clamp(0, 1) * float(np.clip(c.strength, 0, 1))
         prev_a = self.alpha_prev
         if getattr(c, "warp_alpha", False) and mok is not None:
-            # 알파는 **분석 해상도**라 dx·dy 를 그대로 쓴다 (prev 는 전체
-            # 해상도라 sc 를 곱한다). 새로 드러난 가장자리는 마스크가 없어야
-            # 하므로 zeros=True — border 로 하면 없던 마스크가 번져 들어온다.
+            # 알파는 분석 해상도라 dx·dy 를 그대로 쓴다 (prev 는 전체 해상도라 sc).
             prev_a = translate_gpu(prev_a, mdx, mdy, mok, zeros=True)
         a = (1 - c.alpha_smooth) * prev_a + c.alpha_smooth * a
         self.alpha_prev = a
@@ -449,9 +465,9 @@ class FullFilterGPU:
             self.prev_gray = gray_s
             return self.d_in
 
-        # ---- 움직임 — 위에서 이미 추정했다 (warp_alpha 가 먼저 필요로 해서).
-        # 여기서 phase_corr 를 다시 부르면 같은 값을 두 번 계산하는 셈이다.
+        # ---- 움직임 (봉우리 비로 게이트, 호스트 동기화 없음)
         if c.motion_comp and mok is not None:
+            # 위에서 이미 추정했다 — 다시 부르면 같은 값을 두 번 계산한다.
             sc = self.W / float(self.aw)
             self.stats["warped"] += float(mok)
             prevw = translate_gpu(self.prev, mdx * sc, mdy * sc, mok)
