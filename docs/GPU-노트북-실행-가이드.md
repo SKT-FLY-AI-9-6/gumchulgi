@@ -97,8 +97,33 @@ GPU에서 몇 초대로 떨어지는지가 "D 를 오프라인 국소 청소부�
 3. (입력=아티팩트 입힌 클립, 정답=원본) 페어로 GFRM/LFRM 재학습
 4. 재학습본을 2번 하네스로 재평가 — A 뒤 국소 청소부 슬롯 재도전
 
+## 5. ★ 잔상 대책 기본값 승격 회귀 — net_directional + detail_sigma 32
+
+seunghoon 관문(순방향)과 detail_sigma 32 를 기본값으로 올리기 전의 관문.
+합성 예비(저장소 클립 14편, CPU)는 통과 기록이 validation/ 에 있고,
+**27클립 세트와 실사 209편은 GPU 노트북에만 있으므로 여기서 돌린다**:
+
+```powershell
+cd psepipe_v3_seam/validation
+
+# 합성 27클립 (pse_gpu/{synth,genre,run3} 폴더에서)
+python regress_ab.py synth/*.mp4 genre/*.mp4 run3/seg6.mp4 --gpu `
+    --cand "net_directional=True,detail_sigma=32" --csv regress_27.csv
+
+# 실사 209편 (판정만 빠르게 — 이질감 축까지 재려면 --no-ghost 제거)
+python regress_ab.py 실사폴더/*.mp4 --gpu --no-ghost `
+    --cand "net_directional=True,detail_sigma=32" --csv regress_real.csv
+```
+
+읽는 법: 마지막 줄 **"악화 0"** 이 절대 조건. "퇴보"(base 는 고쳤는데 cand 가
+못 고침)도 0 이어야 한다. 둘 다 0 이면 pselive3/psegpu_full Cfg 기본값을
+`net_directional=True, detail_sigma=32.0` 으로 바꾸고 이 CSV 두 장을 근거로
+커밋한다. detail_sigma 는 과거 고대비 경계(tex 클리핑) 악화 전례가 있으니
+14번(흐르는 줄무늬)·04번(정지 패턴) 행을 반드시 눈으로 확인할 것.
+
 ## 결과 회수
 
 끝나면 다음 파일들을 커밋(영상 제외)하거나 채팅에 업로드:
-`verify_full` 출력 로그, `validation/ad_reels.csv`, D_full 시간 기록.
+`verify_full` 출력 로그, `validation/ad_reels.csv`, D_full 시간 기록,
+`regress_27.csv` / `regress_real.csv` (5번 회귀).
 받으면 종합 분석해서 기획서·발표 수치로 정리한다.

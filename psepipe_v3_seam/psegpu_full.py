@@ -368,12 +368,12 @@ class FullFilterGPU:
     def _detect(self, lin_s):
         """분석 해상도 선형광 (1,3,h,w) -> (마스크 α 원본, 위험면적)."""
         c = self.c
-        hot = up_any = dn_any = None
+        hot = None
+        ups, dns = [], []                     # 채널별 상승/하강 (순방향 관문용)
         for ch in range(3):
             X = lin_s[0, ch]
             f, dn = self.pv[ch].step(X, c.theta_dark, c.michelson)
-            up_any = f if up_any is None else (up_any | f)
-            dn_any = dn if dn_any is None else (dn_any | dn)
+            ups.append(f); dns.append(dn)
             self.ctr[ch].push(f)
             h = self.ctr[ch].counts() >= int(c.arm_count)
             hot = h if hot is None else (hot | h)
@@ -386,10 +386,18 @@ class FullFilterGPU:
         # 들어오고 반대쪽으로 나가므로 up 과 dn 면적이 맞먹어 상쇄된다
         # (pse_bt1702 실측 0.239/0.237 -> 0.089). 진짜 점멸은 한 방향이
         # 압도한다(1.000). 심판이 쓰는 그 관문을 필터에도 건다.
+        # 순방향은 **채널별로 재서 최댓값** — CPU 판(pselive3._mask)과 같은
+        # 이유: 채널 OR 로 재면 등휘도 색 점멸(같은 화소 R↑·B↓)이 상쇄돼
+        # 관문이 닫히고 합성 06/07 의 적색 위반이 잔존한다. 비용은 box 필터
+        # 2회 -> 6회지만 net_directional 을 켠 경우에만 든다.
         if c.net_directional:
-            au = max_box_frac(up_any.view(1, 1, self.ah, self.aw), self.win_px)
-            ad = max_box_frac(dn_any.view(1, 1, self.ah, self.aw), self.win_px)
-            hot = hot & ((au - ad).abs() >= c.arm_area)
+            net = None
+            for u, d in zip(ups, dns):
+                au = max_box_frac(u.view(1, 1, self.ah, self.aw), self.win_px)
+                ad = max_box_frac(d.view(1, 1, self.ah, self.aw), self.win_px)
+                n = (au - ad).abs()
+                net = n if net is None else torch.maximum(net, n)
+            hot = hot & (net >= c.arm_area)
         self.hold = torch.where(hot, torch.full_like(self.hold, self.hold_n),
                                 (self.hold - 1).clamp_min(0))
         return (self.hold > 0)

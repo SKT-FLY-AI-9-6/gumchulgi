@@ -165,6 +165,9 @@ class Cfg:
     #   순방향  헤일로  9.40  악화 0/8
     # 미탐 검증: 진짜 플래시는 놓치지 않는다 (cera 마스크 0.4002->0.3503 이지만
     # 판정은 플래시->적합, 움직임 클립은 마스크가 통째로 꺼진다 0.3594->0.0000).
+    # **지뢰: 순방향은 채널별 최댓값으로 잴 것** (2026-08-18). 채널 OR 마스크로
+    # 재면 등휘도 색 점멸(같은 화소 R↑·B↓ 동시)이 상쇄돼 관문이 닫히고 합성
+    # 06/07 적색 위반이 잔존했다(퇴보 2). 채널별로 바꾼 뒤 14클립 회귀 재통과.
     net_directional: bool = False
     # ---- 국소 움직임 보상 (잔상 대책 — 위 게이트 실패의 정공법)
     # 전역 평행이동 워프는 화면 전체가 같이 움직일 때만 맞다. 배경 고정 +
@@ -286,15 +289,15 @@ class LiveFilter3:
             mich = (hi - lo) / np.maximum(hi + lo, 1e-6)
             return (lo < c.theta_dark) | (mich > c.michelson)
 
-        hot = up_any = dn_any = None
+        hot = None
+        ups, dns = [], []                      # 채널별 상승/하강 (순방향 관문용)
         for ch in range(3):
             X = np.ascontiguousarray(lin[..., ch])
             flash, _, anytr = self.pv[ch].step(X, qualify=qual)
             # step 은 (up, delta, down|up) 을 준다. up 과 down 은 both 해소 뒤
             # 서로소이므로 down = anytr & ~up 으로 되살릴 수 있다.
             dn = anytr & ~flash
-            up_any = flash if up_any is None else (up_any | flash)
-            dn_any = dn if dn_any is None else (dn_any | dn)
+            ups.append(flash); dns.append(dn)
             self.ctr[ch].push(flash, self.n * self.frame_ms)
             h = self.ctr[ch].counts(False) >= c.arm_count
             hot = h if hot is None else (hot | h)
@@ -314,10 +317,19 @@ class LiveFilter3:
             if a_hot < c.arm_area:
                 hot = np.zeros_like(hot)
         # **순 방향성 관문** (Cfg.net_directional 주석 참고)
+        # 순방향은 **채널별로 재서 최댓값**을 쓴다. 채널 OR 마스크(up_any/dn_any)로
+        # 재면 등휘도 색 점멸이 뚫린다 — 같은 화소에서 R↑·B↓ 가 동시에 일어나
+        # 합산 순방향이 0 이 되고, 관문이 이를 움직임으로 오인해 개입을 꺼서
+        # 합성 06/07(등휘도 적↔청 12Hz)의 적색 위반이 잔존했다 (base 는 고침).
+        # 채널별로 재면 색 점멸은 한 채널이 압도(순방향 큼)하고, 팬·줌·회전은
+        # 모든 채널이 각각 상쇄돼 관문 의도가 그대로 산다.
         if c.net_directional and hot.any():
-            au, _ = PC.area_wcag(up_any, self.win_px)
-            ad, _ = PC.area_wcag(dn_any, self.win_px)
-            if abs(au - ad) < c.arm_area:
+            net = 0.0
+            for u, d in zip(ups, dns):
+                au, _ = PC.area_wcag(u, self.win_px)
+                ad, _ = PC.area_wcag(d, self.win_px)
+                net = max(net, abs(au - ad))
+            if net < c.arm_area:
                 hot = np.zeros_like(hot)
                 self.stats["net_blocked"] = self.stats.get("net_blocked", 0) + 1
         self.hold[hot] = self.hold_n
