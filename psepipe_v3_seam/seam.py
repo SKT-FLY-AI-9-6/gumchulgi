@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
-"""이질감 측정기 — 필터가 만든 '보이는 부작용' 2가지를 잰다.
+"""이질감 측정기 — 필터가 만든 '보이는 부작용' 3가지를 잰다.
 
 목표가 "이질감 없이"인데 지금까지 지표는 PSNR/선택비뿐이었다. 둘 다 이질감
 지표가 아니다 — 위반 구역 PSNR 은 일부러 낮고(점멸을 눌렀으니), 이질감은
 **어디가 얼마나 달라졌나**가 아니라 **원본에 없던 구조가 생겼나**의 문제다.
 
-지표 2개, 둘 다 마스크 없이 (src, out) 쌍만으로 계산한다:
+지표 3개, 전부 마스크 없이 (src, out) 쌍만으로 계산한다:
 
   · 펌핑 P — 원본이 시간적으로 정지한 화소에서 출력이 움직인 양.
       정지 화소: |ΔY_src| <= 1.0 이 **연속 STATIC_RUN(10)프레임** 이어진 화소.
@@ -20,7 +20,19 @@
       평활 마스크가 구분이 안 됐다(1차 보정에서 실측). 상위 1% 로 잡아야
       "가장 나쁜 경계"를 본다.
 
-둘 다 인코딩 자체가 바닥값을 만든다 (x264 가 링잉/블록을 넣는다). 그래서
+  · 잔상 G — 움직인 화소에서 출력이 **과거 입력에 머무는** 양.
+      Kim&Moon harness/ghost_metric.py 의 lag/drag 를 CPU 범용 축으로 이식.
+      사람 눈이 잡았는데 판정·펌핑·헤일로가 전부 못 잡은 축이다 — A 는
+      out = prev + k·(in - prev) 라 k 가 작으면 출력이 입력을 못 따라가고,
+      움직이는 물체에서 그게 잔상(유령 얼굴)으로 보인다.
+        lag  : 출력이 몇 프레임 전 입력을 가장 닮았는가 (0 = 지연 없음)
+        drag : 움직인 화소(|ΔY_src| > 6)에서 |Y_out - Y_src| 가 그 화소의
+               움직임 크기 대비 얼마인가 (1.0 = 입력 변화를 전혀 못 따라감)
+      주의: 점멸 프레임에서는 전 화면이 '움직임'으로 잡히므로 drag 에
+      점멸 억제분이 섞인다. 그래서 이 축은 **같은 판정 결과끼리의 상대
+      비교**로 읽는다 — 판정을 이기고 drag 가 낮은 쪽이 잔상이 적은 것.
+
+셋 다 인코딩 자체가 바닥값을 만든다 (x264 가 링잉/블록을 넣는다). 그래서
 절대값이 아니라 **인코딩-만-한 대조군 대비**로 읽어야 한다. --base 로 대조군을
 넘기면 초과분(excess)을 같이 낸다.
 
@@ -56,6 +68,10 @@ def make_control(src, dst, crf=16):
 STATIC_THR = 1.0      # 8bit 휘도에서 이 이하로 변한 화소 = 정지
 STATIC_RUN = 10       # 이만큼 연속으로 정지여야 진짜 정지 (3Hz 점멸 배제)
 
+GHOST_MOTION_THR = 6.0   # 8bit 휘도, 이 이상 변한 화소 = 움직임 (ghost_metric 원본값)
+GHOST_MIN_PIX = 100      # 움직인 화소가 이보다 적은 프레임은 잔상 표본에서 제외
+GHOST_LAGS = 4           # 몇 프레임 과거까지 '닮음'을 뒤지는가
+
 
 def _luma(f):
     return cv2.cvtColor(f, cv2.COLOR_BGR2GRAY).astype(np.float32)
@@ -77,6 +93,9 @@ def measure(src, out, max_frames=None, verbose=False):
     pump_worst = 0.0; pump_worst_t = -1
     halo_sum = 0.0; halo_frames = 0
     halo_worst = 0.0; halo_worst_t = -1
+    hist = []                          # 최근 src 휘도 (최신이 앞), 잔상 lag 탐색용
+    ghost_lag_sum = 0.0; ghost_drag_sum = 0.0; ghost_frames = 0
+    ghost_worst = 0.0; ghost_worst_t = -1
     t = 0
     while True:
         oa, fa = ca.read(); ob, fb = cb.read()
@@ -95,7 +114,8 @@ def measure(src, out, max_frames=None, verbose=False):
 
         # 펌핑 — 연속 STATIC_RUN 프레임 정지한 화소만
         if prev_s is not None:
-            quiet = np.abs(ys - prev_s) <= STATIC_THR
+            d_src = np.abs(ys - prev_s)
+            quiet = d_src <= STATIC_THR
             streak = np.where(quiet, streak + 1, 0) if streak is not None \
                      else quiet.astype(np.int32)
             static = streak >= STATIC_RUN
@@ -106,6 +126,20 @@ def measure(src, out, max_frames=None, verbose=False):
                 pf = p / n
                 if pf > pump_worst:
                     pump_worst, pump_worst_t = pf, t
+
+            # 잔상 — 움직인 화소에서 출력이 어느 과거 입력을 닮았나
+            m = d_src > GHOST_MOTION_THR
+            if int(m.sum()) >= GHOST_MIN_PIX and len(hist) >= GHOST_LAGS:
+                errs = [float(np.abs(yo[m] - ys[m]).mean())]
+                errs += [float(np.abs(yo[m] - h[m]).mean())
+                         for h in hist[:GHOST_LAGS]]
+                ghost_lag_sum += int(np.argmin(errs))
+                drag = errs[0] / (float(d_src[m].mean()) + 1e-6)
+                ghost_drag_sum += drag; ghost_frames += 1
+                if drag > ghost_worst:
+                    ghost_worst, ghost_worst_t = drag, t
+        hist.insert(0, ys)
+        del hist[GHOST_LAGS:]
         prev_s, prev_o = ys, yo
         t += 1
         if max_frames and t >= max_frames:
@@ -121,6 +155,11 @@ def measure(src, out, max_frames=None, verbose=False):
         "halo": round(halo_sum / max(halo_frames, 1), 4),
         "halo_worst": round(halo_worst, 4),
         "halo_worst_t": halo_worst_t,
+        "ghost_lag": round(ghost_lag_sum / max(ghost_frames, 1), 3),
+        "ghost_drag": round(ghost_drag_sum / max(ghost_frames, 1), 4),
+        "ghost_drag_worst": round(ghost_worst, 4),
+        "ghost_drag_worst_t": ghost_worst_t,
+        "ghost_frames": ghost_frames,
     }
 
 
@@ -145,13 +184,17 @@ def main():
         r["base"] = b
         r["pumping_excess"] = round(max(r["pumping"] - b["pumping"], 0.0), 4)
         r["halo_excess"] = round(max(r["halo"] - b["halo"], 0.0), 4)
+        r["ghost_drag_excess"] = round(max(r["ghost_drag"] - b["ghost_drag"], 0.0), 4)
     if a.json:
         print(json.dumps(r, ensure_ascii=False, indent=1))
     else:
         print(f"펌핑 {r['pumping']:.3f} (최악 {r['pumping_worst']:.3f} @f{r['pumping_worst_t']})   "
-              f"헤일로 {r['halo']:.3f} (최악 {r['halo_worst']:.3f} @f{r['halo_worst_t']})")
+              f"헤일로 {r['halo']:.3f} (최악 {r['halo_worst']:.3f} @f{r['halo_worst_t']})   "
+              f"잔상 lag {r['ghost_lag']:.2f} drag {r['ghost_drag']:.3f} "
+              f"(최악 {r['ghost_drag_worst']:.3f} @f{r['ghost_drag_worst_t']}, 표본 {r['ghost_frames']}f)")
         if base:
-            print(f"인코딩 대조군 대비 초과 — 펌핑 +{r['pumping_excess']:.3f}  헤일로 +{r['halo_excess']:.3f}")
+            print(f"인코딩 대조군 대비 초과 — 펌핑 +{r['pumping_excess']:.3f}  헤일로 +{r['halo_excess']:.3f}"
+                  f"  잔상 drag +{r['ghost_drag_excess']:.3f}")
 
 
 if __name__ == "__main__":

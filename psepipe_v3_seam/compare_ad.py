@@ -6,6 +6,10 @@
 낮은 쪽 → ③ 빠른 쪽. 판정이 같아야 이질감을 비교한다 — 위반을 남긴 채
 깨끗한 것은 승리가 아니다.
 
+잔상축(lag/drag, seam.py 참조)은 표에 같이 나오지만 승자 규칙에는 안 들어간다
+— 잔상과 점멸 억제는 같은 동전의 양면이라(Kim&Moon 실측) drag 낮음이 항상
+선이 아니다. 같은 판정끼리의 상대 비교 축으로 읽는다.
+
 사용:
     python compare_ad.py 클립1.mp4 클립2.mp4 ...
         [--d-cmd "python -m blazebvd.cli correct {src} -o {dst} --stage ste"]
@@ -34,10 +38,18 @@ def _judge(path, width=320):
 
 
 def _seam_excess(src, out, ctrl):
+    """(펌핑+, 헤일로+, 잔상lag, 잔상drag+) — 전부 인코딩 대조군 초과분.
+
+    잔상축(lag/drag)은 표시 축이다 — 승자 규칙(판정 → 펌핑+헤일로 → 속도)에는
+    넣지 않는다. Kim&Moon 실측대로 잔상과 점멸 억제는 같은 동전의 양면이라
+    drag 낮음이 항상 선(善)이 아니기 때문(개입을 껐어도 drag 는 내려간다).
+    같은 판정 결과끼리의 상대 비교로 읽을 것."""
     m = seam.measure(src, out)
     b = seam.measure(src, ctrl)
     return (round(max(m["pumping"] - b["pumping"], 0.0), 3),
-            round(max(m["halo"] - b["halo"], 0.0), 3))
+            round(max(m["halo"] - b["halo"], 0.0), 3),
+            round(m["ghost_lag"], 2),
+            round(max(m["ghost_drag"] - b["ghost_drag"], 0.0), 3))
 
 
 def run_one(src, d_cmd, workdir, width=320):
@@ -58,7 +70,8 @@ def run_one(src, d_cmd, workdir, width=320):
     row["A_after"] = rA["after_failed"]
     row["A_touched"] = rA.get("touched_time_pct")
     if not rA.get("untouched"):
-        row["A_pump"], row["A_halo"] = _seam_excess(src, outA, ctrl)
+        (row["A_pump"], row["A_halo"],
+         row["A_glag"], row["A_gdrag"]) = _seam_excess(src, outA, ctrl)
 
     # ── D: 외부 보정기
     if d_cmd:
@@ -72,7 +85,8 @@ def run_one(src, d_cmd, workdir, width=320):
             row["D_err"] = (rd.stderr or "")[-200:]
         else:
             row["D_after"] = _judge(outD, width)
-            row["D_pump"], row["D_halo"] = _seam_excess(src, outD, ctrl)
+            (row["D_pump"], row["D_halo"],
+             row["D_glag"], row["D_gdrag"]) = _seam_excess(src, outD, ctrl)
 
     # ── 승자
     if d_cmd and "D_pump" in row or (d_cmd and row.get("D_after") is not None):
@@ -91,19 +105,25 @@ def run_one(src, d_cmd, workdir, width=320):
 
 
 def fmt(rows):
-    hdr = ["clip", "전(위반)", "A후", "A펌핑+", "A헤일로+", "A초",
-           "D후", "D펌핑+", "D헤일로+", "D초", "승자"]
+    hdr = ["clip", "전(위반)", "A후", "A펌핑+", "A헤일로+", "A잔상 lag/drag+", "A초",
+           "D후", "D펌핑+", "D헤일로+", "D잔상 lag/drag+", "D초", "승자"]
     L = [" | ".join(hdr), " | ".join(["---"] * len(hdr))]
+
+    def _ghost(r, k):
+        if f"{k}_glag" not in r:
+            return "-"
+        return f"{r[f'{k}_glag']}/{r[f'{k}_gdrag']}"
+
     for r in rows:
         if r.get("note"):
-            L.append(f"{r['clip']} | (적합) | {r['note']}" + " | -" * 8)
+            L.append(f"{r['clip']} | (적합) | {r['note']}" + " | -" * 10)
             continue
         L.append(" | ".join(str(x) for x in [
             r["clip"], ",".join(r["before"]) or "-",
             ",".join(r.get("A_after", [])) or "적합",
-            r.get("A_pump", "-"), r.get("A_halo", "-"), r.get("A_sec", "-"),
+            r.get("A_pump", "-"), r.get("A_halo", "-"), _ghost(r, "A"), r.get("A_sec", "-"),
             ",".join(r.get("D_after", ["미실행"])) or "적합",
-            r.get("D_pump", "-"), r.get("D_halo", "-"), r.get("D_sec", "-"),
+            r.get("D_pump", "-"), r.get("D_halo", "-"), _ghost(r, "D"), r.get("D_sec", "-"),
             r.get("winner", "-")]))
     return "\n".join(L)
 
@@ -126,8 +146,9 @@ if __name__ == "__main__":
     print(fmt(rows))
     if a.csv:
         import csv as _csv
-        keys = ["clip", "before", "A_after", "A_pump", "A_halo", "A_sec",
-                "A_touched", "D_after", "D_pump", "D_halo", "D_sec", "winner"]
+        keys = ["clip", "before", "A_after", "A_pump", "A_halo", "A_glag",
+                "A_gdrag", "A_sec", "A_touched", "D_after", "D_pump", "D_halo",
+                "D_glag", "D_gdrag", "D_sec", "winner"]
         with open(a.csv, "w", newline="", encoding="utf-8-sig") as f:
             w = _csv.writer(f)
             w.writerow(keys)
