@@ -1,0 +1,31 @@
+torch 2.11.0+cu128  NVIDIA GeForce RTX 4090 Laptop GPU
+
+클립                          해상도      원본     CPU     GPU     선명도  CPU ms  GPU ms  판정
+4UEAYxGC1gE.mp4     854x480       0.00    0.00    0.00    100%    41.1     7.6  PASS
+523LwKMfF2I.mp4     1280x720      79.48   79.43   79.43     95%    99.4    10.1  FAIL
+6gmCC4OkFx8.mp4     1280x720       0.00    0.00    0.00    121%   128.2    10.5  PASS
+9-ochJEQpb0.mp4     1280x720       0.00    0.00    0.00     99%    86.5     8.7  PASS
+AjbrmfjJRk0.mp4     640x360      79.25    0.00    0.00    177%    35.0     6.2  PASS
+Ben_8tA6Eyg.mp4     1280x720      11.50    0.00    0.00    104%   127.7     8.1  PASS
+CIHun1gx7zU.mp4     1280x720      58.96   38.60   37.46     98%    89.8     7.1  FAIL
+GSTB2MVHtMk.mp4     960x720       0.00    0.00    0.00    107%    71.3     9.1  PASS
+M5HYGDDf6wU.mp4     1280x720       1.21    0.00    0.00     94%   123.5     8.4  PASS
+MFC0eGtaF5M.mp4     1280x720      21.20    0.00    0.00    108%   110.1     7.8  PASS
+PFSDW2g3D8o.mp4     1280x720      78.03    0.00    0.00    155%   128.5     9.1  PASS
+QtXx3Qubmys.mp4     1280x720       0.33    0.00    0.00     88%   128.7    10.1  PASS
+TXeDgXiytM0.mp4     1280x720      79.30   79.30   79.30     94%    77.0     9.4  FAIL
+UoHK74aS9sY.mp4     1280x720       0.00    0.00    0.00    144%   120.4     9.3  PASS
+Y76O5wY7EcM.mp4     1280x720      79.40   79.36   79.36     93%    83.2     9.2  FAIL
+Z0NIxY7svlM.mp4     1280x720      23.80    0.00    0.00     77%   115.8    10.7  PASS
+_3-eqclZgQc.mp4     1280x720      17.87    0.00    0.00    101%   129.4     7.6  PASS
+ezm9i2nGYwQ.mp4     1280x720      79.26   79.26   79.26     93%    82.4    10.4  FAIL
+ila-hAUXR5U.mp4     640x480       0.00    0.00    0.00    100%    29.8     8.1  PASS
+kMJVNerOtRI.mp4     1280x720       0.00    0.00    0.00    100%    80.5     7.5  PASS
+xDdAHEUQ2zA.mp4     1280x720      48.43   28.35    5.76     96%    97.2    10.1  FAIL
+xbawhCyMsRI.mp4     1280x720      74.10    0.00    0.00    122%   110.3     7.1  PASS
+yqkfZuyQPc4.mp4     1280x720       0.00    0.00    0.00    105%   101.5     8.9  PASS
+zlmWXyIFYnM.mp4     1280x720      79.36   76.45   75.77     99%    78.3     8.3  FAIL
+
+실사 24편 — CPU와 판정 일치 24 / 불일치 0 / 악화 0
+속도 평균  CPU 94.8 ms  GPU 8.7 ms  (10.9배)
+CSV -> validation/verify_real_yt.csv
