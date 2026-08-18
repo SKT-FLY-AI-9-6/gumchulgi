@@ -102,11 +102,95 @@ class Cfg:
     guard_up: float = 0.03          # 정상 시 회복 속도
     # ---- 마스크 성형
     dilate_px: int = 3
-    feather_px: float = 5.0
+    # 0 이 아니면 **지뢰 6** 이 살아난다 — 0<A<1 인 페더 띠의 실제 변화는
+    # A·k + (1-A) 라 상한을 넘고, 그 반쯤 처리된 띠가 넓게 이어지면 면적 규칙을
+    # 그대로 만족시켜 **없던 위반이 생긴다**(14번 흐르는 줄무늬).
+    # 27클립 전수 실측 (악화 = 안전한 원본을 위반으로 만든 클립 수):
+    #   페더 5.0 -> 악화 1 (14번 0.00->1.54)      2.0 -> 악화 0, 잔여 0.16
+    #   페더 1.5 -> 악화 0, 잔여 0.16             1.0 -> 악화 1 (0.00->0.94)
+    #   페더 0.5 -> 악화 1 (0.00->1.20)           0.0 -> 악화 0, 잔여 0.00
+    # **비단조다.** 1.5/2.0 이 통과하는 건 이 코퍼스에서 우연히 면적 규칙을
+    # 안 넘은 것이고, 0 만이 페더 띠라는 기전 자체를 없앤다.
+    # (alpha_smooth 때문에 시간축 부분 알파는 남는다 — 완전한 증명은 아니다.)
+    # alpha_compensate 로도 막히지만 마스크 면적이 넓어져 선명도가 80%->46% 로
+    # 깎인다(01번). 페더 0 은 선명도를 그대로 두므로 이쪽을 쓴다.
+    # 대가: 마스크 경계가 딱딱해져 헤일로가 는다 (22번 13.0 -> 17.5).
+    feather_px: float = 0.0
+    # 시간축 부분 알파(전이 구간의 0<A<1)도 페더와 같은 이유로 상한을 깬다.
+    # GPU 14번 실측: alpha_smooth 0.5 -> 1.14s, 0.75 -> 0.14s, 1.0 -> 0.00s (단조).
+    # 그런데 1.0 으로 올리면 **CPU 가 0.00 -> 0.26 으로 역행**하고 선명도도
+    # 광범위하게 깎인다 (01번 80%->46%, 02번 94%->65%). 그래서 채택하지 않았다.
     alpha_smooth: float = 0.5
     hold_s: float = 0.25
     # ---- 질감 복원
     detail_sigma: float = 2.0       # >0 이면 레벨만 제한, 밝기 고역은 현재 프레임에서
+    # ---- 부호 일관성 게이트 (잔상 대책)
+    # 슬루 제한은 **모든 변화**를 누른다. 그런데 위반은 점멸이지 움직임이 아니다.
+    # 움직이는 화소까지 눌리니 잔상이 생긴다 (실측 drag 0.31~0.46 — 움직인 화소에서
+    # 출력이 입력 변화의 31~46% 를 못 따라간다).
+    #
+    # **두 가지를 시도했고 둘 다 실패했다. 다시 하지 말 것.**
+    #
+    #   (a) 부호 일관성 — 플래시는 넓은 영역이 같은 방향으로 변하고 움직임은
+    #       경계에서 엇갈린다고 보고 sign(Δ) 의 국소 평균으로 갈랐다.
+    #         gate 0.0/0.3/0.5/0.7/1.0 -> 제거율 92.8 / 60.0 / 59.7 / 59.1 / 56.7 %
+    #       공간적으로 복잡한 점멸을 움직임으로 오인한다 (TXeDgXiytM0 99->0%).
+    #
+    #   (b) 국소 정규화 상관(NCC) — 플래시는 레벨만 바꾸고 구조는 유지한다고 보고
+    #       창 단위 NCC 로 갈랐다.  더 나쁘다:
+    #         gate 0.0/0.3/0.5 -> 제거율 92.8 / 47.1 / 40.6 %,  악화 0 / 1 / 1
+    #       실사에서는 스트로브가 포화·클리핑을 일으켜 **구조도 바꾼다**.
+    #
+    # 공통 원인: 점멸과 움직임은 **같은 곳에서 동시에** 일어난다 (스트로브 아래
+    # 춤추는 사람). 움직임이 있는 곳의 개입을 줄이면 곧 위반이 있는 곳의 개입을
+    # 줄이는 것이다. **입력을 보고 '어디에 개입할지' 정하는 방식으로는 잔상을
+    # 못 잡는다.** 남은 정공법은 움직임 보상을 국소화해서(광학흐름/블록매칭)
+    # d = lin - warp(prev) 에서 움직임 성분을 빼는 것이다 — 그러면 슬루 제한이
+    # 플래시 성분에만 걸린다. 현재 워프는 전역 평행이동 하나뿐이다.
+    coh_gate: float = 0.0           # 0 = 꺼짐. 위 이유로 켜지 말 것
+    coh_win: int = 9
+    # ---- 순 방향성 관문 [seunghoon 브랜치에서 가져옴]
+    # 위 잔상 게이트들이 "어디에 개입할지"를 국소로 판단하려다 실패한 것과 달리,
+    # 이건 **심판이 실제로 쓰는 판별자**를 그대로 가져온다.
+    #
+    # 화소 단위로는 팬과 플래시가 구분되지 않는다. 카메라가 움직이면 어두운 벽에
+    # 있던 화소 자리에 밝은 창문이 들어오고, 그 ΔY 는 플래시의 정의를 만족한다.
+    # 심판(pse_bt1702)은 net = 밝아진면적 - 어두워진면적 으로 막는다 — 팬은 양쪽이
+    # 맞먹어 상쇄되고(실측 0.239/0.237 -> 0.089) 점멸은 한 방향이 압도한다(1.000).
+    # 그런데 필터가 쓰는 psecore 에는 그 관문이 없다. psecore 의 움직임 보상은
+    # 주석대로 "전역(팬) 한정"이라 줌·회전·피사체 움직임에 뚫린다.
+    #
+    # seunghoon 실측 (대표 8편, pse_bt1702 기준, 불응기 0.2 위에서):
+    #   기준    헤일로 35.59  악화 4/8
+    #   순방향  헤일로  9.40  악화 0/8
+    # 미탐 검증: 진짜 플래시는 놓치지 않는다 (cera 마스크 0.4002->0.3503 이지만
+    # 판정은 플래시->적합, 움직임 클립은 마스크가 통째로 꺼진다 0.3594->0.0000).
+    net_directional: bool = False
+    # ---- 국소 움직임 보상 (잔상 대책 — 위 게이트 실패의 정공법)
+    # 전역 평행이동 워프는 화면 전체가 같이 움직일 때만 맞다. 배경 고정 +
+    # 인물 이동 같은 국소 움직임은 보상되지 않아 슬루 제한에 걸리고 그게 잔상이다.
+    # 블록매칭으로 화소별 벡터를 구해 prev 를 끌어오면 d 에서 움직임이 상쇄되고
+    # 점멸만 남는다.
+    #
+    # **구현했고 측정했다. 원리는 맞지만 효과가 없어 기본값 off 로 둔다.**
+    #   설정                    제거율   drag    악화   ms
+    #   끔                      100.0%  0.492    0     8.5
+    #   blk16 r8 s2 gain.15      99.1%  0.469    0    12.2
+    #   blk16 r8 s2 gain.05      98.9%  0.468    0    12.5
+    # 앞의 두 게이트(coh_gate)와 달리 **제거율이 유지된다** — 개입 범위를 안
+    # 건드리고 d 에서 움직임만 빼기 때문이다. 그런데 잔상 개선이 4.7% 뿐이고
+    # 시간은 44% 는다. 채택할 근거가 없다.
+    #
+    # 이유: **잔상의 대부분이 움직임 때문이 아니라 기전 자체다.** 점멸을 누른다는
+    # 건 휘도를 직전 수준에 붙잡아 둔다는 뜻이고, 화면이 '이전 프레임에 머무는'
+    # 것처럼 보이는 그 현상이 곧 보정이 작동하는 모습이다. 움직임 보상으로 걷어낼
+    # 수 있는 건 움직임 때문에 **추가로** 걸린 몫뿐인데 그게 5% 수준이었다.
+    # 잔상과 점멸 억제는 같은 동전의 양면이라 슬루 제한 설계 안에서는 못 넘는다.
+    local_mc: bool = False
+    lmc_radius: int = 8             # 탐색 반경 (분석 해상도 화소)
+    lmc_step: int = 2               # 탐색 간격
+    lmc_block: int = 16             # 블록 크기
+    lmc_min_gain: float = 0.15      # 무변위 대비 SAD 가 이만큼 좋아야 채택
     # ---- 움직임 보상
     motion_comp: bool = True
     motion_resp: float = 0.10       # 위상상관 신뢰도 하한 (주기 패턴이 여기서 걸러진다)
@@ -114,6 +198,29 @@ class Cfg:
     # ---- 컷 리셋
     cut_thresh: float = 0.45
     flat_sd: float = 6.0
+    # **불응기** — 컷 직후 이만큼은 추가 컷을 인정하지 않는다.
+    # 지뢰 2 의 재발이다. 히스토그램에서 NCC 로 바꿔 한 번 막았지만 실사의
+    # 강한 점멸 + 빠른 편집에서는 NCC 도 뚫린다. 실측(유튜브 실사 40초 클립,
+    # 1000~1200 프레임):
+    #   실패군 7편  컷 278~1106  제거율 0~41%   <- 초당 25회 컷을 주장한다
+    #   성공군      컷 0         제거율 100%
+    # 위반량·규칙 조합·마스크(0.997)·무장률(100%)이 같은데 컷 수만 다르고
+    # 결과가 100% 대 0% 로 갈렸다. 컷마다 prev 가 리셋되니 시간축 평활이
+    # 한 번도 누적되지 못한 것이다.
+    # 대가: 진짜 컷이 이 간격 안에 연달아 오면 한 번을 놓쳐 잔상이 남는다.
+    #
+    # 유튜브 실사 24편(위반 16) 스윕 — 악화는 전 구간 0:
+    #   0.00  제거 64.3%  완전 9/16   컷 255   drag 0.370
+    #   0.10       81.0%      10/16       82
+    #   0.20       95.5%      10/16       53   drag 0.394
+    #   0.30       98.6%      11/16       39   drag 0.390
+    #   0.50      100.0%      16/16       26   drag 0.392   <- 채택
+    # **잔상 비용은 불응기를 켜는 순간 한 번 발생하고 그 뒤로는 평평하다.**
+    # 그래서 0.2 -> 0.5 는 잔상을 더 내주지 않고 제거율만 얻는다.
+    # 0.5 는 초당 2회 컷 상한이라 빠른 편집의 진짜 컷을 놓칠 수 있지만,
+    # 초당 6회·10회 컷 합성 클립(21/27번)에서 판정이 유지되는 것을 확인했다 —
+    # 컷 리셋을 놓치면 그 지점에 잔상이 생길 뿐 위반을 만들지는 않는다.
+    cut_min_gap_s: float = 0.5
     # ---- 실행
     short_side: int = 240
     strength: float = 1.0
@@ -152,6 +259,8 @@ class LiveFilter3:
         self._prev_ncc = None
         self._prev_flat = True
         self._prev_gray = None
+        self._cut_gap_n = max(0, int(round(c.cut_min_gap_s * fps)))
+        self._since_cut = 10 ** 9        # 첫 컷은 막지 않는다
         self.n = 0
         # ---- 자기감시: **출력에도 같은 검출기를 돌린다**
         # 인과적 필터는 원본보다 나빠질 수 있다(14번 흐르는 줄무늬 1.26s -> 6.86s).
@@ -177,10 +286,15 @@ class LiveFilter3:
             mich = (hi - lo) / np.maximum(hi + lo, 1e-6)
             return (lo < c.theta_dark) | (mich > c.michelson)
 
-        hot = None
+        hot = up_any = dn_any = None
         for ch in range(3):
             X = np.ascontiguousarray(lin[..., ch])
-            flash, _, _ = self.pv[ch].step(X, qualify=qual)
+            flash, _, anytr = self.pv[ch].step(X, qualify=qual)
+            # step 은 (up, delta, down|up) 을 준다. up 과 down 은 both 해소 뒤
+            # 서로소이므로 down = anytr & ~up 으로 되살릴 수 있다.
+            dn = anytr & ~flash
+            up_any = flash if up_any is None else (up_any | flash)
+            dn_any = dn if dn_any is None else (dn_any | dn)
             self.ctr[ch].push(flash, self.n * self.frame_ms)
             h = self.ctr[ch].counts(False) >= c.arm_count
             hot = h if hot is None else (hot | h)
@@ -199,6 +313,13 @@ class LiveFilter3:
             a_hot, _ = PC.area_wcag(hot, self.win_px)
             if a_hot < c.arm_area:
                 hot = np.zeros_like(hot)
+        # **순 방향성 관문** (Cfg.net_directional 주석 참고)
+        if c.net_directional and hot.any():
+            au, _ = PC.area_wcag(up_any, self.win_px)
+            ad, _ = PC.area_wcag(dn_any, self.win_px)
+            if abs(au - ad) < c.arm_area:
+                hot = np.zeros_like(hot)
+                self.stats["net_blocked"] = self.stats.get("net_blocked", 0) + 1
         self.hold[hot] = self.hold_n
         np.maximum(self.hold - 1, 0, out=self.hold)
         return self.hold > 0
@@ -213,6 +334,10 @@ class LiveFilter3:
         cut = False
         if self._prev_ncc is not None and not flat and not self._prev_flat:
             cut = float((gn * self._prev_ncc).mean()) < self.c.cut_thresh
+        # 불응기 (Cfg.cut_min_gap_s 주석 참고)
+        if cut and self._since_cut < self._cut_gap_n:
+            cut = False
+        self._since_cut = 0 if cut else self._since_cut + 1
         self._prev_ncc = gn
         self._prev_flat = flat
         return cut

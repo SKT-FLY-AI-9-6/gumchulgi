@@ -1,0 +1,14 @@
+-- travis_fein
+   before ['플래시', '화면전환']/위반 | A ['화면전환']/위반 halo 2.131 | D-full []/여백없음 halo 18.133 | A->D []/여백없음 halo 20.442
+-- anime
+   before ['플래시', '화면전환']/위반 | A ['화면전환']/위반 halo 0.028 | D-full ['플래시', '화면전환']/위반 halo 29.473 | A->D ['화면전환']/위반 halo 30.321
+-- cera_khin
+   before ['플래시']/위반 | A []/여백없음 halo 2.278 | D-full []/여백없음 halo 29.137 | A->D []/여백없음 halo 29.29
+
+clip | before | A_after | A_tier | A_pump | A_halo | A_sec | Dfull_after | Dfull_tier | Dfull_pump | Dfull_halo | AD_after | AD_tier | AD_pump | AD_halo | AD_sec
+--- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | ---
+travis_fein | 플래시,화면전환 | 화면전환 | 위반 | 0.0 | 2.131 | 37.9 | 적합 | 여백없음 | 1.731 | 18.133 | 적합 | 여백없음 | 1.621 | 20.442 | 406.9
+anime | 플래시,화면전환 | 화면전환 | 위반 | 0.0 | 0.028 | 60.5 | 플래시,화면전환 | 위반 | 1.644 | 29.473 | 화면전환 | 위반 | 1.603 | 30.321 | 743.6
+cera_khin | 플래시 | 적합 | 여백없음 | 0.0 | 2.278 | 47.8 | 적합 | 여백없음 | 1.629 | 29.137 | 적합 | 여백없음 | 1.497 | 29.29 | 223.9
+
+CSV -> validation/three_way_reels_dfull.csv

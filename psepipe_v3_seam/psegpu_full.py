@@ -126,7 +126,8 @@ class TPeakValley:
     def step(self, X, theta_dark, michelson):
         if not self.ring:
             self.ring.append(X.clone())
-            return torch.zeros_like(X, dtype=torch.bool)
+            z = torch.zeros_like(X, dtype=torch.bool)
+            return z, z.clone()
         lmax = self.ring[0]
         lmin = self.ring[0]
         for r in self.ring[1:]:
@@ -153,7 +154,10 @@ class TPeakValley:
         self.ring.append(X.clone())
         if len(self.ring) > self.n:
             self.ring.pop(0)
-        return up
+        # 순 방향성 관문(Cfg.net_directional)이 하강분을 쓴다. CPU 판의
+        # PeakValley 는 (up, delta, down|up) 을 주는데 여기서는 (up, down) 으로
+        # 직접 돌려준다 — down 은 both 해소 뒤라 up 과 서로소다.
+        return up, down
 
 
 class TFlashCounter:
@@ -242,6 +246,65 @@ def translate_gpu(x, dx, dy, gate):
                          align_corners=True)
 
 
+def block_flow(prev_g, cur_g, radius: int, step: int, block: int, min_gain: float):
+    """블록매칭 국소 움직임장. (dx, dy) 를 분석 해상도 맵으로 돌려준다.
+
+    전역 평행이동 워프는 화면 전체가 같이 움직일 때만 맞다. 배경은 고정인데
+    사람만 움직이면 그 움직임이 보상되지 않고 슬루 제한에 걸려 **잔상**이 된다.
+    여기서 국소 벡터를 구해 prev 를 화소별로 끌어오면
+        d = lin - warp_local(prev)
+    에서 움직임 성분이 상쇄되고 점멸 성분만 남는다.
+
+    호스트 동기화가 없어야 하므로 후보 변위를 전부 쌓아 argmin 을 취한다.
+    **잘못된 벡터는 잔상보다 나쁜 아티팩트를 만든다.** 그래서 무변위 대비
+    SAD 가 min_gain 이상 좋아진 블록만 채택하고 나머지는 0 으로 둔다.
+    """
+    h, w = prev_g.shape
+    p = prev_g.view(1, 1, h, w)
+    c = cur_g.view(1, 1, h, w)
+    offs = list(range(-radius, radius + 1, step))
+    costs, vecs = [], []
+    for dy in offs:
+        for dx in offs:
+            sh = torch.roll(p, shifts=(dy, dx), dims=(2, 3))
+            sad = F.avg_pool2d((c - sh).abs(), block, stride=block)
+            costs.append(sad)
+            vecs.append((dx, dy))
+    C = torch.cat(costs, dim=1)                     # (1, K, hb, wb)
+    best = C.argmin(dim=1, keepdim=True)
+    zero_i = vecs.index((0, 0))
+    cost_zero = C[:, zero_i:zero_i + 1]
+    cost_best = C.gather(1, best)
+    # 무변위보다 뚜렷하게 좋을 때만 신뢰한다
+    ok = (cost_best < cost_zero * (1.0 - min_gain)).to(prev_g.dtype)
+
+    dxs = torch.tensor([v[0] for v in vecs], device=prev_g.device,
+                       dtype=prev_g.dtype)
+    dys = torch.tensor([v[1] for v in vecs], device=prev_g.device,
+                       dtype=prev_g.dtype)
+    fx = dxs[best.squeeze(1)].unsqueeze(1) * ok
+    fy = dys[best.squeeze(1)].unsqueeze(1) * ok
+    fx = F.interpolate(fx, size=(h, w), mode="bilinear", align_corners=False)
+    fy = F.interpolate(fy, size=(h, w), mode="bilinear", align_corners=False)
+    return fx, fy
+
+
+def warp_flow(x, fx, fy):
+    """화소별 (fx, fy) 만큼 x 를 끌어온다. fx/fy 는 x 와 같은 해상도로 맞춰진다."""
+    n, c, h, w = x.shape
+    if fx.shape[-2:] != (h, w):
+        fx = F.interpolate(fx, size=(h, w), mode="bilinear", align_corners=False)
+        fy = F.interpolate(fy, size=(h, w), mode="bilinear", align_corners=False)
+    ys, xs = torch.meshgrid(
+        torch.arange(h, device=x.device, dtype=x.dtype),
+        torch.arange(w, device=x.device, dtype=x.dtype), indexing="ij")
+    gx = (xs.view(1, 1, h, w) - fx) / max(w - 1, 1) * 2.0 - 1.0
+    gy = (ys.view(1, 1, h, w) - fy) / max(h - 1, 1) * 2.0 - 1.0
+    grid = torch.cat([gx, gy], dim=1).permute(0, 2, 3, 1)
+    return F.grid_sample(x, grid, mode="bilinear", padding_mode="border",
+                         align_corners=True)
+
+
 # ══════════════════════════════════════════════════════════════════════════════
 @dataclass
 class OptF:
@@ -280,6 +343,9 @@ class FullFilterGPU:
         self.k_fea = gauss1d(c.feather_px, self.dev, self.dt) if c.feather_px > 0 else None
         self.wY = torch.tensor([0.0722, 0.7152, 0.2126],
                                device=self.dev, dtype=self.dt).view(1, 3, 1, 1)
+        # 컷 판정용 — cv2.COLOR_BGR2GRAY 와 같은 Rec.601 가중치 (BGR 순서)
+        self.w601 = torch.tensor([0.114, 0.587, 0.299],
+                                 device=self.dev, dtype=self.dt)
         self.OETF = torch.from_numpy(np.ascontiguousarray(P3._build_oetf())).to(self.dev)
 
         self.prev = None
@@ -288,8 +354,11 @@ class FullFilterGPU:
         self.prev_gray = None
         self.prev_ncc = None
         self.prev_flat = torch.ones((), device=self.dev, dtype=self.dt)
+        self.cut_gap_n = float(max(0, int(round(c.cut_min_gap_s * fps))))
+        self.since_cut = torch.full((), 1e9, device=self.dev, dtype=self.dt)
         self.n = 0
-        self.stats = {"armed": 0, "warped": 0.0, "cuts": 0.0, "mean_area": 0.0}
+        self.stats = {"armed": 0, "warped": 0.0, "cuts": 0.0, "mean_area": 0.0,
+                      "lmc_px": 0.0}
 
         self.h_in = torch.empty((self.H, self.W, 3), dtype=torch.uint8, pin_memory=True)
         self.h_out = torch.empty((self.H, self.W, 3), dtype=torch.uint8, pin_memory=True)
@@ -299,10 +368,12 @@ class FullFilterGPU:
     def _detect(self, lin_s):
         """분석 해상도 선형광 (1,3,h,w) -> (마스크 α 원본, 위험면적)."""
         c = self.c
-        hot = None
+        hot = up_any = dn_any = None
         for ch in range(3):
             X = lin_s[0, ch]
-            f = self.pv[ch].step(X, c.theta_dark, c.michelson)
+            f, dn = self.pv[ch].step(X, c.theta_dark, c.michelson)
+            up_any = f if up_any is None else (up_any | f)
+            dn_any = dn if dn_any is None else (dn_any | dn)
             self.ctr[ch].push(f)
             h = self.ctr[ch].counts() >= int(c.arm_count)
             hot = h if hot is None else (hot | h)
@@ -310,25 +381,52 @@ class FullFilterGPU:
         if c.arm_area > 0:
             a_hot = max_box_frac(hot.view(1, 1, self.ah, self.aw), self.win_px)
             hot = hot & (a_hot >= c.arm_area)
+        # **순 방향성 관문** (seunghoon 브랜치에서 가져옴 — Cfg.net_directional)
+        # 화소 단위로는 팬과 플래시가 구분되지 않는다. 팬은 한쪽에서 밝은 것이
+        # 들어오고 반대쪽으로 나가므로 up 과 dn 면적이 맞먹어 상쇄된다
+        # (pse_bt1702 실측 0.239/0.237 -> 0.089). 진짜 점멸은 한 방향이
+        # 압도한다(1.000). 심판이 쓰는 그 관문을 필터에도 건다.
+        if c.net_directional:
+            au = max_box_frac(up_any.view(1, 1, self.ah, self.aw), self.win_px)
+            ad = max_box_frac(dn_any.view(1, 1, self.ah, self.aw), self.win_px)
+            hot = hot & ((au - ad).abs() >= c.arm_area)
         self.hold = torch.where(hot, torch.full_like(self.hold, self.hold_n),
                                 (self.hold - 1).clamp_min(0))
         return (self.hold > 0)
 
-    def _cut_gate(self, gray_s):
-        """1 이면 컷. 호스트 분기 없이 스칼라 텐서로 돌려준다."""
+    def _cut_gate(self, gray8):
+        """1 이면 컷. 호스트 분기 없이 스칼라 텐서로 돌려준다.
+
+        CPU 기준판(pselive3._is_cut)은 **감마 부호화된 8비트 그레이**에서 잰다.
+        여기서 선형광 루마로 재던 것이 22번(게임 HUD)·seg6 판정 불일치의 원인이었다.
+        감마는 비선형이라 `/255` 환산으로는 못 메운다 — NCC 값 자체가 달라진다.
+        선형광에서는 밝은 프레임의 분산이 과장돼 연속 프레임 상관이 실제보다
+        낮게 나오고, 그래서 임계 0.45 에 컷이 과검출됐다(22번 55회). 컷마다
+        `prev` 가 리셋되니 시간축 평활이 누적되지 않아 출력이 원본과 같아졌다.
+
+        그래서 CPU 와 같은 도메인에서 잰다: 입력 uint8 BGR 에 Rec.601 가중치
+        (cv2.COLOR_BGR2GRAY 와 동일), 0~255 스케일. 이제 `cut_thresh` 0.45 와
+        `flat_sd` 6.0 이 CPU 와 같은 뜻이 된다.
+        """
         c = self.c
-        g = F.interpolate(gray_s.view(1, 1, self.ah, self.aw), size=(64, 64),
+        g = F.interpolate(gray8.view(1, 1, self.H, self.W), size=(64, 64),
                           mode="area").view(64, 64)
         g = g - g.mean()
         sd = g.std()
-        flat = (sd < (c.flat_sd / 255.0)).to(self.dt)     # 선형광 스케일 보정
-        gn = g / sd.clamp_min(1e-6)
+        flat = (sd < c.flat_sd).to(self.dt)               # CPU 와 같은 8비트 스케일
+        # CPU 는 sd 가 너무 작으면 gn 을 0 으로 둔다. 그대로 맞춘다.
+        gn = torch.where(sd > 1e-3, g / sd.clamp_min(1e-6), torch.zeros_like(g))
         if self.prev_ncc is None:
             cut = torch.zeros((), device=self.dev, dtype=self.dt)
         else:
             ncc = (gn * self.prev_ncc).mean()
             valid = (1.0 - flat) * (1.0 - self.prev_flat)
             cut = ((ncc < c.cut_thresh).to(self.dt)) * valid
+        # 불응기 — 컷 직후 cut_gap_n 프레임은 컷을 인정하지 않는다.
+        # (Cfg.cut_min_gap_s 주석 참고) 호스트 분기 없이 스칼라 텐서로 센다.
+        allowed = (self.since_cut >= self.cut_gap_n).to(self.dt)
+        cut = cut * allowed
+        self.since_cut = (1.0 - cut) * (self.since_cut + 1.0)
         self.prev_ncc = gn
         self.prev_flat = flat
         return cut
@@ -346,11 +444,35 @@ class FullFilterGPU:
     def _step(self):
         c = self.c
         dt = self.dt
-        lin = srgb_eotf(self.d_in, dt).permute(2, 0, 1).unsqueeze(0)   # (1,3,H,W)
-        lin_s = F.interpolate(lin, size=(self.ah, self.aw), mode="area")
+        # 감마 부호화 0~1. 선형광과 컷 판정용 그레이가 **둘 다** 여기서 나온다 —
+        # uint8->float 전해상도 변환을 두 번 하지 않으려고 중간값을 붙잡아 둔다.
+        xe = self.d_in.to(dt) / 255.0
+        xe3 = xe.permute(2, 0, 1).unsqueeze(0)
+        lin = torch.where(xe3 <= 0.04045, xe3 / 12.92, ((xe3 + 0.055) / 1.055).pow(2.4))
+
+        # 검출 입력은 CPU 기준판 경로를 그대로 재현한다:
+        #     bgr_small = cv2.resize(bgr, INTER_AREA)   ->  PC._LIN[bgr_small]
+        # 즉 **감마 도메인에서 축소한 뒤 선형화**한다. 여기서 순서를 바꾸면
+        # (선형화 후 축소) 밝은 줄무늬 에너지가 더 남아 값이 커진다.
+        #
+        # 더 중요한 건 리샘플러다. torch 의 mode="area" 는 adaptive_avg_pool2d 라
+        # **정수 경계**로 구간을 나누는데, cv2.INTER_AREA 는 0.75 배 같은 비정수
+        # 배율에서 **분수 가중치**로 면적평균을 낸다. 고대비 줄무늬(14번)에서
+        # 화소별 오차가 임계 theta_lum(0.10)의 2~3 배까지 벌어졌다.
+        # 14번 f0 기준 CPU 대비 오차 (임계 0.10 을 넘는 화소 비율):
+        #     선형 area 0.284 (3.75%) / 감마 area 0.214 (6.67%)
+        #     감마 bicubic+AA 0.054 (0.00%)  <- 채택
+        # 그 오차가 검출 마스크를 0.750 -> 0.875 로 부풀렸고, 안전한 원본을
+        # 위반으로 만드는 데까지 갔다.
+        xe_s = F.interpolate(xe3, size=(self.ah, self.aw), mode="bicubic",
+                             align_corners=False, antialias=True).clamp(0, 1)
+        xe_s = torch.round(xe_s * 255.0) / 255.0     # CPU 는 uint8 을 거친다
+        lin_s = torch.where(xe_s <= 0.04045, xe_s / 12.92,
+                            ((xe_s + 0.055) / 1.055).pow(2.4))
         gray_s = (lin_s * self.wY).sum(1, keepdim=True)[0, 0]
 
-        cut = self._cut_gate(gray_s)
+        # 컷 판정만 감마 도메인에서 (CPU 기준판과 같은 자). _cut_gate 주석 참고.
+        cut = self._cut_gate((xe * self.w601).sum(-1) * 255.0)
         M = self._detect(lin_s)
         self.n += 1
         self.stats["mean_area"] += float(M.float().mean())
@@ -365,6 +487,31 @@ class FullFilterGPU:
         if self.k_fea is not None:
             a = blur(a, self.k_fea)
         a = a.clamp(0, 1) * float(np.clip(c.strength, 0, 1))
+
+        # 국소 구조 게이트 — 움직임은 통과, 점멸만 누른다 (Cfg.coh_gate 주석 참고)
+        #
+        # 판별자는 **국소 정규화 상관(NCC)** 이다. 컷 게이트가 전역에서 하는 일을
+        # 창 단위로 한다:
+        #   플래시  밝기 레벨만 바뀌고 구조는 그대로  -> 정규화하면 상관 ~ 1
+        #   움직임  구조 자체가 이동한다              -> 상관 낮음
+        # 부호 일관성(sign(Δ) 평균)으로 먼저 해봤는데 실패했다 — 공간적으로
+        # 복잡한 점멸을 움직임으로 오인해 제거율이 92.8% -> 60.0% 로 무너졌다
+        # (TXeDgXiytM0 99%->0%, Y76O5wY7EcM 65%->0%).
+        if c.coh_gate > 0 and self.prev_gray is not None:
+            k = int(c.coh_win) | 1
+            cur = gray_s.view(1, 1, self.ah, self.aw)
+            pre = self.prev_gray.view(1, 1, self.ah, self.aw)
+
+            def box(x):
+                return F.avg_pool2d(x, k, stride=1, padding=k // 2)
+
+            mc, mp = box(cur), box(pre)
+            vc = (box(cur * cur) - mc * mc).clamp_min(1e-8)
+            vp = (box(pre * pre) - mp * mp).clamp_min(1e-8)
+            cov = box(cur * pre) - mc * mp
+            ncc = (cov / (vc.sqrt() * vp.sqrt())).clamp(0.0, 1.0)
+            a = a * (1.0 - c.coh_gate * (1.0 - ncc))
+
         a = (1 - c.alpha_smooth) * self.alpha_prev + c.alpha_smooth * a
         self.alpha_prev = a
         A = F.interpolate(a, size=(self.H, self.W), mode="bilinear",
@@ -387,6 +534,18 @@ class FullFilterGPU:
             prevw = translate_gpu(self.prev, dx * sc, dy * sc, ok)
         else:
             prevw = self.prev
+
+        # ---- 국소 움직임 보상 (Cfg.local_mc 주석 참고)
+        # 전역 워프 뒤에 남은 **국소** 움직임을 블록매칭으로 마저 걷어낸다.
+        # d 에서 움직임이 빠지면 슬루 제한이 점멸 성분에만 걸려 잔상이 준다.
+        if c.local_mc:
+            pg = self.prev_gray
+            fx, fy = block_flow(pg, gray_s, int(c.lmc_radius), int(c.lmc_step),
+                                int(c.lmc_block), float(c.lmc_min_gain))
+            sc2 = self.W / float(self.aw)
+            prevw = warp_flow(prevw, fx * sc2, fy * sc2)
+            self.stats["lmc_px"] += float((fx.abs() + fy.abs()).mean())
+
         self.prev_gray = gray_s
 
         # ---- 컷이면 리셋 (분기 대신 게이트)
@@ -559,8 +718,10 @@ if __name__ == "__main__":
     o = OptF(half=a.half)
     if a.ratio is not None:
         o.peak_ratio_min = a.ratio
+    cfg = P3.Cfg()
     if a.cut_thresh is not None:
-        o.cut_thresh = a.cut_thresh
-    rep, _ = run(a.src, P3.Cfg(), o, video_out=a.video,
+        # 예전에는 OptF 에 썼는데 _cut_gate 는 Cfg 를 읽어서 플래그가 무시됐다.
+        cfg.cut_thresh = a.cut_thresh
+    rep, _ = run(a.src, cfg, o, video_out=a.video,
                  lossless=True if a.lossless else None)
     print(json.dumps(rep, ensure_ascii=False, indent=1))
