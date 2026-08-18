@@ -51,7 +51,11 @@ def make_control(src, dst, crf=16):
     필터 16.6 — 지표가 뒤집힘). cv2 로 디코드한 프레임을 그대로 파이프에 넣으면
     필터 출력과 같은 경로라 어긋날 수 없다."""
     cap = cv2.VideoCapture(src)
-    fps = cap.get(cv2.CAP_PROP_FPS) or 30.0
+    fps = cap.get(cv2.CAP_PROP_FPS)
+    # 컨테이너가 거짓 fps 를 신고하는 경우가 있다 (VP9 webm 이 1000fps 로
+    # 읽힌 실측: Test3.webm). pse_bt1702.analyze() 와 같은 가드를 건다.
+    if not fps or fps != fps or fps <= 0 or fps > 240:
+        fps = 30.0
     W = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)); H = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
     q = subprocess.Popen(["ffmpeg", "-y", "-v", "error", "-f", "rawvideo", "-pix_fmt", "bgr24",
                           "-s", f"{W}x{H}", "-r", str(fps), "-i", "-",

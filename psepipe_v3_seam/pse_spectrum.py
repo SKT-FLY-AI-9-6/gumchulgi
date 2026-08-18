@@ -36,7 +36,11 @@ def measure(path: str, block: int = 40, width: int = 320,
     cap = cv2.VideoCapture(path)
     if not cap.isOpened():
         raise IOError(path)
-    fps = cap.get(cv2.CAP_PROP_FPS) or 30.0
+    fps = cap.get(cv2.CAP_PROP_FPS)
+    # 컨테이너가 거짓 fps 를 신고하는 경우가 있다 (VP9 webm 이 1000fps 로
+    # 읽힌 실측: Test3.webm). pse_bt1702.analyze() 와 같은 가드를 건다.
+    if not fps or fps != fps or fps <= 0 or fps > 240:
+        fps = 30.0
     frames = []
     i = 0
     while True:
