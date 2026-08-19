@@ -100,6 +100,11 @@ class Cfg:
     guard_tau_s: float = 0.4        # 판단용 EMA 시상수
     guard_down: float = 0.85        # 악화 시 개입 강도 배율
     guard_up: float = 0.03          # 정상 시 회복 속도
+    # 후퇴 금지 기준 면적 — "입력이 이미 대규모 위반"의 기준은 **규격 선점
+    # 면적(0.20)** 이지 티어의 arm_area 가 아니다. T4 실측(travis)에서
+    # arm_area 를 0.08 로 좁히자 후퇴 금지 조건도 따라 좁아져 가드가 다시
+    # 붕괴했다(gain_min 0.0 — 판정은 살았지만 같은 구멍의 재발이다).
+    guard_hold_area: float = 0.20
     # ---- 마스크 성형
     dilate_px: int = 3
     # 0 이 아니면 **지뢰 6** 이 살아난다 — 0<A<1 인 페더 띠의 실제 변화는
@@ -249,6 +254,31 @@ class Cfg:
         c.arm_count = 1.0
         c.hold_s = 0.5
         return c
+
+    @classmethod
+    def for_tier(cls, tier: str = "t3") -> "Cfg":
+        """티어 선택형 프리셋 — 통합 티어 표 v2 의 플래시 공유축 번역.
+
+        t3 = 규격 표준 (STRONG 그대로)
+        t4 = 편두통 기본: 휘도 임계 10cd/m²(theta 0.05) · 면적 한도 10%
+             선점(arm_area 0.08) · 첫 플래시 무장(STRONG 이 이미 충족)
+
+        실사 3편 실측 (validation/tier_real3.csv, 2026-08-19):
+        - T4 출력도 규격 판정(pse_bt1702) 전부 적합 — 안전선 유지.
+        - comfort 선량 추가 감소는 **콘텐츠 축 의존** — 플래시 지배(cera)
+          -7.5%, 색·글레어 지배(pinkvenom) 0%. 임계 클램프 전략은 문턱
+          아래 잔여 깜빡임을 남기므로 연속 선량 지표는 크게 못 내린다.
+          T4/T5 의 본체는 고유 축 작동기(패턴 감쇠·색·휘도)다 — 이 프리셋은
+          그중 플래시 공유축의 강화만 담당한다."""
+        t = tier.lower()
+        if t == "t3":
+            return cls.strong()
+        if t == "t4":
+            c = cls.strong()
+            c.theta_lum = 0.05
+            c.arm_area = 0.08
+            return c
+        raise ValueError(f"지원 티어: t3, t4 (요청: {tier})")
 
 
 def _build_oetf(n: int = 4096) -> np.ndarray:
@@ -540,7 +570,7 @@ class LiveFilter3:
         # 플래시 구간 내내 err_ema 양수 -> gain 0 까지 붕괴 -> 판정 플래시 잔존,
         # 같은 설정 guard=False 는 적합. 입력 위반 구간을 조건에서 빼면
         # 가드 본연의 방어(안전 원본 보호)는 그대로 남는다.
-        if self.err_ema > c.guard_margin and self.in_frac < c.arm_area:
+        if self.err_ema > c.guard_margin and self.in_frac < c.guard_hold_area:
             self.gain = max(0.0, self.gain * c.guard_down)
         else:
             self.gain = min(1.0, self.gain + c.guard_up)
@@ -628,8 +658,11 @@ if __name__ == "__main__":
     ap.add_argument("--strong", action="store_true",
                     help="강한 컨트롤 프리셋 (Cfg.strong 주석 참조). "
                          "개별 플래그를 주면 프리셋 위에 덮어쓴다")
+    ap.add_argument("--tier", choices=["t3", "t4"], default=None,
+                    help="티어 선택형 프리셋 (Cfg.for_tier 주석 참조). "
+                         "t3=규격 표준(STRONG), t4=편두통 플래시 강화")
     a = ap.parse_args()
-    c = Cfg.strong() if a.strong else Cfg()
+    c = Cfg.for_tier(a.tier) if a.tier else (Cfg.strong() if a.strong else Cfg())
     for name, val in (("slew_frac", a.slew), ("slew_chroma", a.slewc),
                       ("arm_count", a.arm), ("hold_s", a.hold),
                       ("detail_sigma", a.detail), ("strength", a.strength),
