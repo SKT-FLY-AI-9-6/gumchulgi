@@ -310,7 +310,13 @@ def warp_flow(x, fx, fy):
 class OptF:
     half: bool = False
     peak_ratio_min: float = 1.35    # 이 아래면 '봉우리가 여럿' -> 워프하지 않는다
-    guard: bool = False             # 출력 검출기. 현재 코퍼스에서 발동한 적 없음
+    guard: bool = False             # **미구현 플래그** — GPU 판에는 자기감시
+                                    # 가드가 이식돼 있지 않다 (읽는 코드 없음).
+                                    # CPU 판(pselive3._guard)은 2026-08-19 에
+                                    # "입력 대규모 위반 구간에서는 후퇴 금지"
+                                    # 조건이 붙었다 — GPU 이식 시 그 형태로 옮길 것.
+                                    # cera 재인코딩본에서 무조건 가드가 개입을
+                                    # 통째로 붕괴시킨 실측이 근거다.
     graph: bool = False
 
 
