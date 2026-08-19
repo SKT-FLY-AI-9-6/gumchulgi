@@ -229,6 +229,27 @@ class Cfg:
     strength: float = 1.0
     fast: bool = False
 
+    @classmethod
+    def strong(cls) -> "Cfg":
+        """강한 컨트롤 프리셋 — "점멸이 강하게 나오는 영상을 보이게 누른다".
+
+        실사 3편(cera·pinkvenom·travis) 강도 스윕(2026-08-19)에서 확정한 조합.
+        slew 만 낮추는 것은 세 클립 모두 효과 0 이었고(잔존은 진폭 누출이
+        아니라 무장 전 앞단 누출), 첫 플래시 무장이 실제로 움직이는 손잡이다:
+          pinkvenom  플래시 3->2회, 대역에너지 11.8->8.8%, 헤일로 12.4->9.6
+          travis     플래시 7->5회, 대역 67.5->59.7%, 헤일로 6.8->5.3,
+                     **화면전환 축까지 적합** (컷 경계 휘도 점프도 눌림)
+        대가는 잔상 lag 소폭 증가 (0.97->1.15 / 0.18->0.31).
+        detail_sigma 32 는 억제량과 무관한 자연스러움 축이라 함께 켠다
+        (seunghoon 스윕: 억제 -0.7~2%p 에 헤일로 1/6, 판정·마스크 불변)."""
+        c = cls()
+        c.net_directional = True
+        c.detail_sigma = 32.0
+        c.slew_safety = 0.65
+        c.arm_count = 1.0
+        c.hold_s = 0.5
+        return c
+
 
 def _build_oetf(n: int = 4096) -> np.ndarray:
     x = np.linspace(0.0, 1.0, n)
@@ -511,7 +532,15 @@ class LiveFilter3:
         out_frac = float(max(fr))
         err = out_frac - self.in_frac
         self.err_ema = (1 - self.g_alpha) * self.err_ema + self.g_alpha * err
-        if self.err_ema > c.guard_margin:
+        # **입력이 이미 대규모로 위반 중인 구간에서는 후퇴하지 않는다.**
+        # 가드의 존재 이유는 "안전한 원본에 필터가 위반을 만드는" 악화 방지다
+        # (14번 흐르는 줄무늬 1.26s -> 6.86s). 입력 위험면적이 개입 임계를 넘는
+        # 구간에서 출력에 위험이 남은 것은 악화가 아니라 **억제 부족**인데,
+        # 여기서 물러나면 억제가 통째로 무력화된다 — cera 재인코딩본 실측:
+        # 플래시 구간 내내 err_ema 양수 -> gain 0 까지 붕괴 -> 판정 플래시 잔존,
+        # 같은 설정 guard=False 는 적합. 입력 위반 구간을 조건에서 빼면
+        # 가드 본연의 방어(안전 원본 보호)는 그대로 남는다.
+        if self.err_ema > c.guard_margin and self.in_frac < c.arm_area:
             self.gain = max(0.0, self.gain * c.guard_down)
         else:
             self.gain = min(1.0, self.gain + c.guard_up)
@@ -596,8 +625,11 @@ if __name__ == "__main__":
     ap.add_argument("--no-motion", action="store_true")
     ap.add_argument("--no-guard", action="store_true")
     ap.add_argument("--lossless", action="store_true")
+    ap.add_argument("--strong", action="store_true",
+                    help="강한 컨트롤 프리셋 (Cfg.strong 주석 참조). "
+                         "개별 플래그를 주면 프리셋 위에 덮어쓴다")
     a = ap.parse_args()
-    c = Cfg()
+    c = Cfg.strong() if a.strong else Cfg()
     for name, val in (("slew_frac", a.slew), ("slew_chroma", a.slewc),
                       ("arm_count", a.arm), ("hold_s", a.hold),
                       ("detail_sigma", a.detail), ("strength", a.strength),
