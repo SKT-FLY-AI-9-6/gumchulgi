@@ -278,7 +278,16 @@ class Cfg:
             c.theta_lum = 0.05
             c.arm_area = 0.08
             return c
-        raise ValueError(f"지원 티어: t3, t4 (요청: {tier})")
+        if t == "t5":
+            # 편두통 보수: 휘도 5cd/m² · 면적 5% 선점 · 1회/s (기충족).
+            # 주의 — T4/T5 의 완전체는 고유 축 체인 포함이다:
+            #   pselive3 --tier tN  ->  pse_soften --tier tN  ->  (M2 색상, 미구현)
+            # 이 프리셋은 플래시 공유축만 담당한다.
+            c = cls.strong()
+            c.theta_lum = 0.025
+            c.arm_area = 0.04
+            return c
+        raise ValueError(f"지원 티어: t3, t4, t5 (요청: {tier})")
 
 
 def _build_oetf(n: int = 4096) -> np.ndarray:
@@ -658,7 +667,7 @@ if __name__ == "__main__":
     ap.add_argument("--strong", action="store_true",
                     help="강한 컨트롤 프리셋 (Cfg.strong 주석 참조). "
                          "개별 플래그를 주면 프리셋 위에 덮어쓴다")
-    ap.add_argument("--tier", choices=["t3", "t4"], default=None,
+    ap.add_argument("--tier", choices=["t3", "t4", "t5"], default=None,
                     help="티어 선택형 프리셋 (Cfg.for_tier 주석 참조). "
                          "t3=규격 표준(STRONG), t4=편두통 플래시 강화")
     a = ap.parse_args()
