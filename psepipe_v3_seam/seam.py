@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
-"""이질감 측정기 — 필터가 만든 '보이는 부작용' 3가지를 잰다.
+"""이질감 측정기 — 필터가 만든 '보이는 부작용' 5가지를 잰다.
 
 목표가 "이질감 없이"인데 지금까지 지표는 PSNR/선택비뿐이었다. 둘 다 이질감
 지표가 아니다 — 위반 구역 PSNR 은 일부러 낮고(점멸을 눌렀으니), 이질감은
 **어디가 얼마나 달라졌나**가 아니라 **원본에 없던 구조가 생겼나**의 문제다.
 
-지표 3개, 전부 마스크 없이 (src, out) 쌍만으로 계산한다:
+지표 5개, 전부 마스크 없이 (src, out) 쌍만으로 계산한다:
 
   · 펌핑 P — 원본이 시간적으로 정지한 화소에서 출력이 움직인 양.
       정지 화소: |ΔY_src| <= 1.0 이 **연속 STATIC_RUN(10)프레임** 이어진 화소.
@@ -32,6 +32,18 @@
       점멸 억제분이 섞인다. 그래서 이 축은 **같은 판정 결과끼리의 상대
       비교**로 읽는다 — 판정을 이기고 drag 가 낮은 쪽이 잔상이 적은 것.
 
+  · 선명도 S — 출력이 원본 대비 고주파를 얼마나 유지했는가.
+      프레임별 Sobel 에너지 비율 mean(G_out)/mean(G_src) 의 평균.
+      1.0 = 유지, <1 = 흐려짐. **정적 축 작동기(패턴 감쇠 등)의 비용 축**
+      — 시간축 보정의 부작용(잔상)과 달리 정적 보정의 부작용은 흐려짐이라
+      기존 3축이 못 쟀다 (T4/T5 티어 확장에서 필요해짐).
+
+  · 색충실도 Δu'v' — 출력의 색도가 원본에서 평균 얼마나 이동했는가.
+      CIE 1976 UCS 색차의 lit 화소(8bit 휘도 >= 20) 평균, 축소 폭 160 계산.
+      적색 규격 임계가 Δu'v' 0.20 이니 0.01 대면 지각적으로 작다.
+      **색 작동기(청색 감쇠·색도분리 제한)의 비용 축** — 창작자 색 보정을
+      얼마나 건드렸는지 이걸로 관리한다.
+
 셋 다 인코딩 자체가 바닥값을 만든다 (x264 가 링잉/블록을 넣는다). 그래서
 절대값이 아니라 **인코딩-만-한 대조군 대비**로 읽어야 한다. --base 로 대조군을
 넘기면 초과분(excess)을 같이 낸다.
@@ -42,6 +54,8 @@
 import argparse, json, subprocess, sys
 import cv2
 import numpy as np
+
+from pse_bt1702 import uv_prime
 
 
 def make_control(src, dst, crf=16):
@@ -76,6 +90,9 @@ GHOST_MOTION_THR = 6.0   # 8bit 휘도, 이 이상 변한 화소 = 움직임 (gh
 GHOST_MIN_PIX = 100      # 움직인 화소가 이보다 적은 프레임은 잔상 표본에서 제외
 GHOST_LAGS = 4           # 몇 프레임 과거까지 '닮음'을 뒤지는가
 
+DUV_W = 160              # 색충실도 계산 폭 (평균 지표라 축소로 충분, 속도 8배)
+DUV_LIT = 20.0           # 8bit 휘도, 이보다 어두운 화소는 색차 표본에서 제외
+
 
 def _luma(f):
     return cv2.cvtColor(f, cv2.COLOR_BGR2GRAY).astype(np.float32)
@@ -100,6 +117,7 @@ def measure(src, out, max_frames=None, verbose=False):
     hist = []                          # 최근 src 휘도 (최신이 앞), 잔상 lag 탐색용
     ghost_lag_sum = 0.0; ghost_drag_sum = 0.0; ghost_frames = 0
     ghost_worst = 0.0; ghost_worst_t = -1
+    sharp_sum = 0.0; duv_sum = 0.0; duv_frames = 0
     t = 0
     while True:
         oa, fa = ca.read(); ob, fb = cb.read()
@@ -110,11 +128,24 @@ def measure(src, out, max_frames=None, verbose=False):
         ys, yo = _luma(fa), _luma(fb)
 
         # 헤일로 — 프레임별 상위 1% (경계 링을 겨냥)
-        ex = np.maximum(_grad(yo) - _grad(ys), 0.0)
+        gs, go = _grad(ys), _grad(yo)
+        ex = np.maximum(go - gs, 0.0)
         h = float(np.percentile(ex, 99))
         halo_sum += h; halo_frames += 1
         if h > halo_worst:
             halo_worst, halo_worst_t = h, t
+
+        # 선명도 — 고주파 에너지 유지율 (같은 그라디언트 재사용)
+        sharp_sum += float(go.mean()) / (float(gs.mean()) + 1e-6)
+
+        # 색충실도 — lit 화소 평균 Δu'v' (축소 폭에서)
+        hh = max(2, int(round(fa.shape[0] * DUV_W / fa.shape[1])))
+        sa = cv2.resize(fa, (DUV_W, hh), interpolation=cv2.INTER_AREA)
+        sb = cv2.resize(fb, (DUV_W, hh), interpolation=cv2.INTER_AREA)
+        lit = cv2.cvtColor(sa, cv2.COLOR_BGR2GRAY) >= DUV_LIT
+        if int(lit.sum()) >= 50:
+            d = np.linalg.norm(uv_prime(sb) - uv_prime(sa), axis=-1)
+            duv_sum += float(d[lit].mean()); duv_frames += 1
 
         # 펌핑 — 연속 STATIC_RUN 프레임 정지한 화소만
         if prev_s is not None:
@@ -164,6 +195,8 @@ def measure(src, out, max_frames=None, verbose=False):
         "ghost_drag_worst": round(ghost_worst, 4),
         "ghost_drag_worst_t": ghost_worst_t,
         "ghost_frames": ghost_frames,
+        "sharp": round(sharp_sum / max(t, 1), 4),
+        "duv": round(duv_sum / max(duv_frames, 1), 5),
     }
 
 
@@ -189,13 +222,16 @@ def main():
         r["pumping_excess"] = round(max(r["pumping"] - b["pumping"], 0.0), 4)
         r["halo_excess"] = round(max(r["halo"] - b["halo"], 0.0), 4)
         r["ghost_drag_excess"] = round(max(r["ghost_drag"] - b["ghost_drag"], 0.0), 4)
+        r["sharp_vs_ctrl"] = round(r["sharp"] / max(b["sharp"], 1e-6), 4)
+        r["duv_excess"] = round(max(r["duv"] - b["duv"], 0.0), 5)
     if a.json:
         print(json.dumps(r, ensure_ascii=False, indent=1))
     else:
         print(f"펌핑 {r['pumping']:.3f} (최악 {r['pumping_worst']:.3f} @f{r['pumping_worst_t']})   "
               f"헤일로 {r['halo']:.3f} (최악 {r['halo_worst']:.3f} @f{r['halo_worst_t']})   "
               f"잔상 lag {r['ghost_lag']:.2f} drag {r['ghost_drag']:.3f} "
-              f"(최악 {r['ghost_drag_worst']:.3f} @f{r['ghost_drag_worst_t']}, 표본 {r['ghost_frames']}f)")
+              f"(최악 {r['ghost_drag_worst']:.3f} @f{r['ghost_drag_worst_t']}, 표본 {r['ghost_frames']}f)   "
+              f"선명도 {r['sharp']:.3f}   Δu'v' {r['duv']:.4f}")
         if base:
             print(f"인코딩 대조군 대비 초과 — 펌핑 +{r['pumping_excess']:.3f}  헤일로 +{r['halo_excess']:.3f}"
                   f"  잔상 drag +{r['ghost_drag_excess']:.3f}")
