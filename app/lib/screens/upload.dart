@@ -19,6 +19,7 @@ class _UploadState extends ConsumerState<UploadScreen> {
 
   Future<void> _pick() async {
     final f = await ImagePicker().pickVideo(source: ImageSource.gallery);
+    if (!mounted) return;
     if (f != null) setState(() { _file = f; _message = null; });
   }
 
@@ -27,14 +28,17 @@ class _UploadState extends ConsumerState<UploadScreen> {
     setState(() { _progress = 0; _message = null; });
     try {
       await ref.read(apiProvider).upload(_file!.path, _title.text,
-          onProgress: (sent, total) =>
-              setState(() => _progress = sent / total));
+          onProgress: (sent, total) {
+            if (mounted) setState(() => _progress = sent / total);
+          });
+      if (!mounted) return;
       setState(() {
         _progress = null; _file = null; _title.clear();
         _message = '업로드 완료 — 검출·보정 처리 중입니다.\n'
             '완료되면 피드와 내 페이지에 표시됩니다.';
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _progress = null;
         _message = '업로드 실패: 크기(200MB)·길이(3분) 제한을 확인하세요';
