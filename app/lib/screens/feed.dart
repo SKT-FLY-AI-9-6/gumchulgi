@@ -9,6 +9,7 @@ import '../state/settings.dart';
 import '../theme.dart';
 import '../widgets/settings_sheet.dart';
 import '../widgets/video_page.dart';
+import '../widgets/warning_banner.dart';
 
 class FeedScreen extends ConsumerStatefulWidget {
   const FeedScreen({super.key});
@@ -91,6 +92,8 @@ class _FeedState extends ConsumerState<FeedScreen> {
       Positioned(top: 48, right: 12, child: IconButton(
           icon: const Icon(Icons.filter_alt_outlined, size: 28),
           onPressed: () => showSettingsSheet(context))),
+      // 경고 배너 (목업 ④)
+      const WarningBanner(),
     ]);
   }
 }
