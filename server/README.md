@@ -6,6 +6,9 @@ cp server/.env.example server/.env   # JWT_SECRET 수정
 docker compose up -d --build
 curl http://localhost:8000/health    # {"ok":true}
 ```
+docker-compose 는 두 서비스 모두 `APP_ENV=production` 으로 실행됩니다.
+JWT_SECRET 이 기본값(dev-secret/change-me)이면 API 서버가 부팅 시
+바로 종료되니, `.env` 의 JWT_SECRET 을 반드시 안전한 값으로 바꾸세요.
 
 ## 테스트
 ```
