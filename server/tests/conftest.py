@@ -5,6 +5,7 @@ REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO / "server"))
 sys.path.insert(0, str(REPO / "psepipe_v3_seam"))
 
+import subprocess
 import pytest
 from fastapi.testclient import TestClient
 
@@ -27,3 +28,16 @@ def auth_headers(client):
         assert r.status_code == 201, r.text
         return {"Authorization": f"Bearer {r.json()['token']}"}
     return _make
+
+
+@pytest.fixture(scope="session")
+def small_mp4(tmp_path_factory):
+    """2초 360x640 회색 테스트 영상 (오디오 포함)."""
+    p = tmp_path_factory.mktemp("clips") / "gray.mp4"
+    subprocess.run(
+        ["ffmpeg", "-y", "-v", "error",
+         "-f", "lavfi", "-i", "color=c=gray:s=360x640:d=2:r=30",
+         "-f", "lavfi", "-i", "sine=frequency=440:duration=2",
+         "-c:v", "libx264", "-pix_fmt", "yuv420p", "-c:a", "aac",
+         "-shortest", str(p)], check=True)
+    return p
