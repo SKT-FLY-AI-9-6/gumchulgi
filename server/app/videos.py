@@ -1,6 +1,7 @@
 import os
 import sqlite3
 from pathlib import Path
+from typing import Literal
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse, StreamingResponse
@@ -86,7 +87,8 @@ def _video_or_404(conn, vid: int):
 
 
 @router.get("/videos/{vid}/stream")
-def stream(vid: int, request: Request, variant: str = "original",
+def stream(vid: int, request: Request,
+           variant: Literal["original", "filtered"] = "original",
            user=Depends(current_user),
            conn: sqlite3.Connection = Depends(get_db)):
     row = _video_or_404(conn, vid)
@@ -97,13 +99,24 @@ def stream(vid: int, request: Request, variant: str = "original",
     rng = request.headers.get("range")
     start, end = 0, size - 1
     status = 200
-    if rng and rng.startswith("bytes="):
-        s, _, e = rng[6:].partition("-")
-        start = int(s) if s else 0
-        end = min(int(e), size - 1) if e else size - 1
-        if start > end or start >= size:
-            raise HTTPException(416, "잘못된 Range")
-        status = 206
+    if rng and rng.startswith("bytes=") and "," not in rng:
+        s, _, e = rng[6:].strip().partition("-")
+        try:
+            if s == "" and e == "":
+                raise ValueError("빈 Range")
+            if s == "":
+                # 접미사 형태 "bytes=-N" — 마지막 N바이트 (RFC 7233)
+                start, end = max(0, size - int(e)), size - 1
+            else:
+                start = int(s)
+                end = min(int(e), size - 1) if e else size - 1
+            if start > end or start >= size:
+                raise HTTPException(416, "잘못된 Range",
+                                    headers={"Content-Range": f"bytes */{size}"})
+            status = 206
+        except ValueError:
+            # 숫자로 해석할 수 없는 Range는 무시하고 전체를 서빙
+            start, end, status = 0, size - 1, 200
 
     def _iter(p=path, a=start, b=end):
         with open(p, "rb") as f:
@@ -135,7 +148,7 @@ def thumb(vid: int, user=Depends(current_user),
 
 class EventIn(BaseModel):
     watched_s: float
-    variant: str  # original | filtered
+    variant: Literal["original", "filtered"]
 
 
 @router.post("/videos/{vid}/events")
