@@ -26,6 +26,10 @@ class MyPageScreen extends ConsumerWidget {
       body: FutureBuilder(
         future: ref.read(apiProvider).myVideos(),
         builder: (context, snap) {
+          if (snap.hasError) {
+            return const Center(child: Text('불러오기 실패 — 다시 시도해주세요',
+                style: TextStyle(color: AppColors.sub)));
+          }
           if (!snap.hasData) {
             return const Center(child: CircularProgressIndicator());
           }
