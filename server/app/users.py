@@ -34,3 +34,16 @@ def put_settings(body: SettingsIO, user=Depends(current_user),
                  "WHERE user_id=?",
                  (int(body.filter_on), int(body.auto_skip), user["id"]))
     return body
+
+
+@router.get("/me/videos")
+def my_videos(user=Depends(current_user),
+              conn: sqlite3.Connection = Depends(get_db)):
+    rows = conn.execute(
+        "SELECT v.id, v.title, v.status, v.risk, v.duration_s, v.view_count,"
+        " v.created_at,"
+        " (SELECT COUNT(*) FROM likes l WHERE l.video_id=v.id) AS like_count"
+        " FROM videos v WHERE v.uploader_id=? ORDER BY v.id DESC",
+        (user["id"],)).fetchall()
+    return {"videos": [
+        {**dict(r), "thumb_url": f"/videos/{r['id']}/thumb"} for r in rows]}
