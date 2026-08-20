@@ -28,11 +28,9 @@ def make_token(user_id: int) -> str:
                       settings.JWT_SECRET, algorithm="HS256")
 
 
-def current_user(cred: HTTPAuthorizationCredentials = Depends(bearer),
-                 conn: sqlite3.Connection = Depends(get_db)) -> sqlite3.Row:
+def user_from_token(conn: sqlite3.Connection, token: str) -> sqlite3.Row:
     try:
-        payload = jwt.decode(cred.credentials, settings.JWT_SECRET,
-                             algorithms=["HS256"])
+        payload = jwt.decode(token, settings.JWT_SECRET, algorithms=["HS256"])
     except jwt.PyJWTError:
         raise HTTPException(401, "토큰이 유효하지 않습니다")
     row = conn.execute("SELECT * FROM users WHERE id=?",
@@ -40,6 +38,11 @@ def current_user(cred: HTTPAuthorizationCredentials = Depends(bearer),
     if row is None:
         raise HTTPException(401, "사용자가 없습니다")
     return row
+
+
+def current_user(cred: HTTPAuthorizationCredentials = Depends(bearer),
+                 conn: sqlite3.Connection = Depends(get_db)) -> sqlite3.Row:
+    return user_from_token(conn, cred.credentials)
 
 
 class SignupIn(BaseModel):
