@@ -61,6 +61,8 @@ def _user_out(row) -> dict:
 def signup(body: SignupIn, conn: sqlite3.Connection = Depends(get_db)):
     if len(body.password) < 8:
         raise HTTPException(422, "비밀번호는 8자 이상")
+    if len(body.password.encode('utf-8')) > 72:
+        raise HTTPException(422, "비밀번호는 72바이트 이하")
     try:
         cur = conn.execute(
             "INSERT INTO users(email, password_hash, nickname) VALUES(?,?,?)",
@@ -77,7 +79,14 @@ def signup(body: SignupIn, conn: sqlite3.Connection = Depends(get_db)):
 def login(body: LoginIn, conn: sqlite3.Connection = Depends(get_db)):
     row = conn.execute("SELECT * FROM users WHERE email=?",
                        (body.email.lower(),)).fetchone()
-    if row is None or not check_pw(body.password, row["password_hash"]):
+    if row is None:
+        raise HTTPException(401, "이메일 또는 비밀번호가 틀립니다")
+    try:
+        pwd_match = check_pw(body.password, row["password_hash"])
+    except ValueError:
+        # Password exceeds 72 bytes, treat as wrong password
+        pwd_match = False
+    if not pwd_match:
         raise HTTPException(401, "이메일 또는 비밀번호가 틀립니다")
     return {"token": make_token(row["id"]), "user": _user_out(row)}
 
