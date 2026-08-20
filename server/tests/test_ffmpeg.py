@@ -1,3 +1,4 @@
+import pytest
 from worker import ffmpeg
 
 
@@ -11,3 +12,11 @@ def test_normalize_and_thumbnail(small_mp4, tmp_path):
     th = tmp_path / "t.jpg"
     ffmpeg.thumbnail(out, th)
     assert th.stat().st_size > 100
+
+
+def test_normalize_nonexistent_path(tmp_path):
+    """normalize on nonexistent input path must raise RuntimeError."""
+    nonexistent = tmp_path / "nonexistent.mp4"
+    out = tmp_path / "output.mp4"
+    with pytest.raises(RuntimeError):
+        ffmpeg.normalize(nonexistent, out)
