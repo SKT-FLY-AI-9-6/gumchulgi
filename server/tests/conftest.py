@@ -1,3 +1,4 @@
+import os
 import sys
 from pathlib import Path
 
@@ -41,3 +42,14 @@ def small_mp4(tmp_path_factory):
          "-c:v", "libx264", "-pix_fmt", "yuv420p", "-c:a", "aac",
          "-shortest", str(p)], check=True)
     return p
+
+
+@pytest.fixture(scope="session")
+def testclips(tmp_path_factory):
+    """legacy_detectors/make_testclips.py 로 정답 알려진 합성 클립 생성."""
+    out = tmp_path_factory.mktemp("testclips")
+    env = {**os.environ, "PYTHONIOENCODING": "utf-8"}
+    subprocess.run([sys.executable,
+                    str(REPO / "legacy_detectors" / "make_testclips.py"),
+                    str(out)], check=True, cwd=str(REPO), env=env)
+    return out  # 00_safe_gradient.mkv(안전), 01_flash_5hz.mkv(플래시 위반) 등
