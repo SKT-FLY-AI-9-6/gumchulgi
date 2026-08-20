@@ -9,7 +9,9 @@ SCHEMA = Path(__file__).with_name("schema.sql").read_text(encoding="utf-8")
 def connect(db_path=None) -> sqlite3.Connection:
     path = Path(db_path) if db_path else settings.DATA_DIR / "db.sqlite3"
     path.parent.mkdir(parents=True, exist_ok=True)
-    conn = sqlite3.connect(path, timeout=30)
+    # FastAPI 스레드풀에서 의존성 setup/teardown 이 서로 다른 워커 스레드에서
+    # 실행될 수 있다 — 요청당 연결이라 동시 사용은 없으므로 스레드 검사만 끈다.
+    conn = sqlite3.connect(path, timeout=30, check_same_thread=False)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL")
     conn.execute("PRAGMA foreign_keys=ON")

@@ -5,10 +5,11 @@ from typing import Literal
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse, StreamingResponse
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel
 
 from app import storage
-from app.auth import current_user
+from app.auth import current_user, user_from_token
 from app.config import settings
 from app.db import get_db
 from app.dashboard import exposure_today
@@ -86,10 +87,25 @@ def _video_or_404(conn, vid: int):
     return row
 
 
+_bearer_opt = HTTPBearer(auto_error=False)
+
+
+def media_user(cred: HTTPAuthorizationCredentials | None = Depends(_bearer_opt),
+               token: str | None = None,
+               conn: sqlite3.Connection = Depends(get_db)):
+    """스트림·썸네일용 인증. 웹 <video>/<img>는 헤더를 못 보내므로
+    운영 환경이 아닐 때만 ?token= 쿼리를 허용한다."""
+    if cred is not None:
+        return user_from_token(conn, cred.credentials)
+    if token and settings.APP_ENV != "production":
+        return user_from_token(conn, token)
+    raise HTTPException(401, "인증이 필요합니다")
+
+
 @router.get("/videos/{vid}/stream")
 def stream(vid: int, request: Request,
            variant: Literal["original", "filtered"] = "original",
-           user=Depends(current_user),
+           user=Depends(media_user),
            conn: sqlite3.Connection = Depends(get_db)):
     row = _video_or_404(conn, vid)
     path = row["filtered_path"] if variant == "filtered" else row["original_path"]
@@ -138,7 +154,7 @@ def stream(vid: int, request: Request,
 
 
 @router.get("/videos/{vid}/thumb")
-def thumb(vid: int, user=Depends(current_user),
+def thumb(vid: int, user=Depends(media_user),
           conn: sqlite3.Connection = Depends(get_db)):
     row = _video_or_404(conn, vid)
     if not row["thumb_path"] or not os.path.exists(row["thumb_path"]):
