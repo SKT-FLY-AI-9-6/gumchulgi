@@ -29,7 +29,7 @@ class _VideoPageState extends ConsumerState<VideoPage> {
       ..setLooping(true)
       ..initialize().then((_) {
         if (mounted) setState(() {});
-        if (widget.active) _c!.play();
+        if (mounted && widget.active) _c!.play();
       }).catchError((_) {
         if (mounted) setState(() => _error = true);
       });
