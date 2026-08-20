@@ -19,6 +19,7 @@ class WarningBanner extends ConsumerWidget {
             filterOn: settings.filterOn)) {
       return const SizedBox.shrink();
     }
+    final messenger = ScaffoldMessenger.of(context);
     return Positioned(top: 90, left: 12, right: 12, child: Material(
       color: AppColors.card, borderRadius: BorderRadius.circular(12),
       child: Padding(padding: const EdgeInsets.all(12), child: Column(
@@ -38,8 +39,10 @@ class WarningBanner extends ConsumerWidget {
                 style: FilledButton.styleFrom(
                     backgroundColor: AppColors.amber,
                     foregroundColor: Colors.black),
-                onPressed: () =>
-                    ref.read(settingsProvider.notifier).setFilter(true),
+                onPressed: () => ref.read(settingsProvider.notifier)
+                    .setFilter(true).catchError((_) => messenger.showSnackBar(
+                        const SnackBar(content:
+                            Text('설정 저장 실패 — 다시 시도해주세요')))),
                 child: const Text('필터 ON')),
             const SizedBox(width: 8),
             OutlinedButton(

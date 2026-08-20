@@ -95,7 +95,11 @@ class DashboardScreen extends ConsumerWidget {
             const SizedBox(height: 8),
             FilledButton(
                 onPressed: () {
-                  ref.read(settingsProvider.notifier).setFilter(true);
+                  final messenger = ScaffoldMessenger.of(context);
+                  ref.read(settingsProvider.notifier).setFilter(true)
+                      .catchError((_) => messenger.showSnackBar(
+                          const SnackBar(content:
+                              Text('설정 저장 실패 — 다시 시도해주세요'))));
                   Navigator.pop(context);
                 },
                 child: const Text('필터 켜기')),

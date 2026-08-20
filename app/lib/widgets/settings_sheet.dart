@@ -12,11 +12,16 @@ void showSettingsSheet(BuildContext context) {
       final s = ref.watch(settingsProvider).value;
       if (s == null) return const SizedBox(height: 180);
       final n = ref.read(settingsProvider.notifier);
+      final messenger = ScaffoldMessenger.of(context);
+      void onSaveError(Object _) => messenger.showSnackBar(
+          const SnackBar(content: Text('설정 저장 실패 — 다시 시도해주세요')));
       return SafeArea(child: Column(mainAxisSize: MainAxisSize.min, children: [
         SwitchListTile(title: const Text('필터 기능 켜기'),
-            value: s.filterOn, onChanged: n.setFilter),
+            value: s.filterOn,
+            onChanged: (v) => n.setFilter(v).catchError(onSaveError)),
         SwitchListTile(title: const Text('위험 영상 자동 스킵 켜기'),
-            value: s.autoSkip, onChanged: n.setAutoSkip),
+            value: s.autoSkip,
+            onChanged: (v) => n.setAutoSkip(v).catchError(onSaveError)),
         ListTile(leading: const Icon(Icons.insights),
             title: const Text('광 노출 대시보드 확인'),
             onTap: () {

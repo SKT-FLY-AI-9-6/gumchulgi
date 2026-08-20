@@ -18,7 +18,12 @@ class SettingsController extends AsyncNotifier<AppSettings> {
         const AppSettings(filterOn: true, autoSkip: false);
     final next = f(cur);
     state = AsyncData(next);
-    state = AsyncData(await ref.read(apiProvider).putSettings(next));
+    try {
+      state = AsyncData(await ref.read(apiProvider).putSettings(next));
+    } catch (e) {
+      state = AsyncData(cur);
+      rethrow;
+    }
   }
 }
 
