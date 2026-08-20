@@ -50,3 +50,24 @@ def upload(file: UploadFile, title: str = Form(...),
 
     conn.execute("INSERT INTO jobs(video_id) VALUES(?)", (vid,))
     return {"video_id": vid}
+
+
+def _like_count(conn, vid: int) -> int:
+    return conn.execute("SELECT COUNT(*) FROM likes WHERE video_id=?",
+                        (vid,)).fetchone()[0]
+
+
+@router.post("/videos/{vid}/like")
+def like(vid: int, user=Depends(current_user),
+         conn: sqlite3.Connection = Depends(get_db)):
+    conn.execute("INSERT OR IGNORE INTO likes(user_id, video_id) VALUES(?,?)",
+                 (user["id"], vid))
+    return {"like_count": _like_count(conn, vid), "liked": True}
+
+
+@router.delete("/videos/{vid}/like")
+def unlike(vid: int, user=Depends(current_user),
+           conn: sqlite3.Connection = Depends(get_db)):
+    conn.execute("DELETE FROM likes WHERE user_id=? AND video_id=?",
+                 (user["id"], vid))
+    return {"like_count": _like_count(conn, vid), "liked": False}
