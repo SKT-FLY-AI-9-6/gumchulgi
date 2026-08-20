@@ -4,9 +4,9 @@ import subprocess
 
 def _run(args):
     p = subprocess.run(["ffmpeg", "-y", "-v", "error", *args],
-                       capture_output=True, text=True)
+                       capture_output=True, text=True, encoding="utf-8", errors="ignore")
     if p.returncode != 0:
-        raise RuntimeError(f"ffmpeg 실패: {p.stderr.strip()[:300]}")
+        raise RuntimeError(f"ffmpeg 실패: {(p.stderr or '').strip()[:300]}")
 
 
 def normalize(src, dst):
