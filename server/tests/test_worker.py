@@ -38,9 +38,11 @@ def test_flash_clip_pipeline(tmp_path, monkeypatch, testclips):
     v = conn.execute("SELECT * FROM videos WHERE id=?", (vid,)).fetchone()
     assert v["status"] == "ready"
     assert v["risk"] in ("corrected", "uncorrected")   # 기계 동작 검증
+    assert v["filter_level"] in ("strong", "base")
     assert v["n_flash"] > 0
     assert storage.filtered_path(vid).exists()
     assert storage.report_path(vid).exists()
+    assert storage.report_filtered_path(vid).exists()
     job = conn.execute("SELECT * FROM jobs WHERE video_id=?", (vid,)).fetchone()
     assert job["status"] == "done"
 
@@ -65,10 +67,10 @@ def test_requeue_stale(tmp_path, monkeypatch):
     conn.execute("INSERT INTO users(email,password_hash,nickname) "
                  "VALUES('r@t.co','x','재큐')")
     conn.execute("INSERT INTO videos(uploader_id,title) VALUES(1,'t')")
-    # 도커 재시작은 몇 초면 끝나므로 30분이 아니라 10분 기준으로도
-    # 잡혀야 한다 — 11분 전 시작 잡이 재큐잉되는지 확인.
+    # CPU 폴백 사다리(보정 2회)는 3분 영상에서 10분을 넘길 수 있어
+    # stale 기준을 30분으로 올렸다 — 31분 전 시작 잡이 재큐잉되는지 확인.
     conn.execute("INSERT INTO jobs(video_id,status,started_at) "
-                 "VALUES(1,'running',datetime('now','-11 minutes'))")
+                 "VALUES(1,'running',datetime('now','-31 minutes'))")
     worker_main.requeue_stale(conn)
     row = conn.execute("SELECT status, started_at FROM jobs").fetchone()
     assert row["status"] == "queued"

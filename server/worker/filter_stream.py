@@ -1,5 +1,6 @@
 import subprocess
 import threading
+from pathlib import Path
 
 import cv2
 import numpy as np
@@ -7,29 +8,71 @@ import numpy as np
 from pselive3 import Cfg, LiveFilter3
 
 
-def filter_video(src, dst, cfg: Cfg | None = None) -> int:
-    """pselive3 STRONG 을 스트리밍으로 적용. 메모리 O(1).
+def gpu_available() -> bool:
+    try:
+        import torch
+        return bool(torch.cuda.is_available())
+    except Exception:
+        return False
+
+
+def filter_video(src, dst, cfg: Cfg | None = None,
+                 use_gpu: bool | None = None) -> int:
+    """cfg 로 보정본을 만든다. CUDA 가 있으면 psegpu_full, 없으면
+    pselive3 스트리밍. 반환값은 처리한 프레임 수."""
+    cfg = cfg or Cfg.strong()
+    if use_gpu is None:
+        use_gpu = gpu_available()
+    if use_gpu:
+        return _filter_gpu(src, dst, cfg)
+    return _filter_cpu(src, dst, cfg)
+
+
+def _filter_gpu(src, dst, cfg: Cfg) -> int:
+    import psegpu_full
+
+    try:
+        rep, _ = psegpu_full.run(str(src), cfg, psegpu_full.OptF(),
+                                 video_out=str(dst), lossless=False,
+                                 progress=False)
+    except OSError as exc:
+        # ffmpeg writer 가 먼저 죽으면 stdin write 가 OSError 로 끊긴다 —
+        # CPU 경로와 같은 예외 형태(RuntimeError)로 통일한다.
+        raise RuntimeError(f"GPU 필터 인코딩 실패: {exc}") from exc
+    n = int(rep.get("frames", 0))
+    p = Path(dst)
+    if n == 0 or not p.exists() or p.stat().st_size == 0:
+        raise RuntimeError(f"GPU 필터가 출력을 만들지 못했습니다: {dst}")
+    return n
+
+
+def _filter_cpu(src, dst, cfg: Cfg) -> int:
+    """pselive3 를 스트리밍으로 적용. 메모리 O(1).
 
     pselive3.run() 과 같은 알고리즘·같은 인코딩 인자이지만 프레임을
     버퍼링하지 않고 ffmpeg stdin 으로 바로 흘린다. 오디오는 src 에서 copy.
     """
-    cfg = cfg or Cfg.strong()
     cap = cv2.VideoCapture(str(src))
     if not cap.isOpened():
         raise RuntimeError(f"영상을 열 수 없습니다: {src}")
     fps = cap.get(cv2.CAP_PROP_FPS) or 30.0
     W = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
     H = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    total = int(cap.get(cv2.CAP_PROP_FRAME_COUNT)) or 0
     s = cfg.short_side / min(W, H) if min(W, H) > cfg.short_side else 1.0
     aw, ah = max(2, int(W * s)), max(2, int(H * s))
     live = LiveFilter3(fps, (ah, aw), cfg)
 
+    # 오디오는 영상 길이까지만 복사한다(입력측 -t). -shortest 를 쓰면
+    # 오디오가 영상보다 짧은 클립에서 ffmpeg 가 조기 종료해 영상 꼬리가
+    # 잘리거나 stdin 파이프가 끊긴다 (REGRESS_0820.md 7절).
+    a_limit = (["-t", f"{total / fps:.3f}"] if total > 0 and fps > 0 else [])
     p = subprocess.Popen(
         ["ffmpeg", "-y", "-hide_banner", "-loglevel", "error",
          "-f", "rawvideo", "-pix_fmt", "bgr24", "-s", f"{W}x{H}",
          "-r", str(fps), "-i", "-",
-         "-i", str(src), "-map", "0:v:0", "-map", "1:a:0?",
-         "-c:a", "copy", "-shortest",
+         *a_limit, "-i", str(src), "-map", "0:v:0", "-map", "1:a:0?",
+         "-c:a", "copy",
          "-sws_flags", "bicubic+accurate_rnd+full_chroma_int",
          "-c:v", "libx264", "-preset", "medium", "-crf", "16",
          "-pix_fmt", "yuv420p", "-colorspace", "bt709",
