@@ -1,3 +1,5 @@
+import pytest
+
 from worker import ffmpeg
 from worker.filter_stream import filter_video
 
@@ -22,3 +24,11 @@ def test_audio_is_kept(small_mp4, tmp_path):
                        capture_output=True, text=True, check=True)
     kinds = {s["codec_type"] for s in json.loads(p.stdout)["streams"]}
     assert "audio" in kinds
+
+
+def test_ffmpeg_failure_raises_runtime_error(small_mp4, tmp_path):
+    """출력 경로가 없어 ffmpeg 가 실패하는 경우, 멈추지 않고 RuntimeError 로
+    끝나야 한다 (stderr 파이프 drain 미비로 인한 데드락 회귀 방지)."""
+    dst = tmp_path / "no_such_dir" / "flt.mp4"
+    with pytest.raises(RuntimeError):
+        filter_video(small_mp4, dst)

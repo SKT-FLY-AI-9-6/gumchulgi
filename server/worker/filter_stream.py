@@ -1,4 +1,5 @@
 import subprocess
+import threading
 
 import cv2
 import numpy as np
@@ -35,6 +36,21 @@ def filter_video(src, dst, cfg: Cfg | None = None) -> int:
          "-color_primaries", "bt709", "-color_trc", "bt709",
          "-movflags", "+faststart", str(dst)],
         stdin=subprocess.PIPE, stderr=subprocess.PIPE)
+
+    # ffmpeg 의 stderr 를 계속 비워두지 않으면 OS 파이프 버퍼가 가득 찼을 때
+    # ffmpeg 가 stderr 쓰기에서 멈추고 → stdin 읽기도 멈춰 p.stdin.write() 가
+    # 영원히 블록될 수 있다. 별도 스레드로 병행 drain 한다. (최근 ~300바이트만
+    # 보관하면 충분하므로 무한정 쌓이지 않도록 잘라낸다.)
+    err_buf = bytearray()
+
+    def _drain_stderr():
+        for chunk in iter(lambda: p.stderr.read(4096), b""):
+            err_buf.extend(chunk)
+            del err_buf[:-300]
+
+    err_thread = threading.Thread(target=_drain_stderr, daemon=True)
+    err_thread.start()
+
     n = 0
     try:
         while True:
@@ -44,13 +60,23 @@ def filter_video(src, dst, cfg: Cfg | None = None) -> int:
             sm = (cv2.resize(f, (aw, ah), interpolation=cv2.INTER_AREA)
                   if s != 1.0 else f)
             g = live.push(f, sm)
-            p.stdin.write(np.ascontiguousarray(g).tobytes())
+            try:
+                p.stdin.write(np.ascontiguousarray(g).tobytes())
+            except OSError:
+                # ffmpeg 가 먼저 죽어 파이프가 끊긴 경우. 종료 코드는
+                # 아래 finally 에서 확인해 RuntimeError 로 통일한다.
+                break
             n += 1
     finally:
         cap.release()
-        p.stdin.close()
-        err = p.stderr.read().decode(errors="replace")
-        if p.wait() != 0:
+        try:
+            p.stdin.close()
+        except OSError:
+            pass
+        err_thread.join()
+        rc = p.wait()
+        if rc != 0:
+            err = bytes(err_buf).decode(errors="replace")
             raise RuntimeError(f"ffmpeg 인코딩 실패: {err[:300]}")
     if n == 0:
         raise RuntimeError("프레임을 하나도 읽지 못했습니다")
