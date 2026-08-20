@@ -23,3 +23,6 @@ __pycache__/
 .venv/
 venv/
 *.egg-info/
+
+# docker compose 로컬 데이터 볼륨 (저장소 루트)
+/data/
