@@ -31,9 +31,10 @@ class _FeedState extends ConsumerState<FeedScreen> {
     final s = _watch.elapsed.inMilliseconds / 1000.0;
     _watch..reset()..start();
     if (s < 0.5) return; // 스쳐 지나간 페이지는 무시
+    final exposure = ref.read(exposureProvider.notifier);
     ref.read(apiProvider)
         .sendEvent(v.id, s.clamp(0, 600), v.variant)
-        .then((e) => ref.read(exposureProvider.notifier).update(e))
+        .then((e) => exposure.update(e))
         .catchError((_) {});
   }
 
@@ -51,6 +52,11 @@ class _FeedState extends ConsumerState<FeedScreen> {
       if (prev?.value != null && next.value != null &&
           (prev!.value!.filterOn != next.value!.filterOn ||
            prev.value!.autoSkip != next.value!.autoSkip)) {
+        final vids = ref.read(feedProvider).value;
+        if (vids != null && _current < vids.length) _sendEvent(vids[_current]);
+        _watch..reset()..start();
+        setState(() => _current = 0);
+        if (_page.hasClients) _page.jumpToPage(0);
         ref.read(feedProvider.notifier).refreshAll();
       }
     });
