@@ -27,3 +27,7 @@ def thumb_path(vid: int) -> Path:
 
 def report_path(vid: int) -> Path:
     return video_dir(vid) / "report.json"
+
+
+def report_filtered_path(vid: int) -> Path:
+    return video_dir(vid) / "report_filtered.json"

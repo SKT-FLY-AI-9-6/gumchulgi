@@ -172,3 +172,28 @@ JSON 을 보고 확정한다.
 댓글·팔로우·공유·리믹스 실동작, psepipe 사다리 폴백, S3 저장,
 iOS 빌드·서명, HTTPS, 푸시 알림, 관리자 페이지, 추천 알고리즘
 (피드는 최신순).
+
+## 2026-08-20 개정 — GPU 사다리·서버 위치 (승인됨)
+
+GPU 노트북에서의 회귀 완료(fix/ste-report-consistency 의
+`psepipe_v3_seam/validation/REGRESS_0820.md`) 후 확정한 변경:
+
+1. **워커 필터 = GPU psegpu_full + 사후 폴백 사다리.**
+   검출(원본) 위반 시: `Cfg.strong()` 으로 1차 보정 → 재검출 →
+   적합이면 채택. 위반 잔존 시 기본 `Cfg()` 로 2차 보정 → 재검출 →
+   두 출력의 위반 규칙 집합을 비교해 **strong ⊆ base 면 strong, 아니면
+   base 채택** (209편 실측: strong 채택 204, 폴백 5, base 대비 퇴보 0).
+   채택본만 `filtered.mp4` 로 남기고 `videos.filter_level`('strong'|'base')
+   에 기록한다. 재판정 리포트는 `report_filtered.json` 으로 저장.
+2. **GPU 자동 감지, CPU 폴백.** torch+CUDA 가 있으면 psegpu_full,
+   없으면 기존 pselive3 스트리밍 경로 — EC2 CPU 배포 호환 유지.
+   이에 따라 워커 stale 기준 10분→30분 (CPU 2회 보정 대비).
+3. **`-shortest` 제거.** 오디오가 영상보다 짧은 클립에서 ffmpeg 가
+   조기 종료해 BrokenPipe 로 죽는 버그(REGRESS_0820.md 7절)의 원인.
+   오디오는 입력측 `-t <영상길이>` 로 상한만 걸어 복사한다
+   (psegpu_full._open_writer 와 worker/filter_stream 동일 적용).
+4. **시연 구성 = 이 GPU 노트북이 서버.** api+워커를 Docker 없이
+   네이티브 실행(GPU 접근), 폰의 Flutter 앱은 같은 와이파이에서
+   `--dart-define=API_BASE=http://<노트북IP>:8000` 으로 접속.
+   Docker/EC2 구성은 CPU 경로용으로 유지. D(BlazeBVD) 슬롯은
+   파이프라인에서 제외 확정.
