@@ -1,6 +1,8 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:image_picker/image_picker.dart';
 
 import 'models.dart';
 
@@ -25,7 +27,15 @@ class ApiClient {
 
   String get token => _token ?? '';
   Map<String, String> get authHeaders => {'Authorization': 'Bearer $_token'};
-  String absoluteUrl(String path) => '$apiBase$path';
+  String absoluteUrl(String path) {
+    var url = '$apiBase$path';
+    // 웹의 <video>/<img>는 인증 헤더를 못 보내므로 토큰을 쿼리로 전달
+    // (서버는 운영 환경이 아닐 때만 허용).
+    if (kIsWeb && _token != null) {
+      url += url.contains('?') ? '&token=$_token' : '?token=$_token';
+    }
+    return url;
+  }
 
   Future<String?> loadToken() async =>
       _token = await _storage.read(key: 'jwt');
@@ -96,11 +106,16 @@ class ApiClient {
       ((await _dio.get('/me/videos')).data['videos'] as List)
           .map((e) => MyVideo.fromJson(e)).toList();
 
-  Future<int> upload(String path, String title,
+  Future<int> upload(XFile file, String title,
       {void Function(int, int)? onProgress}) async {
+    // 웹은 파일 경로가 없어(blob) bytes 로 전송한다.
+    final mf = kIsWeb
+        ? MultipartFile.fromBytes(await file.readAsBytes(),
+            filename: file.name)
+        : await MultipartFile.fromFile(file.path);
     final form = FormData.fromMap({
       'title': title,
-      'file': await MultipartFile.fromFile(path),
+      'file': mf,
     });
     final r = await _dio.post('/videos', data: form,
         onSendProgress: onProgress);

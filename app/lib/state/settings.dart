@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../api/client.dart';
 import '../api/models.dart';
+import 'feed.dart';
 
 class SettingsController extends AsyncNotifier<AppSettings> {
   @override
@@ -20,6 +21,9 @@ class SettingsController extends AsyncNotifier<AppSettings> {
     state = AsyncData(next);
     try {
       state = AsyncData(await ref.read(apiProvider).putSettings(next));
+      // 노출 규칙이 서버에 확정된 뒤에 피드를 다시 불러야 한다 —
+      // optimistic 시점에 부르면 옛 설정으로 계산된 피드를 받는다.
+      ref.invalidate(feedProvider);
     } catch (e) {
       state = AsyncData(cur);
       rethrow;

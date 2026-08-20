@@ -67,7 +67,9 @@ class _FeedState extends ConsumerState<FeedScreen> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
-    // 설정이 바뀌면 노출 규칙이 달라지므로 피드 재로드
+    // 설정이 바뀌면 시청 기록을 마감하고 인덱스를 리셋한다.
+    // 피드 재로드 자체는 SettingsController 가 서버 PUT 확정 후
+    // feedProvider 를 invalidate 하는 것으로 수행된다 (레이스 방지).
     ref.listen(settingsProvider, (prev, next) {
       if (prev?.value != null && next.value != null &&
           (prev!.value!.filterOn != next.value!.filterOn ||
@@ -77,7 +79,6 @@ class _FeedState extends ConsumerState<FeedScreen> with WidgetsBindingObserver {
         _watch..reset()..start();
         setState(() => _current = 0);
         if (_page.hasClients) _page.jumpToPage(0);
-        ref.read(feedProvider.notifier).refreshAll();
       }
     });
     final feed = ref.watch(feedProvider);

@@ -33,7 +33,7 @@ class _UploadState extends ConsumerState<UploadScreen> {
     if (_file == null) return;
     setState(() { _progress = 0; _message = null; });
     try {
-      await ref.read(apiProvider).upload(_file!.path, _title.text,
+      await ref.read(apiProvider).upload(_file!, _title.text,
           onProgress: (sent, total) {
             if (mounted) setState(() => _progress = sent / total);
           });
