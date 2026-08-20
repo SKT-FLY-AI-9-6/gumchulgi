@@ -1,0 +1,7 @@
+CIHun1gx7zU    strong: 플래시
+PFSDW2g3D8o    strong: 플래시,화면전환
+UoHK74aS9sY    strong: 패턴,화면전환
+Y76O5wY7EcM    strong: 플래시,화면전환,5초지속
+xDdAHEUQ2zA    strong: 화면전환,5초지속
+Db19aDiAxHJ    strong: 패턴
+완료

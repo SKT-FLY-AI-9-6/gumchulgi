@@ -1,0 +1,31 @@
+01_lum_strobe_5hz            전 플래시              base 적합               cand 적합               동일
+02_lum_safe_2.5hz            전 적합               base 적합               cand 적합               동일
+03_isolum_redgreen_8hz       전 적색               base 적합               cand 적합               동일
+04_isolum_blueyellow_8hz     전 적합               base 적합               cand 적합               동일
+05_static                    전 적합               base 적합               cand 적합               동일
+06_cardinal_LM_8hz           전 적합               base 화면전환             cand 화면전환             동일
+07_cardinal_S_8hz            전 적합               base 화면전환             cand 화면전환             동일
+08_red_black_5hz             전 플래시,적색           base 적합               cand 적합               동일
+09_red_gray_isolum_5hz       전 적색               base 화면전환             cand 화면전환             동일
+10_red_depth_6hz             전 플래시              base 적합               cand 적합               동일
+11_red_safe_2.5hz            전 적합               base 적합               cand 적합               동일
+12_porygon_redblue_12hz      전 플래시,적색           base 적합               cand 적합               동일
+13_stripes_static_10pairs    전 패턴               base 패턴               cand 패턴               동일
+14_stripes_drift_10pairs     전 패턴               base 패턴               cand 패턴               동일
+15_stripes_3pairs_safe       전 적합               base 적합               cand 적합               동일
+16_stripes_lowcontrast_safe  전 적합               base 적합               cand 적합               동일
+17_stripes_smallarea_safe    전 적합               base 적합               cand 적합               동일
+20_bright_indoor_5hz         전 플래시              base 적합               cand 적합               동일
+21_anime_cuts_6ps            전 화면전환             base 화면전환             cand 화면전환             동일
+22_game_hud_7hz              전 플래시              base 적합               cand 적합               동일
+23_letterbox_5hz             전 플래시              base 적합               cand 적합               동일
+24_film24_5hz                전 플래시              base 적합               cand 적합               동일
+25_safe_slow                 전 적합               base 적합               cand 적합               동일
+26_safe_shaky                전 적합               base 적합               cand 적합               동일
+27_anime_cuts_10ps           전 플래시,화면전환         base 화면전환             cand 화면전환             동일
+28_blue_strobe_5hz           전 적합               base 적합               cand 적합               동일
+seg6                         전 플래시              base 적합               cand 적합               동일
+
+총 27편 — 동일 27 / 개선 0 / 퇴보 0 / 악화 0
+악화 0
+CSV -> regress_27.csv
