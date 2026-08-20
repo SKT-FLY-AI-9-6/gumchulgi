@@ -11,11 +11,15 @@ class ApiClient {
   final Dio _dio;
   final _storage = const FlutterSecureStorage();
   String? _token;
+  void Function()? onUnauthorized;
 
   ApiClient() : _dio = Dio(BaseOptions(baseUrl: apiBase)) {
     _dio.interceptors.add(InterceptorsWrapper(onRequest: (o, h) {
       if (_token != null) o.headers['Authorization'] = 'Bearer $_token';
       h.next(o);
+    }, onError: (e, h) {
+      if (e.response?.statusCode == 401) onUnauthorized?.call();
+      h.next(e);
     }));
   }
 
