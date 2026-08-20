@@ -36,9 +36,13 @@ def exposure_today(conn: sqlite3.Connection, user_id: int) -> dict:
 def today(user=Depends(current_user),
           conn: sqlite3.Connection = Depends(get_db)):
     ex = exposure_today(conn, user["id"])
+    # 스펙 3절: 위험 노출 이벤트 1건마다 그 영상의 위반 축 각각 +1
+    # (n_flash 등 세그먼트 개수가 아니라, 축이 위반이면 이벤트당 1로 카운트)
     stim = conn.execute(
-        "SELECT COALESCE(SUM(v.n_flash),0) f, COALESCE(SUM(v.n_red),0) r,"
-        " COALESCE(SUM(v.n_pattern),0) p, COALESCE(SUM(v.n_cut),0) c"
+        "SELECT COALESCE(SUM(CASE WHEN v.n_flash>0 THEN 1 ELSE 0 END),0) f,"
+        " COALESCE(SUM(CASE WHEN v.n_red>0 THEN 1 ELSE 0 END),0) r,"
+        " COALESCE(SUM(CASE WHEN v.n_pattern>0 THEN 1 ELSE 0 END),0) p,"
+        " COALESCE(SUM(CASE WHEN v.n_cut>0 THEN 1 ELSE 0 END),0) c"
         " FROM watch_events e JOIN videos v ON v.id=e.video_id"
         " WHERE e.user_id=? AND e.variant='original'"
         " AND v.risk IN ('corrected','uncorrected')"

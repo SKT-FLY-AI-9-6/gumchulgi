@@ -1,5 +1,7 @@
 import sqlite3
 
+import pytest
+
 from app import db, storage
 from worker import main as worker_main
 from worker import pipeline
@@ -63,7 +65,33 @@ def test_requeue_stale(tmp_path, monkeypatch):
     conn.execute("INSERT INTO users(email,password_hash,nickname) "
                  "VALUES('r@t.co','x','재큐')")
     conn.execute("INSERT INTO videos(uploader_id,title) VALUES(1,'t')")
+    # 도커 재시작은 몇 초면 끝나므로 30분이 아니라 10분 기준으로도
+    # 잡혀야 한다 — 11분 전 시작 잡이 재큐잉되는지 확인.
     conn.execute("INSERT INTO jobs(video_id,status,started_at) "
-                 "VALUES(1,'running',datetime('now','-2 hours'))")
+                 "VALUES(1,'running',datetime('now','-11 minutes'))")
     worker_main.requeue_stale(conn)
-    assert conn.execute("SELECT status FROM jobs").fetchone()[0] == "queued"
+    row = conn.execute("SELECT status, started_at FROM jobs").fetchone()
+    assert row["status"] == "queued"
+    assert row["started_at"] is None
+
+
+def test_main_calls_requeue_stale_on_idle_tick(tmp_path, monkeypatch):
+    """도커가 몇 초 만에 워커를 재시작해도, 시작 시 1회뿐 아니라
+    idle 틱마다 requeue_stale 이 호출되어야 오래 걸린 잡이 풀린다."""
+    from app.config import settings
+    monkeypatch.setattr(settings, "DATA_DIR", tmp_path)
+
+    calls = []
+    monkeypatch.setattr(worker_main, "requeue_stale",
+                        lambda c: calls.append("requeue"))
+    monkeypatch.setattr(worker_main, "run_once", lambda c: False)  # 항상 idle
+
+    def _stop_sleep(_s):
+        raise SystemExit
+    monkeypatch.setattr(worker_main.time, "sleep", _stop_sleep)
+
+    with pytest.raises(SystemExit):
+        worker_main.main()
+
+    # 시작 시 1회 + 첫 idle 틱에서 1회 = 최소 2회 호출돼야 함
+    assert len(calls) >= 2
