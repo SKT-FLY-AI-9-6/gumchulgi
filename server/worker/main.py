@@ -4,7 +4,7 @@ import traceback
 from app import db
 from worker import pipeline
 
-STALE_MIN = 30
+STALE_MIN = 10
 POLL_S = 2
 
 
@@ -50,6 +50,7 @@ def main():
     print("워커 시작 — 큐 폴링 중")
     while True:
         if not run_once(conn):
+            requeue_stale(conn)
             time.sleep(POLL_S)
 
 

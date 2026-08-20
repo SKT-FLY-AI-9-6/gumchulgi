@@ -45,3 +45,26 @@ def test_today_and_weekly(client, auth_headers, monkeypatch):
     assert w["days"][-1]["risky_views"] == 2      # 오늘
     assert w["days"][-3]["risky_views"] == 1      # 이틀 전
     assert w["avg"] == round(3 / 7, 1)
+
+
+def test_stimulus_counts_events_not_segments(client, auth_headers):
+    """스펙 3절: 자극 유형별 횟수는 위험 노출 '이벤트' 1건당 위반 축 +1.
+    n_flash=12 인 영상이라도 이벤트가 1건이면 flash 는 1 이어야 한다
+    (세그먼트 개수를 그대로 합산하면 안 됨)."""
+    h = auth_headers(email="s@t.co")
+    conn = db.connect()
+    conn.execute("INSERT INTO videos(uploader_id,title,status,risk,"
+                 "n_flash,n_red) VALUES(1,'t','ready','corrected',12,1)")
+    vid = conn.execute("SELECT MAX(id) FROM videos").fetchone()[0]
+    uid = conn.execute("SELECT id FROM users WHERE email=?",
+                       ("s@t.co",)).fetchone()[0]
+    conn.execute(
+        "INSERT INTO watch_events(user_id,video_id,watched_s,variant)"
+        " VALUES(?,?,10,'original')", (uid, vid))
+    conn.commit(); conn.close()
+
+    t = client.get("/dashboard/today", headers=h).json()
+    assert t["stimulus"]["flash"] == 1
+    assert t["stimulus"]["red"] == 1
+    assert t["stimulus"]["pattern"] == 0
+    assert t["stimulus"]["cut"] == 0
