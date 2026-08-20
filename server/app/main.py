@@ -1,6 +1,9 @@
 from fastapi import FastAPI
 
 from app import auth, dashboard, feed, users, videos
+from app.config import validate_production
+
+validate_production()
 
 app = FastAPI(title="gumchulgi platform")
 app.include_router(auth.router)

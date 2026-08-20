@@ -2,10 +2,14 @@ import os
 from pathlib import Path
 
 
+_INSECURE_SECRETS = ("", "dev-secret", "change-me")
+
+
 class Settings:
     def __init__(self):
         self.DATA_DIR = Path(os.environ.get("DATA_DIR", "./data"))
         self.JWT_SECRET = os.environ.get("JWT_SECRET", "dev-secret")
+        self.APP_ENV = os.environ.get("APP_ENV", "dev")
         self.DAILY_BUDGET_S = int(os.environ.get("DAILY_BUDGET_S", "300"))
         self.MAX_UPLOAD_MB = int(os.environ.get("MAX_UPLOAD_MB", "200"))
         self.MAX_DURATION_S = int(os.environ.get("MAX_DURATION_S", "180"))
@@ -13,3 +17,12 @@ class Settings:
 
 
 settings = Settings()
+
+
+def validate_production():
+    """운영 환경(APP_ENV=production)에서 JWT_SECRET 이 기본값이면 부팅을
+    막는다 — 조용히 dev-secret/change-me 로 뜨는 사고를 방지."""
+    if settings.APP_ENV == "production" and settings.JWT_SECRET in _INSECURE_SECRETS:
+        raise RuntimeError(
+            "운영 환경(APP_ENV=production)에서는 JWT_SECRET을 기본값이 "
+            "아닌 안전한 값으로 반드시 설정해야 합니다.")
