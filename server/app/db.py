@@ -14,7 +14,16 @@ def connect(db_path=None) -> sqlite3.Connection:
     conn.execute("PRAGMA journal_mode=WAL")
     conn.execute("PRAGMA foreign_keys=ON")
     conn.executescript(SCHEMA)
+    _migrate(conn)
     return conn
+
+
+def _migrate(conn):
+    # CREATE IF NOT EXISTS 는 기존 테이블을 바꾸지 않는다 — 스키마에 뒤늦게
+    # 추가된 컬럼은 기존 DB 에 ALTER 로 보충한다.
+    cols = {r[1] for r in conn.execute("PRAGMA table_info(videos)")}
+    if "filter_level" not in cols:
+        conn.execute("ALTER TABLE videos ADD COLUMN filter_level TEXT")
 
 
 def get_db():

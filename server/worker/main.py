@@ -4,7 +4,7 @@ import traceback
 from app import db
 from worker import pipeline
 
-STALE_MIN = 10
+STALE_MIN = 30   # CPU 폴백 사다리(보정 2회)는 3분 영상에서 10분을 넘길 수 있다
 POLL_S = 2
 
 

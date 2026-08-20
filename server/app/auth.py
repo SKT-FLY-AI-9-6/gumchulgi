@@ -23,7 +23,7 @@ def check_pw(p: str, h: str) -> bool:
 
 
 def make_token(user_id: int) -> str:
-    exp = dt.datetime.now(dt.UTC) + dt.timedelta(days=settings.TOKEN_DAYS)
+    exp = dt.datetime.now(dt.timezone.utc) + dt.timedelta(days=settings.TOKEN_DAYS)
     return jwt.encode({"sub": str(user_id), "exp": exp},
                       settings.JWT_SECRET, algorithm="HS256")
 
