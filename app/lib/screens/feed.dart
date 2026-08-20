@@ -17,7 +17,7 @@ class FeedScreen extends ConsumerStatefulWidget {
   ConsumerState<FeedScreen> createState() => _FeedState();
 }
 
-class _FeedState extends ConsumerState<FeedScreen> {
+class _FeedState extends ConsumerState<FeedScreen> with WidgetsBindingObserver {
   final _page = PageController();
   final _watch = Stopwatch();
   int _current = 0;
@@ -25,6 +25,7 @@ class _FeedState extends ConsumerState<FeedScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _watch.start();
   }
 
@@ -44,6 +45,24 @@ class _FeedState extends ConsumerState<FeedScreen> {
     final vids = ref.read(feedProvider).value;
     if (vids != null && _current < vids.length) _sendEvent(vids[_current]);
     super.deactivate();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    final vids = ref.read(feedProvider).value;
+    if (state == AppLifecycleState.paused) {
+      if (vids != null && _current < vids.length) _sendEvent(vids[_current]);
+      _watch.stop();
+    } else if (state == AppLifecycleState.resumed) {
+      _watch..reset()..start();
+    }
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _page.dispose();
+    super.dispose();
   }
 
   @override
@@ -77,6 +96,7 @@ class _FeedState extends ConsumerState<FeedScreen> {
                 style: TextStyle(color: AppColors.sub)))
             : PageView.builder(
                 controller: _page, scrollDirection: Axis.vertical,
+                allowImplicitScrolling: true,
                 itemCount: vids.length,
                 onPageChanged: (i) {
                   _sendEvent(vids[_current]);

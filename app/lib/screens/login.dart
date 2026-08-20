@@ -17,6 +17,14 @@ class _LoginState extends ConsumerState<LoginScreen> {
   bool _signup = false;
 
   @override
+  void dispose() {
+    _email.dispose();
+    _pw.dispose();
+    _nick.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final auth = ref.watch(authProvider);
     return Scaffold(

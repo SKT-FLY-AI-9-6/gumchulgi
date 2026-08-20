@@ -17,6 +17,12 @@ class _UploadState extends ConsumerState<UploadScreen> {
   double? _progress;
   String? _message;
 
+  @override
+  void dispose() {
+    _title.dispose();
+    super.dispose();
+  }
+
   Future<void> _pick() async {
     final f = await ImagePicker().pickVideo(source: ImageSource.gallery);
     if (!mounted) return;
