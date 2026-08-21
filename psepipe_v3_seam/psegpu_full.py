@@ -611,10 +611,15 @@ def _has_nvenc():
     return NVENC
 
 
-def _open_writer(path, src, W, H, fps, lossless):
+def _open_writer(path, src, W, H, fps, lossless, a_max_s=None):
     """**FFV1 은 MP4 컨테이너에 못 들어간다.** 확장자로 고른다.
         .mkv -> FFV1 무손실 (판정 측정용)
         그 외 -> H.264 mp4 (사람이 보는 용, 원본 오디오 통과)
+
+    a_max_s: 오디오 입력을 이 길이(초)까지만 읽는다. -shortest 는 쓰지
+    않는다 — 오디오가 영상보다 짧은 클립(실측 Db4MJViRU0P: 62.3s < 64.1s)
+    에서 ffmpeg 가 오디오 종료 시점에 먼저 끝나 stdin 파이프를 닫고,
+    run() 의 write 가 BrokenPipeError 로 죽는 버그가 있었다.
     """
     import subprocess
     if lossless:
@@ -633,11 +638,12 @@ def _open_writer(path, src, W, H, fps, lossless):
                     "-rc", "vbr", "-cq", "18", "-b:v", "0"]
         else:
             venc = ["-c:v", "libx264", "-preset", "medium", "-crf", "16"]
+        a_limit = ["-t", f"{a_max_s:.3f}"] if a_max_s else []
         cmd = ["ffmpeg", "-y", "-hide_banner", "-loglevel", "error",
                "-f", "rawvideo", "-pix_fmt", "bgr24", "-s", f"{W}x{H}",
                "-r", str(fps), "-i", "-",
+               *a_limit,
                "-i", src, "-map", "0:v:0", "-map", "1:a:0?", "-c:a", "copy",
-               "-shortest",
                "-sws_flags", "bicubic+accurate_rnd+full_chroma_int"] + venc + [
                "-pix_fmt", "yuv420p", "-colorspace", "bt709",
                "-color_primaries", "bt709", "-color_trc", "bt709",
@@ -671,9 +677,11 @@ def run(src, cfg: P3.Cfg = None, opt: OptF = None, video_out=None,
     use_ll = (lossless if lossless is not None else (ext == ".mkv")) if video_out else False
 
     total = int(cap.get(cv2.CAP_PROP_FRAME_COUNT)) or 0
+    a_max_s = total / fps if total > 0 and fps > 0 else None
     writer = None
     if video_out and not keep:
-        writer = _open_writer(video_out, src, W, H, fps, use_ll)
+        writer = _open_writer(video_out, src, W, H, fps, use_ll,
+                              a_max_s=a_max_s)
 
     out, n, t = [], 0, 0.0
     while True:
@@ -709,7 +717,8 @@ def run(src, cfg: P3.Cfg = None, opt: OptF = None, video_out=None,
            "latency_frames": 0}
     if video_out:
         if keep:                       # 모아 뒀으면 여기서 한 번에 쓴다
-            w = _open_writer(video_out, src, W, H, fps, use_ll)
+            w = _open_writer(video_out, src, W, H, fps, use_ll,
+                             a_max_s=(n / fps if fps > 0 else None))
             for g in out:
                 w.stdin.write(np.ascontiguousarray(g).tobytes())
             w.stdin.close()
