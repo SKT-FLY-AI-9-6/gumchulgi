@@ -8,7 +8,7 @@ Cfg.strong() 1차 → 재검출 적합이면 채택. 위반 잔존 시 기본 Cf
 from pselive3 import Cfg
 
 from app import storage
-from worker import detect, ffmpeg, filter_stream
+from worker import detect, ffmpeg, filter_stream, segments
 
 
 def _rules(result) -> set:
@@ -19,9 +19,12 @@ def _correct_with_ladder(video_id: int, orig):
     """위반 원본을 사다리로 보정. (filtered_path, 채택 판정, 강도) 반환."""
     vdir = storage.video_dir(video_id)
     tried = {}                       # level -> (임시 경로, 재검출 결과)
+    armed = {}                       # level -> armed_segments
     for level, cfg in (("strong", Cfg.strong()), ("base", Cfg())):
         p = vdir / f"_flt_{level}.mp4"
-        filter_stream.filter_video(orig, p, cfg)
+        got: list = []
+        filter_stream.filter_video(orig, p, cfg, armed_out=got)
+        armed[level] = got
         tried[level] = (p, detect.detect(p))
         if tried[level][1]["compliant"]:
             break
@@ -37,7 +40,7 @@ def _correct_with_ladder(video_id: int, orig):
     for level, (p, _r) in tried.items():
         if level != adopted:
             p.unlink(missing_ok=True)
-    return flt, result, adopted
+    return flt, result, adopted, armed.get(adopted) or []
 
 
 def process_video(conn, video_id: int):
@@ -53,20 +56,28 @@ def process_video(conn, video_id: int):
 
     if first["compliant"]:
         risk, filtered, level = "safe", None, None
+        mode, seg_s = "full", None
     else:
-        flt, second, level = _correct_with_ladder(video_id, orig)
+        flt, second, level, armed = _correct_with_ladder(video_id, orig)
         detect.save_report(second["report"],
                            storage.report_filtered_path(video_id))
         risk = "corrected" if second["compliant"] else "uncorrected"
         filtered = str(flt)
+        # 구간 저장 — 필터가 건드린 구간만 조각으로. 무이득이거나 이어붙인
+        # 결과가 판정을 깨면 'full' 로 후퇴한다(통짜 filtered.mp4 는 그대로 남음).
+        mode, seg_s = segments.store(conn, video_id, orig, flt, armed,
+                                     first["duration_s"])
 
     a = first["axes"]
     conn.execute(
         "UPDATE videos SET status='ready', risk=?, filter_level=?,"
+        " storage_mode=?, seg_total_s=?, seg_ratio=?,"
         " original_path=?, filtered_path=?, thumb_path=?, report_path=?,"
         " duration_s=?, n_flash=?, n_red=?, n_pattern=?, n_cut=?"
         " WHERE id=?",
-        (risk, level, str(orig), filtered, str(storage.thumb_path(video_id)),
+        (risk, level, mode, seg_s,
+         (seg_s / first["duration_s"]) if seg_s and first["duration_s"] else None,
+         str(orig), filtered, str(storage.thumb_path(video_id)),
          str(storage.report_path(video_id)), first["duration_s"],
          a["flash"], a["red"], a["pattern"], a["cut"], video_id))
     upload.unlink(missing_ok=True)
