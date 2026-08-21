@@ -365,6 +365,10 @@ class FullFilterGPU:
         self.n = 0
         self.stats = {"armed": 0, "warped": 0.0, "cuts": 0.0, "mean_area": 0.0,
                       "lmc_px": 0.0}
+        # **무장한 프레임 번호** (CPU 판 pselive3.armed_at 과 같은 계약).
+        # 구간 저장(docs/구간저장-토글-설계.md)이 이 값으로 조각을 만든다.
+        # 없으면 워커가 조각화를 건너뛰고 통짜로 떨어진다 — 안전하지만 무이득.
+        self.armed_at: list[int] = []
 
         self.h_in = torch.empty((self.H, self.W, 3), dtype=torch.uint8, pin_memory=True)
         self.h_out = torch.empty((self.H, self.W, 3), dtype=torch.uint8, pin_memory=True)
@@ -489,7 +493,14 @@ class FullFilterGPU:
         cut = self._cut_gate((xe * self.w601).sum(-1) * 255.0)
         M = self._detect(lin_s)
         self.n += 1
-        self.stats["mean_area"] += float(M.float().mean())
+        # float() 이 이미 호스트 동기화를 한 번 한다 — 그 값을 그대로 써서
+        # 무장 여부를 판단하면 **추가 동기화가 없다**. M.any() 를 따로 부르면
+        # 프레임당 동기화가 하나 더 생겨 이 파일의 설계(프레임당 1회)를 깬다.
+        _ma = float(M.float().mean())
+        self.stats["mean_area"] += _ma
+        if _ma > 0.0:
+            self.stats["armed"] += 1
+            self.armed_at.append(self.n - 1)
 
         # ---- 알파
         a = M.to(dt).view(1, 1, self.ah, self.aw)
@@ -714,6 +725,9 @@ def run(src, cfg: P3.Cfg = None, opt: OptF = None, video_out=None,
            "realtime_x": round((1000.0 / fps) / max(ms, 1e-9), 2),
            "warped": int(live.stats["warped"]), "cuts": int(live.stats["cuts"]),
            "mean_mask_area": round(live.stats["mean_area"] / max(n, 1), 4),
+           "armed_frames": live.stats["armed"],
+           "armed_segments": P3._segments(live.armed_at, fps),
+           "armed_pct": round(len(live.armed_at) / max(n, 1) * 100, 1),
            "latency_frames": 0}
     if video_out:
         if keep:                       # 모아 뒀으면 여기서 한 번에 쓴다
