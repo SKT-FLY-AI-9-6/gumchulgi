@@ -650,12 +650,17 @@ def _open_writer(path, src, W, H, fps, lossless, a_max_s=None):
         else:
             venc = ["-c:v", "libx264", "-preset", "medium", "-crf", "16"]
         a_limit = ["-t", f"{a_max_s:.3f}"] if a_max_s else []
+        # 0.5초 IDR — 구간 저장이 조각을 **무손실**(-c copy)로 잘라내려면 절단면이
+        # 키프레임이어야 한다. 구간을 0.5초 격자로 정렬하므로 이 간격이면 맞는다.
+        # (docs/구간저장-토글-설계.md — 0.5초인 이유는 용량이 아니라 토글 전환
+        #  지연 상한, 즉 안전이다.)
+        kf = ["-force_key_frames", "expr:gte(t,n_forced*0.5)"]
         cmd = ["ffmpeg", "-y", "-hide_banner", "-loglevel", "error",
                "-f", "rawvideo", "-pix_fmt", "bgr24", "-s", f"{W}x{H}",
                "-r", str(fps), "-i", "-",
                *a_limit,
                "-i", src, "-map", "0:v:0", "-map", "1:a:0?", "-c:a", "copy",
-               "-sws_flags", "bicubic+accurate_rnd+full_chroma_int"] + venc + [
+               "-sws_flags", "bicubic+accurate_rnd+full_chroma_int"] + venc + kf + [
                "-pix_fmt", "yuv420p", "-colorspace", "bt709",
                "-color_primaries", "bt709", "-color_trc", "bt709",
                "-movflags", "+faststart", path]
