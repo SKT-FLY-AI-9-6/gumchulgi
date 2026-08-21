@@ -339,6 +339,11 @@ class LiveFilter3:
         self.in_frac = 0.0
         self.stats = {"armed": 0, "cuts": 0, "warped": 0, "mean_area": 0.0,
                       "alpha_raised": 0.0, "gain_sum": 0.0, "gain_min": 1.0}
+        # **무장한 프레임 번호.** 개수만 세면 "어디를 건드렸나" 를 잃는다 —
+        # 구간 저장(docs/구간저장-토글-설계.md)에 필요하다. 원본과 diff 로
+        # 역산하면 인코딩 손실 때문에 임계값 문제가 생긴다. 필터가 자기
+        # 판단을 그대로 알려주는 편이 정확하다.
+        self.armed_at: list[int] = []
 
     # ------------------------------------------------------------------ 검출
     def _mask(self, bgr_small):
@@ -454,6 +459,7 @@ class LiveFilter3:
         self.stats["mean_area"] += float(M.mean())
         if M.any():
             self.stats["armed"] += 1
+            self.armed_at.append(self.n - 1)
 
         H, W = bgr.shape[:2]
         src = bgr_small if c.fast else bgr
@@ -585,6 +591,24 @@ class LiveFilter3:
             self.gain = min(1.0, self.gain + c.guard_up)
 
 
+def _segments(idx, fps, gap=6, pad=0.0):
+    """무장 프레임 번호 -> [시작초, 끝초] 목록.
+
+    gap 프레임 이내로 떨어진 것은 한 구간으로 잇는다 — 조각이 잘게 쪼개지면
+    저장·재생이 오히려 비싸진다. pad 는 앞뒤 여유(초).
+    """
+    if not idx:
+        return []
+    segs, a, prev = [], idx[0], idx[0]
+    for i in idx[1:]:
+        if i - prev > gap:
+            segs.append((a, prev)); a = i
+        prev = i
+    segs.append((a, prev))
+    return [[round(max(0.0, s / fps - pad), 3), round((e + 1) / fps + pad, 3)]
+            for s, e in segs]
+
+
 def run(src, cfg: Cfg = None, video_out=None, lossless=False, verbose=True):
     cfg = cfg or Cfg()
     cap = cv2.VideoCapture(src)
@@ -623,7 +647,9 @@ def run(src, cfg: Cfg = None, video_out=None, lossless=False, verbose=True):
            "mean_mask_area": round(live.stats["mean_area"] / max(n, 1), 4),
            "gain_mean": round(live.stats["gain_sum"] / max(n, 1), 3),
            "gain_min": round(live.stats["gain_min"], 3),
-           "slew_S": round(live.S, 4), "n_look": live.n_look, "latency_frames": 0}
+           "slew_S": round(live.S, 4), "n_look": live.n_look, "latency_frames": 0,
+           "armed_segments": _segments(live.armed_at, fps),
+           "armed_pct": round(len(live.armed_at) / max(n, 1) * 100, 1)}
     if video_out:
         import subprocess
         import rawmeasure as RM
