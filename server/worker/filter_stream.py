@@ -5,10 +5,7 @@ from pathlib import Path
 import cv2
 import numpy as np
 
-import pselive3
 from pselive3 import Cfg, LiveFilter3
-
-from worker import ffmpeg as ff
 
 
 def gpu_available() -> bool:
@@ -20,24 +17,18 @@ def gpu_available() -> bool:
 
 
 def filter_video(src, dst, cfg: Cfg | None = None,
-                 use_gpu: bool | None = None, armed_out: list | None = None) -> int:
+                 use_gpu: bool | None = None) -> int:
     """cfg 로 보정본을 만든다. CUDA 가 있으면 psegpu_full, 없으면
-    pselive3 스트리밍. 반환값은 처리한 프레임 수.
-
-    armed_out 을 주면 거기에 **필터가 실제로 개입한 구간**을 채운다
-    ([[시작초, 끝초], ...]). 구간 저장(worker/segments.py)의 저장 단위다.
-    무장 밖에서는 keff=1 이라 출력이 입력과 정확히 같으므로, 그 구간만 보관하고
-    나머지를 원본으로 재생해도 이음매에 점프가 없다.
-    반환 형태를 바꾸지 않은 것은 기존 호출부·테스트 계약을 지키기 위해서다."""
+    pselive3 스트리밍. 반환값은 처리한 프레임 수."""
     cfg = cfg or Cfg.strong()
     if use_gpu is None:
         use_gpu = gpu_available()
     if use_gpu:
-        return _filter_gpu(src, dst, cfg, armed_out)
-    return _filter_cpu(src, dst, cfg, armed_out)
+        return _filter_gpu(src, dst, cfg)
+    return _filter_cpu(src, dst, cfg)
 
 
-def _filter_gpu(src, dst, cfg: Cfg, armed_out=None) -> int:
+def _filter_gpu(src, dst, cfg: Cfg) -> int:
     import psegpu_full
 
     try:
@@ -52,12 +43,10 @@ def _filter_gpu(src, dst, cfg: Cfg, armed_out=None) -> int:
     p = Path(dst)
     if n == 0 or not p.exists() or p.stat().st_size == 0:
         raise RuntimeError(f"GPU 필터가 출력을 만들지 못했습니다: {dst}")
-    if armed_out is not None:
-        armed_out[:] = list(rep.get("armed_segments") or [])
     return n
 
 
-def _filter_cpu(src, dst, cfg: Cfg, armed_out=None) -> int:
+def _filter_cpu(src, dst, cfg: Cfg) -> int:
     """pselive3 를 스트리밍으로 적용. 메모리 O(1).
 
     pselive3.run() 과 같은 알고리즘·같은 인코딩 인자이지만 프레임을
@@ -86,7 +75,6 @@ def _filter_cpu(src, dst, cfg: Cfg, armed_out=None) -> int:
          "-c:a", "copy",
          "-sws_flags", "bicubic+accurate_rnd+full_chroma_int",
          "-c:v", "libx264", "-preset", "medium", "-crf", "16",
-         *ff.kf_args(),
          "-pix_fmt", "yuv420p", "-colorspace", "bt709",
          "-color_primaries", "bt709", "-color_trc", "bt709",
          "-movflags", "+faststart", str(dst)],
@@ -135,6 +123,4 @@ def _filter_cpu(src, dst, cfg: Cfg, armed_out=None) -> int:
             raise RuntimeError(f"ffmpeg 인코딩 실패: {err[:300]}")
     if n == 0:
         raise RuntimeError("프레임을 하나도 읽지 못했습니다")
-    if armed_out is not None:
-        armed_out[:] = pselive3._segments(live.armed_at, fps)
     return n

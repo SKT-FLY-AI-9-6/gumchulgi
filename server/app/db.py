@@ -26,10 +26,6 @@ def _migrate(conn):
     cols = {r[1] for r in conn.execute("PRAGMA table_info(videos)")}
     if "filter_level" not in cols:
         conn.execute("ALTER TABLE videos ADD COLUMN filter_level TEXT")
-    if "seg_total_s" not in cols:
-        conn.execute("ALTER TABLE videos ADD COLUMN seg_total_s REAL")
-    if "seg_ratio" not in cols:
-        conn.execute("ALTER TABLE videos ADD COLUMN seg_ratio REAL")
 
 
 def get_db():
