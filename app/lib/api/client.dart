@@ -106,6 +106,10 @@ class ApiClient {
       ((await _dio.get('/me/videos')).data['videos'] as List)
           .map((e) => MyVideo.fromJson(e)).toList();
 
+  Future<AdminMetrics> adminMetrics({double cpm = 5000}) async =>
+      AdminMetrics.fromJson((await _dio.get('/admin/metrics',
+          queryParameters: {'cpm': cpm})).data);
+
   Future<int> upload(XFile file, String title,
       {void Function(int, int)? onProgress}) async {
     // 웹은 파일 경로가 없어(blob) bytes 로 전송한다.

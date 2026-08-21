@@ -57,7 +57,9 @@ class LoginIn(BaseModel):
 
 
 def _user_out(row) -> dict:
-    return {"id": row["id"], "email": row["email"], "nickname": row["nickname"]}
+    return {"id": row["id"], "email": row["email"],
+            "nickname": row["nickname"],
+            "is_admin": bool(row["is_admin"])}
 
 
 def _create_user(conn, email: str, password: str, nickname: str):

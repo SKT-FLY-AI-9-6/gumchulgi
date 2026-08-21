@@ -1,8 +1,47 @@
 class User {
   final int id; final String email, nickname;
-  User({required this.id, required this.email, required this.nickname});
+  final bool isAdmin;
+  User({required this.id, required this.email, required this.nickname,
+      this.isAdmin = false});
   factory User.fromJson(Map<String, dynamic> j) =>
-      User(id: j['id'], email: j['email'], nickname: j['nickname']);
+      User(id: j['id'], email: j['email'], nickname: j['nickname'],
+          isAdmin: j['is_admin'] == true);
+}
+
+class AdminGroup {
+  final int views;
+  final double avgWatchRatio, bounceRate;
+  AdminGroup({required this.views, required this.avgWatchRatio,
+      required this.bounceRate});
+  factory AdminGroup.fromJson(Map<String, dynamic> j) => AdminGroup(
+      views: j['views'],
+      avgWatchRatio: (j['avg_watch_ratio'] as num).toDouble(),
+      bounceRate: (j['bounce_rate'] as num).toDouble());
+}
+
+class AdminMetrics {
+  final AdminGroup filtered, original;
+  final double watchRatioPp, bouncePp, cpm, avgDurationS;
+  final double keptMinActual;
+  final int savedKrwActual, savedKrwPer10k, savedKrwPer1m, totalRiskyViews;
+  AdminMetrics({required this.filtered, required this.original,
+      required this.watchRatioPp, required this.bouncePp,
+      required this.cpm, required this.avgDurationS,
+      required this.keptMinActual, required this.savedKrwActual,
+      required this.savedKrwPer10k, required this.savedKrwPer1m,
+      required this.totalRiskyViews});
+  factory AdminMetrics.fromJson(Map<String, dynamic> j) => AdminMetrics(
+      filtered: AdminGroup.fromJson(j['groups']['filtered']),
+      original: AdminGroup.fromJson(j['groups']['original']),
+      watchRatioPp: (j['delta']['watch_ratio_pp'] as num).toDouble(),
+      bouncePp: (j['delta']['bounce_pp'] as num).toDouble(),
+      cpm: (j['assumptions']['cpm'] as num).toDouble(),
+      avgDurationS: (j['assumptions']['avg_duration_s'] as num).toDouble(),
+      keptMinActual: (j['savings']['kept_min_actual'] as num).toDouble(),
+      savedKrwActual: j['savings']['saved_krw_actual'],
+      savedKrwPer10k: j['savings']['saved_krw_per_10k'],
+      savedKrwPer1m: j['savings']['saved_krw_per_1m'],
+      totalRiskyViews: j['total_risky_views']);
 }
 
 class AppSettings {

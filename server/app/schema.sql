@@ -3,6 +3,7 @@ CREATE TABLE IF NOT EXISTS users(
   email TEXT UNIQUE NOT NULL,
   password_hash TEXT NOT NULL,
   nickname TEXT NOT NULL,
+  is_admin INTEGER NOT NULL DEFAULT 0,   -- 1 이면 내 페이지가 운영 대시보드
   created_at TEXT NOT NULL DEFAULT (datetime('now')));
 CREATE TABLE IF NOT EXISTS user_settings(
   user_id INTEGER PRIMARY KEY REFERENCES users(id),
