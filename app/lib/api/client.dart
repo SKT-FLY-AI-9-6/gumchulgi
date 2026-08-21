@@ -74,7 +74,7 @@ class ApiClient {
 
   Future<(List<FeedVideo>, int?)> feed({int? cursor, int limit = 10}) async {
     final r = await _dio.get('/feed', queryParameters: {
-      if (cursor != null) 'cursor': cursor, 'limit': limit});
+      'cursor': ?cursor, 'limit': limit});
     final vids = (r.data['videos'] as List)
         .map((e) => FeedVideo.fromJson(e)).toList();
     return (vids, r.data['next_cursor'] as int?);
