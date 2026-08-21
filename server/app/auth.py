@@ -60,28 +60,46 @@ def _user_out(row) -> dict:
     return {"id": row["id"], "email": row["email"], "nickname": row["nickname"]}
 
 
-@router.post("/auth/signup", status_code=201)
-def signup(body: SignupIn, conn: sqlite3.Connection = Depends(get_db)):
-    if len(body.password) < 8:
-        raise HTTPException(422, "비밀번호는 8자 이상")
-    if len(body.password.encode('utf-8')) > 72:
-        raise HTTPException(422, "비밀번호는 72바이트 이하")
-    try:
-        cur = conn.execute(
-            "INSERT INTO users(email, password_hash, nickname) VALUES(?,?,?)",
-            (body.email.lower(), hash_pw(body.password), body.nickname))
-    except sqlite3.IntegrityError:
-        raise HTTPException(409, "이미 가입된 이메일입니다")
+def _create_user(conn, email: str, password: str, nickname: str):
+    cur = conn.execute(
+        "INSERT INTO users(email, password_hash, nickname) VALUES(?,?,?)",
+        (email, hash_pw(password.encode()[:72].decode(errors="ignore")),
+         nickname))
     uid = cur.lastrowid
     conn.execute("INSERT INTO user_settings(user_id) VALUES(?)", (uid,))
-    row = conn.execute("SELECT * FROM users WHERE id=?", (uid,)).fetchone()
-    return {"token": make_token(uid), "user": _user_out(row)}
+    return conn.execute("SELECT * FROM users WHERE id=?", (uid,)).fetchone()
+
+
+@router.post("/auth/signup", status_code=201)
+def signup(body: SignupIn, conn: sqlite3.Connection = Depends(get_db)):
+    if not settings.AUTH_OPEN:
+        if len(body.password) < 8:
+            raise HTTPException(422, "비밀번호는 8자 이상")
+        if len(body.password.encode('utf-8')) > 72:
+            raise HTTPException(422, "비밀번호는 72바이트 이하")
+    try:
+        row = _create_user(conn, body.email.lower(), body.password,
+                           body.nickname)
+    except sqlite3.IntegrityError:
+        if not settings.AUTH_OPEN:
+            raise HTTPException(409, "이미 가입된 이메일입니다")
+        # 개방 인증: 이미 있으면 그 계정으로 그냥 들여보낸다
+        row = conn.execute("SELECT * FROM users WHERE email=?",
+                           (body.email.lower(),)).fetchone()
+    return {"token": make_token(row["id"]), "user": _user_out(row)}
 
 
 @router.post("/auth/login")
 def login(body: LoginIn, conn: sqlite3.Connection = Depends(get_db)):
     row = conn.execute("SELECT * FROM users WHERE email=?",
                        (body.email.lower(),)).fetchone()
+    if settings.AUTH_OPEN:
+        # 개방 인증: 비밀번호 검증 생략, 없는 계정은 자동 생성 (시연 전용)
+        if row is None:
+            nickname = body.email.split("@")[0] or "게스트"
+            row = _create_user(conn, body.email.lower(), body.password,
+                               nickname)
+        return {"token": make_token(row["id"]), "user": _user_out(row)}
     if row is None:
         raise HTTPException(401, "이메일 또는 비밀번호가 틀립니다")
     try:
