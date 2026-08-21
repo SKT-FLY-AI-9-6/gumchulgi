@@ -1,0 +1,11 @@
+PFSDW2g3D8o    gate  : 적합
+PFSDW2g3D8o    sigma : 플래시,화면전환
+UoHK74aS9sY    gate  : 패턴,화면전환,5초지속
+UoHK74aS9sY    sigma : 패턴,화면전환,5초지속
+Y76O5wY7EcM    gate  : 화면전환,5초지속
+Y76O5wY7EcM    sigma : 화면전환,5초지속
+xDdAHEUQ2zA    gate  : 화면전환
+xDdAHEUQ2zA    sigma : 화면전환,5초지속
+Db19aDiAxHJ gate: ERROR C:/Users/PJ07/Desktop/gumchulgi/psepipe_v3_seam/_ig_safe/Db19aDiAxHJ.mp4
+Db19aDiAxHJ sigma: ERROR C:/Users/PJ07/Desktop/gumchulgi/psepipe_v3_seam/_ig_safe/Db19aDiAxHJ.mp4
+완료
