@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -24,6 +25,17 @@ class _LoginState extends ConsumerState<LoginScreen> {
     super.dispose();
   }
 
+  String _errorText(Object? e) {
+    if (e is DioException) {
+      final code = e.response?.statusCode;
+      if (code == 409) return '이미 가입된 이메일입니다 — "로그인으로"를 눌러 로그인하세요';
+      if (code == 401) return '비밀번호가 틀렸습니다';
+      if (code == 422) return '입력을 확인하세요 (비밀번호 8자 이상, 이메일 형식)';
+      if (e.response == null) return '서버에 연결할 수 없습니다 — 같은 와이파이인지 확인하세요';
+    }
+    return '실패: 이메일/비밀번호를 확인하세요';
+  }
+
   @override
   Widget build(BuildContext context) {
     final auth = ref.watch(authProvider);
@@ -46,7 +58,7 @@ class _LoginState extends ConsumerState<LoginScreen> {
           const SizedBox(height: 24),
           if (auth.hasError)
             Padding(padding: const EdgeInsets.only(bottom: 8),
-                child: Text('실패: 이메일/비밀번호를 확인하세요',
+                child: Text(_errorText(auth.error),
                     style: const TextStyle(color: AppColors.red))),
           FilledButton(
             onPressed: auth.isLoading ? null : () {

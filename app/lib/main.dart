@@ -19,6 +19,6 @@ class App extends ConsumerWidget {
         data: (u) => u == null ? const LoginScreen() : const ShellScreen(),
         loading: () => const Scaffold(
             body: Center(child: CircularProgressIndicator())),
-        error: (_, __) => const LoginScreen()));
+        error: (_, _) => const LoginScreen()));
   }
 }
