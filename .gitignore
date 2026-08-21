@@ -26,3 +26,4 @@ venv/
 
 # docker compose 로컬 데이터 볼륨 (저장소 루트)
 /data/
+server/data/
