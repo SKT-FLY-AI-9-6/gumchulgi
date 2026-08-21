@@ -40,7 +40,9 @@ def test_flash_clip_pipeline(tmp_path, monkeypatch, testclips):
     assert v["risk"] in ("corrected", "uncorrected")   # 기계 동작 검증
     assert v["filter_level"] in ("strong", "base")
     assert v["n_flash"] > 0
-    assert storage.filtered_path(vid).exists()
+    # 통짜 filtered.mp4 는 남기지 않는다 — 조각으로만 보관한다
+    assert not storage.filtered_path(vid).exists()
+    assert (storage.video_dir(vid) / "seg_000.mp4").exists()
     assert storage.report_path(vid).exists()
     assert storage.report_filtered_path(vid).exists()
     job = conn.execute("SELECT * FROM jobs WHERE video_id=?", (vid,)).fetchone()

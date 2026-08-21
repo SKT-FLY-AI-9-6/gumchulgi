@@ -75,7 +75,10 @@ def test_strong_compliant_adopted_without_base(tmp_path, monkeypatch):
     assert v["risk"] == "corrected"
     assert v["filter_level"] == "strong"
     assert calls == ["strong"]          # base 는 아예 실행되지 않는다
-    assert storage.filtered_path(vid).read_text(encoding="utf-8") == "strong"
+    # 채택본은 통짜가 아니라 조각으로 남는다 — 전체를 덮는 조각 1 개가 곧 통짜다
+    assert not storage.filtered_path(vid).exists()
+    assert (storage.video_dir(vid) / "seg_000.mp4").read_text(
+        encoding="utf-8") == "strong"
     rep = json.loads(storage.report_filtered_path(vid).read_text("utf-8"))
     assert rep["compliant"] is True
 
@@ -89,7 +92,9 @@ def test_fallback_to_base_when_strong_not_subset(tmp_path, monkeypatch):
     assert v["risk"] == "corrected"
     assert v["filter_level"] == "base"
     assert calls == ["strong", "base"]
-    assert storage.filtered_path(vid).read_text(encoding="utf-8") == "base"
+    assert not storage.filtered_path(vid).exists()
+    assert (storage.video_dir(vid) / "seg_000.mp4").read_text(
+        encoding="utf-8") == "base"
     # 채택되지 않은 시도본은 남기지 않는다
     leftovers = [p.name for p in storage.video_dir(vid).glob("_flt_*")]
     assert leftovers == []

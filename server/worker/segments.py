@@ -1,12 +1,20 @@
-"""구간 저장 — 필터가 실제로 건드린 구간만 조각으로 남긴다.
+"""구간 저장 — 필터본을 조각으로만 보관한다. 통짜 파일은 남기지 않는다.
 
 설계: docs/구간저장-토글-설계.md
 
-    채택본(filtered.mp4) + armed_segments
+    채택본 + armed_segments
       -> 0.5초 격자로 정렬·병합
-      -> 무손실 절단(-c copy)  ※ 절단면이 IDR 이라 재인코딩이 없다
-      -> [필수] 원본에 조각을 끼워 이어붙이고 **다시 판정**
-      -> 적합이면 조각 저장, 아니면 통짜로 후퇴
+      -> 무손실 절단(-c copy)
+      -> [필수] 원본에 끼워 이어붙이고 **다시 판정**
+      -> 적합이면 그대로, 아니면 **전체를 덮는 조각 1개로 합친다**
+      -> 통짜 필터본 삭제
+
+**통짜 = 전체를 덮는 조각 1개**다. 별개 파일로 둘 이유가 없다. 그래서
+storage_mode 같은 분기가 없고, 클라이언트는 언제나 같은 방식으로 재생한다.
+
+**재판정 폴백이 항상 성립한다** — 채택본은 이미 적합 판정을 받은 것이므로
+(pipeline._correct_with_ladder), 전체를 덮는 조각 1 개는 그 파일과 바이트가
+같아 적합이 보장된다. 잘게 쪼갠 것이 이음매 때문에 판정을 깨면 합치면 된다.
 
 구간을 심판의 violation_segments 가 아니라 **필터 개입 구간**으로 잡는 이유 —
 pselive3 는 위반 임계보다 낮은 데서 미리 무장한다(arm_count 2.0 = "3회가 되기
@@ -20,8 +28,7 @@ from app import storage
 from worker import detect, ffmpeg
 
 GOP_S = ffmpeg.GOP_S    # 0.5초. 절단 단위이자 토글 전환 지연 상한
-TIME_GUARD = 0.95       # 시간 비율이 이 이상이면 조각 만들 것도 없이 통짜
-BYTE_GUARD = 0.85       # 조각 총 바이트가 통짜의 이 배 이상이면 통짜
+BYTE_GUARD = 0.85       # 조각합이 전체 덮개의 이 배 이상이면 굳이 쪼개지 않는다
 
 
 def snap(segs, dur: float, gop: float = GOP_S) -> list:
@@ -38,52 +45,55 @@ def snap(segs, dur: float, gop: float = GOP_S) -> list:
 
 
 def store(conn, video_id: int, orig: Path, filtered: Path,
-          armed_segments, duration_s: float) -> tuple[str, float]:
-    """조각 저장을 시도한다. 반환 (storage_mode, 조각 길이 합).
+          armed_segments, duration_s: float) -> float:
+    """필터본을 조각으로 저장하고 통짜를 지운다. 반환: 조각 길이 합(초).
 
-    실패·무이득이면 'full' 을 돌려주고 조각을 지운다 — 통짜 filtered.mp4 는
-    어느 경우에도 남으므로 재생은 항상 가능하다.
+    항상 조각이 최소 1 개 남는다 — 전체를 덮는 1 개가 곧 통짜다.
     """
-    if not armed_segments or duration_s <= 0:
-        return "full", 0.0
-
-    segs = snap(armed_segments, duration_s)
-    seg_s = sum(b - a for a, b in segs)
-    if seg_s / duration_s >= TIME_GUARD:
-        return "full", 0.0          # 사실상 전체 — 쪼갤 이유가 없다
-
     vdir = storage.video_dir(video_id)
+    segs = snap(armed_segments, duration_s) if armed_segments else []
+    fine = bool(segs) and sum(b - a for a, b in segs) < duration_s
+
+    pieces = []
+    if fine:
+        pieces = _cut_all(vdir, filtered, segs)
+        # 잘게 쪼갠 것이 전체 덮개보다 크면 의미가 없다 — 0.5초 GOP 이 키프레임을
+        # 4배로 늘려 짧은 조각이 여럿이면 커진다(실측 104%). 요청 수도 는다.
+        too_big = (sum(p.stat().st_size for *_, p in pieces)
+                   >= BYTE_GUARD * filtered.stat().st_size)
+        if too_big or not _splice_ok(vdir, orig, pieces, duration_s):
+            _cleanup(pieces)
+            pieces = []
+
+    if not pieces:                       # 전체를 덮는 조각 1 개 = 통짜
+        pieces = [(0, 0.0, duration_s, _whole(vdir, filtered))]
+
+    conn.execute("DELETE FROM video_segments WHERE video_id=?", (video_id,))
+    conn.executemany(
+        "INSERT INTO video_segments(video_id,idx,start_s,end_s,path,bytes)"
+        " VALUES(?,?,?,?,?,?)",
+        [(video_id, i, a, b, str(p), p.stat().st_size) for i, a, b, p in pieces])
+    return sum(b - a for _, a, b, _ in pieces)
+
+
+def _cut_all(vdir: Path, filtered: Path, segs) -> list:
     pieces = []
     try:
         for i, (a, b) in enumerate(segs):
             p = vdir / f"seg_{i:03d}.mp4"
             ffmpeg.cut_copy(filtered, p, a, b)
             pieces.append((i, a, b, p))
-
-        # **판단 기준은 시간이 아니라 바이트다.** 0.5초 GOP 이 키프레임을 4배로
-        # 늘려 짧은 조각이 여럿이면 통짜보다 커진다(실측 104%). 절단이 무손실
-        # 이라 싸니 만들어 보고 잰다.
-        if sum(p.stat().st_size for *_, p in pieces) >= BYTE_GUARD * filtered.stat().st_size:
-            raise _NoGain()
-
-        if not _splice_ok(vdir, orig, pieces, duration_s):
-            raise _NoGain()
-    except _NoGain:
-        _cleanup(pieces)
-        return "full", 0.0
     except Exception:
         _cleanup(pieces)
         raise
-
-    conn.executemany(
-        "INSERT INTO video_segments(video_id,idx,start_s,end_s,path,bytes)"
-        " VALUES(?,?,?,?,?,?)",
-        [(video_id, i, a, b, str(p), p.stat().st_size) for i, a, b, p in pieces])
-    return "segments", seg_s
+    return pieces
 
 
-class _NoGain(Exception):
-    """조각화가 이득이 없거나 판정을 깼다 — 통짜로 후퇴."""
+def _whole(vdir: Path, filtered: Path) -> Path:
+    """통짜를 조각 1 개로 바꾼다 — 이동뿐이라 재인코딩이 없다."""
+    p = vdir / "seg_000.mp4"
+    filtered.replace(p)
+    return p
 
 
 def _cleanup(pieces):
@@ -94,9 +104,9 @@ def _cleanup(pieces):
 def _splice_ok(vdir: Path, orig: Path, pieces, duration_s: float) -> bool:
     """조각을 원본에 끼워 이어붙인 결과 = 토글 ON 재생 화면. 그걸 다시 판정한다.
 
-    통짜 필터본이 적합이어도 이어붙인 것이 적합이라는 보장이 없다 — 인코딩
-    경계와 격자 확장분이 변수다. 아키텍처 개요의 '남은 관문 3번'(저장 전 심판
-    재판정)이 이 설계에서는 선택이 아니다.
+    채택본이 적합이어도 이어붙인 것이 적합이라는 보장이 없다 — 인코딩 경계와
+    격자 확장분이 변수다. 아키텍처 개요의 '남은 관문 3번'(저장 전 심판 재판정)
+    이 이 설계에서는 선택이 아니다.
     """
     parts, tmp, cur = [], [], 0.0
     spliced = vdir / "_spliced.mp4"

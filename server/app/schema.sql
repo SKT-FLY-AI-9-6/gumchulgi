@@ -15,7 +15,6 @@ CREATE TABLE IF NOT EXISTS videos(
   status TEXT NOT NULL DEFAULT 'processing',  -- processing|ready|failed
   risk TEXT,                                  -- safe|corrected|uncorrected
   filter_level TEXT,                          -- strong|base (사다리 채택 강도)
-  storage_mode TEXT NOT NULL DEFAULT 'full',  -- full|segments (구간 저장 여부)
   seg_total_s REAL,                           -- 조각 길이 합
   seg_ratio REAL,                             -- 조각합 / 전체
   original_path TEXT, filtered_path TEXT, thumb_path TEXT, report_path TEXT,

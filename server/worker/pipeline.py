@@ -56,26 +56,30 @@ def process_video(conn, video_id: int):
 
     if first["compliant"]:
         risk, filtered, level = "safe", None, None
-        mode, seg_s = "full", None
+        seg_s = None
     else:
         flt, second, level, armed = _correct_with_ladder(video_id, orig)
         detect.save_report(second["report"],
                            storage.report_filtered_path(video_id))
         risk = "corrected" if second["compliant"] else "uncorrected"
         filtered = str(flt)
-        # 구간 저장 — 필터가 건드린 구간만 조각으로. 무이득이거나 이어붙인
-        # 결과가 판정을 깨면 'full' 로 후퇴한다(통짜 filtered.mp4 는 그대로 남음).
-        mode, seg_s = segments.store(conn, video_id, orig, flt, armed,
-                                     first["duration_s"])
+        # 구간 저장 — 필터본을 조각으로만 남기고 통짜는 지운다. 전체를 덮는
+        # 조각 1 개가 곧 통짜라 별도 모드가 없다. filtered_path 는 조각이
+        # 하나뿐일 때만 그 파일을 가리킨다(기존 variant=filtered 호환).
+        seg_s = segments.store(conn, video_id, orig, flt, armed,
+                               first["duration_s"])
+        rows = conn.execute("SELECT path FROM video_segments WHERE video_id=?",
+                            (video_id,)).fetchall()
+        filtered = rows[0]["path"] if len(rows) == 1 else None
 
     a = first["axes"]
     conn.execute(
         "UPDATE videos SET status='ready', risk=?, filter_level=?,"
-        " storage_mode=?, seg_total_s=?, seg_ratio=?,"
+        " seg_total_s=?, seg_ratio=?,"
         " original_path=?, filtered_path=?, thumb_path=?, report_path=?,"
         " duration_s=?, n_flash=?, n_red=?, n_pattern=?, n_cut=?"
         " WHERE id=?",
-        (risk, level, mode, seg_s,
+        (risk, level, seg_s,
          (seg_s / first["duration_s"]) if seg_s and first["duration_s"] else None,
          str(orig), filtered, str(storage.thumb_path(video_id)),
          str(storage.report_path(video_id)), first["duration_s"],
