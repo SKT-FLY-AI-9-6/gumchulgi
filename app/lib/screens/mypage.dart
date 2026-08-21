@@ -5,6 +5,7 @@ import '../api/client.dart';
 import '../api/models.dart';
 import '../state/auth.dart';
 import '../theme.dart';
+import 'admin.dart';
 
 const _badge = {
   'processing': ('처리 중', AppColors.sub),
@@ -18,6 +19,8 @@ class MyPageScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final user = ref.watch(authProvider).value;
+    // 관리자 계정의 내 페이지 = 운영 대시보드 (필터 ON/OFF 비교·비용 환산)
+    if (user?.isAdmin == true) return const AdminScreen();
     return Scaffold(
       appBar: AppBar(title: Text('@${user?.nickname ?? ''}'), actions: [
         IconButton(icon: const Icon(Icons.logout),
