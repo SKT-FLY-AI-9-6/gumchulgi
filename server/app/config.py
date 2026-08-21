@@ -14,6 +14,9 @@ class Settings:
         self.MAX_UPLOAD_MB = int(os.environ.get("MAX_UPLOAD_MB", "200"))
         self.MAX_DURATION_S = int(os.environ.get("MAX_DURATION_S", "180"))
         self.TOKEN_DAYS = int(os.environ.get("TOKEN_DAYS", "30"))
+        # 데모 개방 인증 — 로그인 UI 는 그대로 두고 검증만 끈다:
+        # 아무 이메일/비밀번호나 통과, 없는 계정은 자동 생성. 시연 전용.
+        self.AUTH_OPEN = os.environ.get("AUTH_OPEN", "0") == "1"
 
 
 settings = Settings()
