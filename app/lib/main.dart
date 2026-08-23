@@ -14,7 +14,7 @@ class App extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final auth = ref.watch(authProvider);
     return MaterialApp(
-      title: '검출기', theme: appTheme,
+      title: 'SoftReel', theme: appTheme,
       // 가로 화면(웹 데스크톱)에서는 쇼츠답게 가운데 9:16 프레임으로 제한.
       // 폰(세로 화면)은 그대로 전체 화면.
       builder: (context, child) => LayoutBuilder(builder: (context, box) {
