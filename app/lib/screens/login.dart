@@ -31,7 +31,7 @@ class _LoginState extends ConsumerState<LoginScreen> {
       body: Center(child: SingleChildScrollView(
         padding: const EdgeInsets.all(32),
         child: Column(children: [
-          const Text('검출기', style: TextStyle(
+          const Text('SoftReel', style: TextStyle(
               fontSize: 32, fontWeight: FontWeight.bold)),
           const Text('광과민성 안전 숏폼 플랫폼',
               style: TextStyle(color: AppColors.sub)),

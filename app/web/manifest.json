@@ -1,6 +1,6 @@
 {
-    "name": "gumchulgi_app",
-    "short_name": "gumchulgi_app",
+    "name": "SoftReel",
+    "short_name": "SoftReel",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

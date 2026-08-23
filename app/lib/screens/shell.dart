@@ -1,16 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../state/feed.dart';
 
 import 'feed.dart';
 import 'mypage.dart';
 import 'upload.dart';
 
-class ShellScreen extends StatefulWidget {
+class ShellScreen extends ConsumerStatefulWidget {
   const ShellScreen({super.key});
   @override
-  State<ShellScreen> createState() => _ShellState();
+  ConsumerState<ShellScreen> createState() => _ShellState();
 }
 
-class _ShellState extends State<ShellScreen> {
+class _ShellState extends ConsumerState<ShellScreen> {
   int _idx = 0; // 0 피드, 1 업로드, 2 내페이지
 
   void _dummy() => ScaffoldMessenger.of(context).showSnackBar(
@@ -29,7 +32,11 @@ class _ShellState extends State<ShellScreen> {
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
           IconButton(icon: const Icon(Icons.home_filled),
-              onPressed: () => setState(() => _idx = 0)),
+              onPressed: () {
+                // 이미 홈이면 한 번 더 눌러 피드 새로고침
+                if (_idx == 0) ref.read(feedProvider.notifier).refreshAll();
+                setState(() => _idx = 0);
+              }),
           IconButton(icon: const Icon(Icons.play_circle_outline),
               onPressed: _dummy),                       // shorts (더미)
           IconButton(icon: const Icon(Icons.add_box_outlined),

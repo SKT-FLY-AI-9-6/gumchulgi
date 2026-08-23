@@ -14,9 +14,10 @@ class WarningBanner extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final exposure = ref.watch(exposureProvider);
     final settings = ref.watch(settingsProvider).value;
+    final dismissedAt = ref.watch(bannerDismissProvider);
     if (settings == null ||
         !shouldShowBanner(percent: exposure?.percent,
-            filterOn: settings.filterOn)) {
+            filterOn: settings.filterOn, dismissedAt: dismissedAt)) {
       return const SizedBox.shrink();
     }
     final messenger = ScaffoldMessenger.of(context);
@@ -26,12 +27,20 @@ class WarningBanner extends ConsumerWidget {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(children: const [
-            Icon(Icons.warning_amber, color: AppColors.amber),
-            SizedBox(width: 8),
-            Expanded(child: Text('경고! 위험 영상에 대한 노출이 많습니다.\n'
-                '필터 기능을 키는 것을 추천드립니다.',
-                style: TextStyle(fontSize: 13))),
+          Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            const Icon(Icons.warning_amber, color: AppColors.amber),
+            const SizedBox(width: 8),
+            const Expanded(child: Padding(
+                padding: EdgeInsets.only(top: 2),
+                child: Text('경고! 위험 영상에 대한 노출이 많습니다.\n'
+                    '필터 기능을 키는 것을 추천드립니다.',
+                    style: TextStyle(fontSize: 13)))),
+            SizedBox(width: 28, height: 28, child: IconButton(
+                padding: EdgeInsets.zero,
+                tooltip: '닫기',
+                icon: const Icon(Icons.close, size: 20, color: AppColors.sub),
+                onPressed: () => ref.read(bannerDismissProvider.notifier)
+                    .dismiss(exposure!.percent))),
           ]),
           const SizedBox(height: 8),
           Row(children: [

@@ -21,9 +21,14 @@ class SettingsController extends AsyncNotifier<AppSettings> {
     state = AsyncData(next);
     try {
       state = AsyncData(await ref.read(apiProvider).putSettings(next));
-      // 노출 규칙이 서버에 확정된 뒤에 피드를 다시 불러야 한다 —
-      // optimistic 시점에 부르면 옛 설정으로 계산된 피드를 받는다.
-      ref.invalidate(feedProvider);
+      // 서버에 확정된 뒤에 피드에 반영한다 (optimistic 시점에 하면 옛
+      // 설정으로 계산된 피드를 받을 수 있다).
+      if (next.autoSkip != cur.autoSkip) {
+        ref.invalidate(feedProvider); // 숨김 규칙이 바뀌므로 재조회
+      } else if (next.filterOn != cur.filterOn) {
+        // 보던 영상 그 자리에서 원본 <-> 보정본만 교체
+        ref.read(feedProvider.notifier).applyFilter(next.filterOn);
+      }
     } catch (e) {
       state = AsyncData(cur);
       rethrow;
