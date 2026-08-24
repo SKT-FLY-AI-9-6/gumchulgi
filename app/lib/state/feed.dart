@@ -33,6 +33,26 @@ class FeedController extends AsyncNotifier<List<FeedVideo>> {
     state = await AsyncValue.guard(build);
   }
 
+  /// 설정의 '필터 기능' 토글을 현재 피드에 즉시 반영한다 (재조회 없음).
+  /// - corrected: filtered <-> original 스트림 교체 (VideoPage 가 위치 유지)
+  /// - uncorrected(보정 불가 위험 영상): 필터 ON 이면 서버 규칙대로 숨김.
+  ///   OFF 로 되돌릴 때 다시 보이는 건 다음 새로고침부터다.
+  void applyFilter(bool on) {
+    final list = state.value;
+    if (list == null) return;
+    final next = <FeedVideo>[];
+    for (final v in list) {
+      if (v.canToggleVariant) {
+        next.add(v.copyWith(variant: on ? 'filtered' : 'original'));
+      } else if (on && v.risk == 'uncorrected') {
+        continue;
+      } else {
+        next.add(v);
+      }
+    }
+    state = AsyncData(next);
+  }
+
   Future<void> toggleLike(int id) async {
     final list = state.value;
     if (list == null) return;
