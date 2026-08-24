@@ -45,3 +45,13 @@ def test_report_owner_only(client, auth_headers, tmp_path, small_mp4):
     other = auth_headers("other@t.co")
     assert client.get(f"/videos/{vid}/report",
                       headers=other).status_code == 403
+
+
+def test_segments_visible_to_any_user(client, auth_headers, tmp_path,
+                                      small_mp4):
+    h, vid = _make_video(client, auth_headers, tmp_path, small_mp4)
+    other = auth_headers("viewer@t.co")
+    r = client.get(f"/videos/{vid}/segments", headers=other)
+    assert r.status_code == 200
+    segs = r.json()["segments"]
+    assert len(segs) == 2 and "rule" not in segs[0]

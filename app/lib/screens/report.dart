@@ -166,6 +166,9 @@ class ReportScreen extends ConsumerWidget {
                   _mini('필터 ON 시청',
                       '${r.filterOnWatchPercent!.round()}%'),
                   const SizedBox(width: 8),
+                  _mini('평균 시청 유지', r.avgWatchPercent == null
+                      ? '—' : '${r.avgWatchPercent!.round()}%'),
+                  const SizedBox(width: 8),
                   _mini('조회수', '${r.viewCount}'),
                 ]),
               ])),
