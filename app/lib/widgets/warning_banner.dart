@@ -21,7 +21,7 @@ class WarningBanner extends ConsumerWidget {
       return const SizedBox.shrink();
     }
     final messenger = ScaffoldMessenger.of(context);
-    return Positioned(top: 90, left: 12, right: 12, child: Material(
+    return Positioned(top: 56, left: 12, right: 12, child: Material(
       color: AppColors.card, borderRadius: BorderRadius.circular(12),
       child: Padding(padding: const EdgeInsets.all(12), child: Column(
         mainAxisSize: MainAxisSize.min,

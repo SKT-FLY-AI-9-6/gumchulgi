@@ -89,8 +89,8 @@ void showSettingsSheet(BuildContext context) {
           color: _sheetBg,
           borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
           border: Border(top: BorderSide(color: _stroke))),
-        padding: const EdgeInsets.fromLTRB(20, 12, 20, 30),
-        child: s == null
+        padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
+        child: SafeArea(top: false, child: s == null
             ? const SizedBox(height: 180)
             : Column(mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -145,7 +145,7 @@ void showSettingsSheet(BuildContext context) {
                   '위험 노출은 일일 예산 300초 기준으로 집계됩니다',
                   style: TextStyle(
                       fontSize: 10.5, color: AppColors.sub))),
-            ]),
+            ])),
       );
     }));
 }

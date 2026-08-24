@@ -64,8 +64,8 @@ class _LoginState extends ConsumerState<LoginScreen> {
                   Aurora.rose.withValues(alpha: .07),
                   Colors.transparent,
                 ], stops: const [0, .55, 1]))))),
-        Center(child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(26, 48, 26, 28),
+        SafeArea(child: Center(child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(26, 32, 26, 20),
           child: Column(children: [
             // 로고 = 할로 링 (브랜드 심볼과 노출 링이 같은 도형)
             HaloRing(size: 110, progress: .75, stroke: 8,
@@ -120,7 +120,7 @@ class _LoginState extends ConsumerState<LoginScreen> {
             const Text('계속하면 이용약관과 개인정보 처리방침에 동의하게 됩니다',
                 style: TextStyle(fontSize: 10, color: Color(0xFF5E5F73))),
           ]),
-        )),
+        ))),
       ]),
     );
   }

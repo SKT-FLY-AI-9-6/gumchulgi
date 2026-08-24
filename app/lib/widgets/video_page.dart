@@ -167,7 +167,7 @@ class _VideoPageState extends ConsumerState<VideoPage> {
                       const Color(0xFF05050C).withValues(alpha: .92)]))))),
       // 좌상단 안전 상태 칩
       if (v.risk != 'safe')
-        Positioned(top: 52, left: 20, child: Container(
+        Positioned(top: 12, left: 20, child: Container(
             padding: const EdgeInsets.symmetric(
                 horizontal: 12, vertical: 5),
             decoration: BoxDecoration(

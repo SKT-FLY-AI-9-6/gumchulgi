@@ -96,8 +96,11 @@ class _FeedState extends ConsumerState<FeedScreen> with WidgetsBindingObserver {
       // 필터 ON/OFF 만 바뀐 경우는 보던 자리에서 스트림만 교체된다.
     });
     final filterOn = ref.watch(settingsProvider).value?.filterOn ?? true;
+    final topPad = MediaQuery.paddingOf(context).top;
     final feed = ref.watch(feedProvider);
-    return Stack(children: [
+    return Container(color: Colors.black,
+        padding: EdgeInsets.only(top: topPad),
+        child: Stack(children: [
       feed.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Column(
@@ -145,13 +148,13 @@ class _FeedState extends ConsumerState<FeedScreen> with WidgetsBindingObserver {
                     key: ValueKey(vids[i].id),
                     video: vids[i], active: i == _current))),
       // 우상단 필터 버튼 (목업 ①)
-      Positioned(top: 48, right: 12, child: IconButton(
+      Positioned(top: 8, right: 12, child: IconButton(
           tooltip: filterOn ? '보호 필터 ON' : '보호 필터 OFF',
           icon: Icon(filterOn ? Icons.filter_alt : Icons.filter_alt_outlined,
               size: 28, color: filterOn ? AppColors.blue : AppColors.amber),
           onPressed: () => showSettingsSheet(context))),
       // 경고 배너 (목업 ④)
       const WarningBanner(),
-    ]);
+    ]));
   }
 }
