@@ -29,7 +29,7 @@ class WarningBanner extends ConsumerWidget {
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
             color: V1.card,
-            border: Border.all(color: V1.amber.withValues(alpha: .55)),
+            border: Border.all(color: V1.stroke),
             borderRadius: BorderRadius.circular(20),
             boxShadow: const [BoxShadow(
                 color: Color(0x66000000), blurRadius: 18,
