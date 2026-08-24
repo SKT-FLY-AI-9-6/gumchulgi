@@ -25,7 +25,7 @@ class ReportScreen extends ConsumerWidget {
       appBar: AppBar(backgroundColor: V1.bg0,
           title: const Text('내 영상 리포트',
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700))),
-      body: FutureBuilder(
+      body: SafeArea(top: false, child: FutureBuilder(
         future: api.videoReport(video.id),
         builder: (context, snap) {
           if (snap.hasError) {
@@ -180,7 +180,7 @@ class ReportScreen extends ConsumerWidget {
                 style: TextStyle(fontSize: 10.5, color: V1.sub,
                     height: 1.5))),
           ]);
-        }),
+        })),
     );
   }
 

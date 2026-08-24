@@ -31,7 +31,7 @@ class DashboardScreen extends ConsumerWidget {
       appBar: AppBar(backgroundColor: V1.bg0,
           title: const Text('광 노출 대시보드',
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700))),
-      body: FutureBuilder(
+      body: SafeArea(top: false, child: FutureBuilder(
         future: Future.wait([api.dashboardToday(), api.dashboardWeekly()]),
         builder: (context, snap) {
           if (snap.hasError) {
@@ -144,7 +144,7 @@ class DashboardScreen extends ConsumerWidget {
               const SizedBox(height: 16),
             ],
           ]);
-        }),
+        })),
     );
   }
 

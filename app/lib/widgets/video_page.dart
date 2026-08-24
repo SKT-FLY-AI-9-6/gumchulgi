@@ -208,7 +208,7 @@ class _VideoPageState extends ConsumerState<VideoPage> {
                   color: Colors.white.withValues(alpha: .85))),
         ])),
       // 재생 진행바 (+ 보정 영상이면 완화 라벨)
-      Positioned(left: 20, right: 20, bottom: 12, child:
+      Positioned(left: 0, right: 0, bottom: 0, child:
           _ProgressBar(controller: _c, video: v,
               segments: _segments, segDuration: _segDuration)),
       Positioned(right: 8, bottom: 40, child: ActionRail(video: v)),
@@ -217,8 +217,9 @@ class _VideoPageState extends ConsumerState<VideoPage> {
 }
 
 
-/// 시안 A 하단 진행바 — 재생 위치 + (보정 영상) 완화 안내 라벨
-class _ProgressBar extends StatelessWidget {
+/// 시안 A 하단 진행바 — 재생 위치 표시 + 탭/드래그 시킹.
+/// 화면 좌우 끝까지 하단 메뉴 위에 붙는다.
+class _ProgressBar extends StatefulWidget {
   final VideoPlayerController? controller;
   final FeedVideo video;
   final List<SegmentSpan> segments;
@@ -227,62 +228,94 @@ class _ProgressBar extends StatelessWidget {
       this.segments = const [], this.segDuration});
 
   @override
+  State<_ProgressBar> createState() => _ProgressBarState();
+}
+
+class _ProgressBarState extends State<_ProgressBar> {
+  double? _dragPos; // 드래그 중 미리보기 위치 (0~1)
+
+  void _seekTo(double ratio, {required bool finish}) {
+    final c = widget.controller;
+    if (c == null || !c.value.isInitialized) return;
+    final r = ratio.clamp(0.0, 1.0);
+    setState(() => _dragPos = finish ? null : r);
+    if (finish) c.seekTo(c.value.duration * r);
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final c = controller;
-    final mitigated = video.risk == 'corrected' &&
-        video.variant == 'filtered';
-    final nStim = video.stimulus.values.fold(0, (a, b) => a + b);
+    final c = widget.controller;
+    final mitigated = widget.video.risk == 'corrected' &&
+        widget.video.variant == 'filtered';
+    final nStim = widget.video.stimulus.values.fold(0, (a, b) => a + b);
     return Column(crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min, children: [
       if (mitigated && nStim > 0)
-        Padding(padding: const EdgeInsets.only(bottom: 7),
+        Padding(padding: const EdgeInsets.only(left: 20, bottom: 6),
             child: Text('위험 자극 $nStim건 완화됨',
                 style: const TextStyle(fontSize: 11,
                     fontWeight: FontWeight.w600, color: V1.lavender))),
-      SizedBox(height: 12, child: c == null
-          ? const SizedBox.shrink()
+      c == null
+          ? const SizedBox(height: 18)
           : ValueListenableBuilder(valueListenable: c,
               builder: (context, VideoPlayerValue val, _) {
                 final dur = val.duration.inMilliseconds;
-                final pos = dur == 0 ? 0.0
+                final playPos = dur == 0 ? 0.0
                     : val.position.inMilliseconds / dur;
-                final totalS = (segDuration ?? video.durationS) ??
-                    (dur > 0 ? dur / 1000.0 : 0.0);
+                final pos = _dragPos ?? playPos;
+                final totalS =
+                    (widget.segDuration ?? widget.video.durationS) ??
+                        (dur > 0 ? dur / 1000.0 : 0.0);
                 return LayoutBuilder(builder: (context, box) =>
-                    Stack(alignment: Alignment.centerLeft, children: [
-                  Container(height: 4, decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: .22),
-                      borderRadius: BorderRadius.circular(2))),
-                  Container(height: 4,
-                      width: box.maxWidth * pos.clamp(0.0, 1.0),
-                      decoration: BoxDecoration(color: V1.violet,
-                          borderRadius: BorderRadius.circular(2))),
-                  // 위험 구간 마커 (노란색) — 진행바가 지나가도
-                  // 덮이지 않게 항상 위에 그린다.
-                  if (totalS > 0)
-                    for (final seg in segments)
-                      Positioned(
-                          left: box.maxWidth *
-                              (seg.startS / totalS).clamp(0.0, 1.0),
-                          width: (box.maxWidth *
-                                  ((seg.endS - seg.startS) / totalS))
-                              .clamp(3.0, box.maxWidth),
-                          child: Container(height: 4,
-                              decoration: BoxDecoration(
-                                  color: V1.amber,
-                                  borderRadius:
-                                      BorderRadius.circular(2)))),
-                  Positioned(
-                      left: (box.maxWidth * pos.clamp(0.0, 1.0) - 6)
-                          .clamp(0.0, box.maxWidth - 12),
-                      child: Container(width: 12, height: 12,
-                          decoration: BoxDecoration(
-                              shape: BoxShape.circle, color: Colors.white,
-                              boxShadow: [BoxShadow(
-                                  color: V1.violet.withValues(alpha: .9),
-                                  blurRadius: 10)]))),
-                ]));
-              })),
+                    GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTapDown: (d) => _seekTo(
+                      d.localPosition.dx / box.maxWidth, finish: true),
+                  onHorizontalDragUpdate: (d) => _seekTo(
+                      d.localPosition.dx / box.maxWidth, finish: false),
+                  onHorizontalDragEnd: (_) {
+                    if (_dragPos != null) {
+                      _seekTo(_dragPos!, finish: true);
+                    }
+                  },
+                  // 터치 영역은 18px, 실제 바는 아래에 붙은 4px
+                  child: SizedBox(height: 18, child: Stack(
+                      alignment: Alignment.bottomLeft, children: [
+                    Container(height: 4, decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: .22))),
+                    Container(height: 4,
+                        width: box.maxWidth * pos.clamp(0.0, 1.0),
+                        color: V1.violet),
+                    // 위험 구간 마커 — 진행바가 지나가도 덮이지 않는다.
+                    if (totalS > 0)
+                      for (final seg in widget.segments)
+                        Positioned(
+                            bottom: 0,
+                            left: box.maxWidth *
+                                (seg.startS / totalS).clamp(0.0, 1.0),
+                            width: (box.maxWidth *
+                                    ((seg.endS - seg.startS) / totalS))
+                                .clamp(3.0, box.maxWidth),
+                            child: Container(
+                                height: 4, color: V1.amber)),
+                    Positioned(
+                        bottom: -2,
+                        left: (box.maxWidth * pos.clamp(0.0, 1.0) -
+                                (_dragPos == null ? 6 : 8))
+                            .clamp(0.0, box.maxWidth - 16),
+                        child: Container(
+                            width: _dragPos == null ? 12 : 16,
+                            height: _dragPos == null ? 12 : 16,
+                            decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: Colors.white,
+                                boxShadow: [BoxShadow(
+                                    color: V1.violet
+                                        .withValues(alpha: .9),
+                                    blurRadius: 10)]))),
+                  ])),
+                ));
+              }),
     ]);
   }
 }
