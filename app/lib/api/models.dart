@@ -77,9 +77,18 @@ class FeedVideo {
       likeCount: j['like_count'], viewCount: j['view_count'],
       likedByMe: j['liked_by_me'] == true,
       stimulus: Map<String, int>.from(j['stimulus'] ?? {}));
-  FeedVideo copyWith({int? likeCount, bool? likedByMe}) => FeedVideo(
+  /// 보정본이 존재해 원본/필터본을 오갈 수 있는 영상인가.
+  bool get canToggleVariant => risk == 'corrected';
+
+  static String streamUrlFor(int id, String variant) =>
+      '/videos/$id/stream?variant=$variant';
+
+  FeedVideo copyWith({int? likeCount, bool? likedByMe, String? variant}) =>
+      FeedVideo(
       id: id, title: title, uploaderNickname: uploaderNickname, risk: risk,
-      variant: variant, streamUrl: streamUrl, thumbUrl: thumbUrl,
+      variant: variant ?? this.variant,
+      streamUrl: variant == null ? streamUrl : streamUrlFor(id, variant),
+      thumbUrl: thumbUrl,
       durationS: durationS, likeCount: likeCount ?? this.likeCount,
       viewCount: viewCount, likedByMe: likedByMe ?? this.likedByMe,
       stimulus: stimulus);
