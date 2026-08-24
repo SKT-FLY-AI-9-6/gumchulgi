@@ -177,3 +177,74 @@ def watch_event(vid: int, body: EventIn, user=Depends(current_user),
     conn.execute("UPDATE videos SET view_count=view_count+1 WHERE id=?", (vid,))
     ex = exposure_today(conn, user["id"])
     return {"today_percent": ex["percent"], "status": ex["status"]}
+
+
+# ── 업로더용 검출 리포트 ──────────────────────────────────────────
+
+def _merged_segments(report: dict) -> list[dict]:
+    """rule 별로 겹치거나 0.5초 이내로 이어지는 위반 구간을 병합한다."""
+    by_rule: dict[str, list] = {}
+    for seg in report.get("violation_segments", []):
+        try:
+            s, e = float(seg["start_s"]), float(seg["end_s"])
+        except (KeyError, TypeError, ValueError):
+            continue
+        by_rule.setdefault(str(seg.get("rule", "")), []).append((s, e))
+    out = []
+    for rule, spans in by_rule.items():
+        spans.sort()
+        cur_s, cur_e = spans[0]
+        for s, e in spans[1:]:
+            if s <= cur_e + 0.5:
+                cur_e = max(cur_e, e)
+            else:
+                out.append({"rule": rule, "start_s": round(cur_s, 2),
+                            "end_s": round(cur_e, 2)})
+                cur_s, cur_e = s, e
+        out.append({"rule": rule, "start_s": round(cur_s, 2),
+                    "end_s": round(cur_e, 2)})
+    out.sort(key=lambda x: x["start_s"])
+    return out
+
+
+def _load_json(path) -> dict | None:
+    if not path or not os.path.exists(path):
+        return None
+    import json
+    try:
+        return json.loads(Path(path).read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+
+
+@router.get("/videos/{vid}/report")
+def video_report(vid: int, user=Depends(current_user),
+                 conn: sqlite3.Connection = Depends(get_db)):
+    row = _video_or_404(conn, vid)
+    if row["uploader_id"] != user["id"] and not user["is_admin"]:
+        raise HTTPException(403, "본인 영상만 볼 수 있습니다")
+    report = _load_json(row["report_path"]) or {}
+    filtered = _load_json(storage.report_filtered_path(vid))
+    segments = _merged_segments(report)
+    # 보정 후 잔존 위반과 겹치는 구간은 '부분 완화'
+    residual = _merged_segments(filtered) if filtered else []
+    for seg in segments:
+        left = seg["start_s"] - 0.25
+        right = seg["end_s"] + 0.25
+        seg["resolved"] = row["risk"] == "safe" or (
+            row["risk"] == "corrected" and not any(
+                r["start_s"] < right and r["end_s"] > left
+                for r in residual))
+    filt = conn.execute(
+        "SELECT SUM(CASE WHEN variant='filtered' THEN 1 ELSE 0 END) f,"
+        " COUNT(*) n FROM watch_events WHERE video_id=?", (vid,)).fetchone()
+    ratio = round(100.0 * (filt["f"] or 0) / filt["n"], 1) if filt["n"] else None
+    return {
+        "id": vid, "title": row["title"], "status": row["status"],
+        "risk": row["risk"], "duration_s": row["duration_s"],
+        "view_count": row["view_count"],
+        "filter_level": row["filter_level"],
+        "compliant_original": bool(report.get("compliant", True)),
+        "segments": segments,
+        "filter_on_watch_percent": ratio,
+    }

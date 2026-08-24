@@ -15,10 +15,18 @@ class ActionRail extends ConsumerWidget {
         const SnackBar(content: Text('준비 중입니다')));
     Widget item(IconData ic, String label, VoidCallback onTap,
             {Color? color}) =>
-        Padding(padding: const EdgeInsets.only(bottom: 16), child: Column(
+        Padding(padding: const EdgeInsets.only(bottom: 14), child: Column(
           children: [
-            IconButton(icon: Icon(ic, size: 30, color: color), onPressed: onTap),
-            Text(label, style: const TextStyle(fontSize: 12)),
+            InkWell(onTap: onTap, customBorder: const CircleBorder(),
+                child: Container(width: 46, height: 46,
+                    decoration: BoxDecoration(shape: BoxShape.circle,
+                        color: Colors.white.withValues(alpha: .12),
+                        border: Border.all(
+                            color: Colors.white.withValues(alpha: .18))),
+                    child: Icon(ic, size: 21, color: color ?? Colors.white))),
+            const SizedBox(height: 5),
+            Text(label, style: TextStyle(fontSize: 11,
+                color: Colors.white.withValues(alpha: .9))),
           ]));
     return Column(mainAxisSize: MainAxisSize.min, children: [
       item(video.likedByMe ? Icons.favorite : Icons.favorite_border,

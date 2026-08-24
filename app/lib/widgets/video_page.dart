@@ -5,6 +5,7 @@ import 'package:video_player/video_player.dart';
 import '../api/client.dart';
 import '../api/models.dart';
 import '../theme.dart';
+import 'brand_v1.dart';
 import 'action_rail.dart';
 
 class VideoPage extends ConsumerStatefulWidget {
@@ -143,28 +144,103 @@ class _VideoPageState extends ConsumerState<VideoPage> {
         const Positioned(top: 100, left: 0, right: 0,
             child: Center(child: SizedBox(width: 28, height: 28,
                 child: CircularProgressIndicator(strokeWidth: 2)))),
+      // 하단 스크림 (시안 A)
+      Positioned(left: 0, right: 0, bottom: 0, height: 260,
+          child: IgnorePointer(child: DecoratedBox(
+              decoration: BoxDecoration(gradient: LinearGradient(
+                  begin: Alignment.topCenter, end: Alignment.bottomCenter,
+                  colors: [Colors.transparent,
+                      const Color(0xFF05050C).withValues(alpha: .92)]))))),
+      // 좌상단 안전 상태 칩
+      if (v.risk != 'safe')
+        Positioned(top: 96, left: 20, child: Container(
+            padding: const EdgeInsets.symmetric(
+                horizontal: 12, vertical: 5),
+            decoration: BoxDecoration(
+                color: (v.variant == 'filtered'
+                        ? V1.violet : V1.amber).withValues(alpha: .26),
+                border: Border.all(color: (v.variant == 'filtered'
+                        ? V1.violet : V1.amber).withValues(alpha: .75)),
+                borderRadius: BorderRadius.circular(20)),
+            child: Row(mainAxisSize: MainAxisSize.min, children: [
+              Container(width: 8, height: 8, decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: v.variant == 'filtered' ? V1.green : V1.amber,
+                  boxShadow: [BoxShadow(color: v.variant == 'filtered'
+                      ? V1.green : V1.amber, blurRadius: 8)])),
+              const SizedBox(width: 6),
+              Text(v.variant == 'filtered'
+                      ? '보정됨 · 위험 자극 완화' : '⚠ 광 자극 원본',
+                  style: const TextStyle(fontSize: 12,
+                      fontWeight: FontWeight.w600)),
+            ]))),
       // 하단 정보
-      Positioned(left: 16, right: 88, bottom: 24, child: Column(
+      Positioned(left: 20, right: 88, bottom: 96, child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text('@${v.uploaderNickname}',
-              style: const TextStyle(fontWeight: FontWeight.bold)),
-          Text(v.title, maxLines: 2, overflow: TextOverflow.ellipsis),
-          if (v.risk != 'safe')
-            Container(
-              margin: const EdgeInsets.only(top: 6),
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-              decoration: BoxDecoration(
-                  color: v.variant == 'filtered'
-                      ? AppColors.blue.withValues(alpha: .25)
-                      : AppColors.amber.withValues(alpha: .25),
-                  borderRadius: BorderRadius.circular(6)),
-              child: Text(v.variant == 'filtered'
-                  ? '보호 필터 적용됨' : '⚠ 광 자극 원본',
-                  style: const TextStyle(fontSize: 12))),
+          Text('@${v.uploaderNickname}', style: const TextStyle(
+              fontSize: 16, fontWeight: FontWeight.w700)),
+          const SizedBox(height: 5),
+          Text(v.title, maxLines: 2, overflow: TextOverflow.ellipsis,
+              style: TextStyle(fontSize: 13.5,
+                  color: Colors.white.withValues(alpha: .85))),
         ])),
-      Positioned(right: 8, bottom: 24, child: ActionRail(video: v)),
+      // 재생 진행바 (+ 보정 영상이면 완화 라벨)
+      Positioned(left: 20, right: 20, bottom: 40, child:
+          _ProgressBar(controller: _c, video: v)),
+      Positioned(right: 8, bottom: 88, child: ActionRail(video: v)),
     ]));
+  }
+}
+
+
+/// 시안 A 하단 진행바 — 재생 위치 + (보정 영상) 완화 안내 라벨
+class _ProgressBar extends StatelessWidget {
+  final VideoPlayerController? controller;
+  final FeedVideo video;
+  const _ProgressBar({required this.controller, required this.video});
+
+  @override
+  Widget build(BuildContext context) {
+    final c = controller;
+    final mitigated = video.risk == 'corrected' &&
+        video.variant == 'filtered';
+    final nStim = video.stimulus.values.fold(0, (a, b) => a + b);
+    return Column(crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min, children: [
+      if (mitigated && nStim > 0)
+        Padding(padding: const EdgeInsets.only(bottom: 7),
+            child: Text('위험 자극 $nStim건 완화됨',
+                style: const TextStyle(fontSize: 11,
+                    fontWeight: FontWeight.w600, color: V1.lavender))),
+      SizedBox(height: 12, child: c == null
+          ? const SizedBox.shrink()
+          : ValueListenableBuilder(valueListenable: c,
+              builder: (context, VideoPlayerValue val, _) {
+                final dur = val.duration.inMilliseconds;
+                final pos = dur == 0 ? 0.0
+                    : val.position.inMilliseconds / dur;
+                return LayoutBuilder(builder: (context, box) =>
+                    Stack(alignment: Alignment.centerLeft, children: [
+                  Container(height: 4, decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: .22),
+                      borderRadius: BorderRadius.circular(2))),
+                  Container(height: 4,
+                      width: box.maxWidth * pos.clamp(0.0, 1.0),
+                      decoration: BoxDecoration(color: V1.violet,
+                          borderRadius: BorderRadius.circular(2))),
+                  Positioned(
+                      left: (box.maxWidth * pos.clamp(0.0, 1.0) - 6)
+                          .clamp(0.0, box.maxWidth - 12),
+                      child: Container(width: 12, height: 12,
+                          decoration: BoxDecoration(
+                              shape: BoxShape.circle, color: Colors.white,
+                              boxShadow: [BoxShadow(
+                                  color: V1.violet.withValues(alpha: .9),
+                                  blurRadius: 10)]))),
+                ]));
+              })),
+    ]);
   }
 }

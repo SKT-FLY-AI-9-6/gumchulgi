@@ -102,6 +102,9 @@ class ApiClient {
   Future<Weekly> dashboardWeekly() async =>
       Weekly.fromJson((await _dio.get('/dashboard/weekly')).data);
 
+  Future<VideoReport> videoReport(int id) async =>
+      VideoReport.fromJson((await _dio.get('/videos/$id/report')).data);
+
   Future<List<MyVideo>> myVideos() async =>
       ((await _dio.get('/me/videos')).data['videos'] as List)
           .map((e) => MyVideo.fromJson(e)).toList();
