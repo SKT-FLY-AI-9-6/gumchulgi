@@ -171,6 +171,45 @@ class SegmentSpan {
       endS: (j['end_s'] as num).toDouble());
 }
 
+/// 보정 영향 지표 (impact JSON 공용 계약 v1).
+class ImpactSummary {
+  final double lumMeanDropPct, lumPeakDropPct;
+  final int flashBefore, flashAfter;
+  final double flashViolSBefore, flashViolSAfter;
+  final double colorMeanDuv, colorP95Duv, colorKeepPct;
+  ImpactSummary({required this.lumMeanDropPct, required this.lumPeakDropPct,
+      required this.flashBefore, required this.flashAfter,
+      required this.flashViolSBefore, required this.flashViolSAfter,
+      required this.colorMeanDuv, required this.colorP95Duv,
+      required this.colorKeepPct});
+  factory ImpactSummary.fromJson(Map<String, dynamic> j) => ImpactSummary(
+      lumMeanDropPct: (j['lum_mean_drop_pct'] as num?)?.toDouble() ?? 0,
+      lumPeakDropPct: (j['lum_peak_drop_pct'] as num?)?.toDouble() ?? 0,
+      flashBefore: (j['flash_before'] as num?)?.toInt() ?? 0,
+      flashAfter: (j['flash_after'] as num?)?.toInt() ?? 0,
+      flashViolSBefore: (j['flash_viol_s_before'] as num?)?.toDouble() ?? 0,
+      flashViolSAfter: (j['flash_viol_s_after'] as num?)?.toDouble() ?? 0,
+      colorMeanDuv: (j['color_mean_duv'] as num?)?.toDouble() ?? 0,
+      colorP95Duv: (j['color_p95_duv'] as num?)?.toDouble() ?? 0,
+      colorKeepPct: (j['color_keep_pct'] as num?)?.toDouble() ?? 0);
+}
+
+/// 최근 시청한 보정 영상 1건 (GET /dashboard/recent_impact).
+class RecentImpact {
+  final int videoId;
+  final String title, watchedAt;
+  final String? thumbUrl, filterLevel;
+  final ImpactSummary? impact;
+  RecentImpact({required this.videoId, required this.title,
+      required this.watchedAt, this.thumbUrl, this.filterLevel, this.impact});
+  factory RecentImpact.fromJson(Map<String, dynamic> j) => RecentImpact(
+      videoId: j['video_id'], title: j['title'],
+      watchedAt: j['watched_at'] ?? '',
+      thumbUrl: j['thumb_url'], filterLevel: j['filter_level'],
+      impact: j['impact'] == null
+          ? null : ImpactSummary.fromJson(j['impact']));
+}
+
 class VideoReport {
   final int id;
   final String title, status;

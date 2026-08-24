@@ -16,6 +16,7 @@ CREATE TABLE IF NOT EXISTS videos(
   status TEXT NOT NULL DEFAULT 'processing',  -- processing|ready|failed
   risk TEXT,                                  -- safe|corrected|uncorrected
   filter_level TEXT,                          -- strong|base (사다리 채택 강도)
+  impact_json TEXT,                           -- 보정 영향 지표 JSON (계약 v1)
   original_path TEXT, filtered_path TEXT, thumb_path TEXT, report_path TEXT,
   duration_s REAL,
   n_flash INTEGER NOT NULL DEFAULT 0, n_red INTEGER NOT NULL DEFAULT 0,
