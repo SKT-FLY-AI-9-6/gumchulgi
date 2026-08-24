@@ -132,7 +132,8 @@ class _UploadState extends ConsumerState<UploadScreen> {
           actions: [if (_file != null && !busy)
             TextButton(onPressed: _reset, child: const Text('취소',
                 style: TextStyle(color: Aurora.sub, fontSize: 12.5)))]),
-      body: ListView(padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+      body: SafeArea(top: false,
+          child: ListView(padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
           children: [
         // 파일 카드 / 선택 버튼
         if (_file == null)
@@ -252,7 +253,7 @@ class _UploadState extends ConsumerState<UploadScreen> {
           const SizedBox(height: 16),
           AuroraButton(label: '새 릴 올리기', onTap: _reset),
         ],
-      ]),
+      ])),
     );
   }
 
