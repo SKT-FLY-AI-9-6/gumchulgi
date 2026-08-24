@@ -102,6 +102,11 @@ class ApiClient {
   Future<Weekly> dashboardWeekly() async =>
       Weekly.fromJson((await _dio.get('/dashboard/weekly')).data);
 
+  Future<List<RecentImpact>> fetchRecentImpact({int limit = 10}) async =>
+      ((await _dio.get('/dashboard/recent_impact',
+              queryParameters: {'limit': limit})).data['items'] as List)
+          .map((e) => RecentImpact.fromJson(e)).toList();
+
   Future<VideoReport> videoReport(int id) async =>
       VideoReport.fromJson((await _dio.get('/videos/$id/report')).data);
 

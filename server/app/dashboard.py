@@ -1,3 +1,4 @@
+import json
 import sqlite3
 
 from fastapi import APIRouter, Depends
@@ -87,3 +88,31 @@ def weekly(user=Depends(current_user),
     out = [{"date": r["d"], "risky_views": by_day.get(r["d"], 0)} for r in days]
     total = sum(d["risky_views"] for d in out)
     return {"days": out, "avg": round(total / 7, 1)}
+
+
+@router.get("/dashboard/recent_impact")
+def recent_impact(limit: int = 10, user=Depends(current_user),
+                  conn: sqlite3.Connection = Depends(get_db)):
+    """최근 시청한 보정 영상의 보정 영향 지표 (공용 계약 v1).
+
+    이 사용자의 watch_events 중 filtered_path·impact_json 이 있는 영상만,
+    영상별 최신 시청 1행, 최신순 limit 개."""
+    limit = max(1, min(limit, 50))
+    rows = conn.execute(
+        "SELECT v.id, v.title, v.thumb_path, v.filter_level, v.impact_json,"
+        " MAX(e.created_at) AS watched_at"
+        " FROM watch_events e JOIN videos v ON v.id=e.video_id"
+        " WHERE e.user_id=? AND e.variant='filtered'"
+        " AND v.filtered_path IS NOT NULL"
+        " AND v.impact_json IS NOT NULL"
+        " GROUP BY v.id ORDER BY watched_at DESC, v.id DESC LIMIT ?",
+        (user["id"], limit)).fetchall()
+    items = [{
+        "video_id": r["id"], "title": r["title"],
+        # 피드와 같은 방식의 썸네일 URL (app/feed.py, /videos/{vid}/thumb)
+        "thumb_url": f"/videos/{r['id']}/thumb" if r["thumb_path"] else None,
+        "watched_at": r["watched_at"],
+        "filter_level": r["filter_level"],
+        "impact": json.loads(r["impact_json"]),
+    } for r in rows]
+    return {"items": items}

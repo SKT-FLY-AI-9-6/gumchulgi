@@ -26,6 +26,8 @@ def _migrate(conn):
     cols = {r[1] for r in conn.execute("PRAGMA table_info(videos)")}
     if "filter_level" not in cols:
         conn.execute("ALTER TABLE videos ADD COLUMN filter_level TEXT")
+    if "impact_json" not in cols:
+        conn.execute("ALTER TABLE videos ADD COLUMN impact_json TEXT")
     ucols = {r[1] for r in conn.execute("PRAGMA table_info(users)")}
     if "is_admin" not in ucols:
         conn.execute(

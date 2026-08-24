@@ -11,6 +11,7 @@ import '../widgets/brand_v1.dart';
 const _statusKo = {'good': '양호', 'caution': '주의', 'warning': '경고'};
 const _statusColor = {
   'good': V1.green, 'caution': V1.amber, 'warning': V1.pink};
+const _levelKo = {'strong': '강', 'base': '기본'};
 const _stimKo = [
   ('flash', '고휘도 플래시', V1.amber),
   ('red', '포화 적색', V1.pink),
@@ -32,7 +33,11 @@ class DashboardScreen extends ConsumerWidget {
           title: const Text('광 노출 대시보드',
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700))),
       body: SafeArea(top: false, child: FutureBuilder(
-        future: Future.wait([api.dashboardToday(), api.dashboardWeekly()]),
+        future: Future.wait([api.dashboardToday(), api.dashboardWeekly(),
+            // 신규 엔드포인트 — 구버전 서버(404 등)에서 실패해도
+            // 대시보드 본체는 뜨도록 빈 목록으로 대체한다.
+            api.fetchRecentImpact()
+                .catchError((_) => <RecentImpact>[])]),
         builder: (context, snap) {
           if (snap.hasError) {
             return const Center(child: Text('불러오기 실패',
@@ -43,6 +48,7 @@ class DashboardScreen extends ConsumerWidget {
           }
           final today = snap.data![0] as DashboardToday;
           final weekly = snap.data![1] as Weekly;
+          final recent = snap.data![2] as List<RecentImpact>;
           final min = today.exposureS ~/ 60;
           final sec = (today.exposureS % 60).round();
           return ListView(padding: const EdgeInsets.all(20), children: [
@@ -131,6 +137,16 @@ class DashboardScreen extends ConsumerWidget {
                       ])),
               ]),
             ])),
+            // 최근 필터 적용 영상 — 보정 전후 지표
+            if (recent.isNotEmpty)
+              V1Card(child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start, children: [
+                const Text('최근 필터 적용 영상', style: TextStyle(
+                    fontSize: 13, fontWeight: FontWeight.w700)),
+                const Text('보정 전후 자극이 이만큼 줄었어요', style: TextStyle(
+                    fontSize: 11, color: V1.sub)),
+                for (final r in recent) _impactRow(api, r),
+              ])),
             if (!filterOn) ...[
               const SizedBox(height: 2),
               V1Button(label: '필터 켜고 안전하게 보기', onTap: () {
@@ -147,6 +163,74 @@ class DashboardScreen extends ConsumerWidget {
         })),
     );
   }
+
+  Widget _impactRow(ApiClient api, RecentImpact r) {
+    final imp = r.impact;
+    final level = r.filterLevel;
+    final thumb = r.thumbUrl;
+    return Padding(padding: const EdgeInsets.only(top: 12),
+        child: Row(children: [
+      ClipRRect(borderRadius: BorderRadius.circular(10),
+          child: SizedBox(width: 50, height: 64,
+              child: thumb == null
+                  ? const DecoratedBox(decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                          begin: Alignment.topRight,
+                          end: Alignment.bottomLeft,
+                          colors: [V1.card2, V1.bg1])))
+                  : Image.network(api.absoluteUrl(thumb),
+                      headers: api.authHeaders, fit: BoxFit.cover,
+                      errorBuilder: (a, b, c) => const DecoratedBox(
+                          decoration: BoxDecoration(gradient: LinearGradient(
+                              begin: Alignment.topRight,
+                              end: Alignment.bottomLeft,
+                              colors: [V1.card2, V1.bg1])))))),
+      const SizedBox(width: 12),
+      Expanded(child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          Flexible(child: Text(r.title, maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                  fontSize: 13, fontWeight: FontWeight.w600))),
+          if (level != null) ...[
+            const SizedBox(width: 6),
+            Container(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                    border: Border.all(color: V1.violet),
+                    borderRadius: BorderRadius.circular(6)),
+                child: Text(_levelKo[level] ?? level,
+                    style: const TextStyle(fontSize: 9.5,
+                        fontWeight: FontWeight.w700, color: V1.lavender))),
+          ],
+        ]),
+        if (imp != null) ...[
+          const SizedBox(height: 7),
+          Wrap(spacing: 6, runSpacing: 6, children: [
+            _chip(_lumLabel(imp.lumPeakDropPct), V1.amber),
+            _chip('플래시 ${imp.flashBefore}→${imp.flashAfter}', V1.pink),
+            _chip('색감 ${imp.colorKeepPct.round()}% 유지', V1.green),
+          ]),
+        ],
+      ])),
+    ]));
+  }
+
+  /// 양수(감소)는 −, 음수(증가)는 + 로 표기. 반올림해 0 이면 부호 생략.
+  String _lumLabel(double v) {
+    final n = v.round();
+    if (n == 0) return '휘도 0%';
+    return n > 0 ? '휘도 −$n%' : '휘도 +${-n}%';
+  }
+
+  Widget _chip(String label, Color color) => Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(color: V1.card2,
+          borderRadius: BorderRadius.circular(8)),
+      child: Text(label, style: TextStyle(fontSize: 10.5,
+          fontWeight: FontWeight.w600, color: color)));
 
   Widget _hstat(String l, String v) => Row(children: [
     Expanded(child: Text(l, style: const TextStyle(
