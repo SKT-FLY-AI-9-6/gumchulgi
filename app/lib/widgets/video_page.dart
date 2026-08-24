@@ -253,7 +253,12 @@ class _ProgressBar extends StatelessWidget {
                   Container(height: 4, decoration: BoxDecoration(
                       color: Colors.white.withValues(alpha: .22),
                       borderRadius: BorderRadius.circular(2))),
-                  // 위험 구간 마커 (노란색)
+                  Container(height: 4,
+                      width: box.maxWidth * pos.clamp(0.0, 1.0),
+                      decoration: BoxDecoration(color: V1.violet,
+                          borderRadius: BorderRadius.circular(2))),
+                  // 위험 구간 마커 (노란색) — 진행바가 지나가도
+                  // 덮이지 않게 항상 위에 그린다.
                   if (totalS > 0)
                     for (final seg in segments)
                       Positioned(
@@ -265,15 +270,8 @@ class _ProgressBar extends StatelessWidget {
                           child: Container(height: 4,
                               decoration: BoxDecoration(
                                   color: V1.amber,
-                                  borderRadius: BorderRadius.circular(2),
-                                  boxShadow: [BoxShadow(
-                                      color: V1.amber
-                                          .withValues(alpha: .8),
-                                      blurRadius: 5)]))),
-                  Container(height: 4,
-                      width: box.maxWidth * pos.clamp(0.0, 1.0),
-                      decoration: BoxDecoration(color: V1.violet,
-                          borderRadius: BorderRadius.circular(2))),
+                                  borderRadius:
+                                      BorderRadius.circular(2)))),
                   Positioned(
                       left: (box.maxWidth * pos.clamp(0.0, 1.0) - 6)
                           .clamp(0.0, box.maxWidth - 12),
