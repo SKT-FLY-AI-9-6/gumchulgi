@@ -44,14 +44,16 @@ class _ShellState extends ConsumerState<ShellScreen> {
     return Scaffold(
       body: body,
       bottomNavigationBar: Container(
-        height: 72,
-        padding: const EdgeInsets.only(bottom: 6),
         decoration: BoxDecoration(
             color: const Color(0xF00A0A12),
             border: Border(top: BorderSide(
                 color: Colors.white.withValues(alpha: .08)))),
-        child: Row(mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
+        // 폰의 시스템 내비게이션 바(제스처 바)와 겹치지 않게
+        // SafeArea 로 하단 인셋만큼 띄운다.
+        child: SafeArea(top: false, child: SizedBox(
+          height: 62,
+          child: Row(mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
           _item(Icons.home_filled, '홈', _idx == 0, () {
             // 이미 홈이면 한 번 더 눌러 피드 새로고침
             if (_idx == 0) ref.read(feedProvider.notifier).refreshAll();
@@ -74,7 +76,7 @@ class _ShellState extends ConsumerState<ShellScreen> {
           _item(Icons.notifications_none, '알림', false, _dummy),
           _item(Icons.person_outline, 'MY', _idx == 2,
               () => setState(() => _idx = 2)),
-        ]),
+        ]))),
       ),
     );
   }
