@@ -149,3 +149,41 @@ class Weekly {
       days: (j['days'] as List).map((e) => DayCount.fromJson(e)).toList(),
       avg: (j['avg'] as num).toDouble());
 }
+
+class ReportSegment {
+  final String rule;
+  final double startS, endS;
+  final bool resolved;
+  ReportSegment({required this.rule, required this.startS,
+      required this.endS, required this.resolved});
+  factory ReportSegment.fromJson(Map<String, dynamic> j) => ReportSegment(
+      rule: j['rule'] ?? '',
+      startS: (j['start_s'] as num).toDouble(),
+      endS: (j['end_s'] as num).toDouble(),
+      resolved: j['resolved'] == true);
+}
+
+class VideoReport {
+  final int id;
+  final String title, status;
+  final String? risk, filterLevel;
+  final double? durationS;
+  final int viewCount;
+  final bool compliantOriginal;
+  final List<ReportSegment> segments;
+  final double? filterOnWatchPercent;
+  VideoReport({required this.id, required this.title, required this.status,
+      this.risk, this.filterLevel, this.durationS, required this.viewCount,
+      required this.compliantOriginal, required this.segments,
+      this.filterOnWatchPercent});
+  factory VideoReport.fromJson(Map<String, dynamic> j) => VideoReport(
+      id: j['id'], title: j['title'], status: j['status'], risk: j['risk'],
+      filterLevel: j['filter_level'],
+      durationS: (j['duration_s'] as num?)?.toDouble(),
+      viewCount: j['view_count'] ?? 0,
+      compliantOriginal: j['compliant_original'] == true,
+      segments: ((j['segments'] ?? []) as List)
+          .map((e) => ReportSegment.fromJson(e)).toList(),
+      filterOnWatchPercent:
+          (j['filter_on_watch_percent'] as num?)?.toDouble());
+}
