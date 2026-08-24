@@ -131,10 +131,17 @@ class _VideoPageState extends ConsumerState<VideoPage> {
     super.dispose();
   }
 
-  Widget _player(VideoPlayerController c) => FittedBox(
-      fit: BoxFit.cover, clipBehavior: Clip.hardEdge,
-      child: SizedBox(width: c.value.size.width,
-          height: c.value.size.height, child: VideoPlayer(c)));
+  /// 세로 영상은 화면을 꽉 채우고(cover), 가로 영상은 잘리지 않게
+  /// 위아래 검은 여백과 함께 전체를 보여준다(contain).
+  Widget _player(VideoPlayerController c) {
+    final size = c.value.size;
+    final landscape = size.width > size.height;
+    return ColoredBox(color: Colors.black, child: FittedBox(
+        fit: landscape ? BoxFit.contain : BoxFit.cover,
+        clipBehavior: Clip.hardEdge,
+        child: SizedBox(width: size.width, height: size.height,
+            child: VideoPlayer(c))));
+  }
 
   @override
   Widget build(BuildContext context) {
