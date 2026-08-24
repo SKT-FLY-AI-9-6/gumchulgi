@@ -259,3 +259,15 @@ A 실패 구간만 D-full 2차 시도. D-full 은 GPU 필요(CPU 14s/프레임�
 저장소 밖 전달. D-full 재현: blazebvd 브랜치 blazebvd-training 설치 후
 `blazebvd correct <src> -o <dst> --stage full --checkpoint
 runs/davis_blazebvd/tcm/best.pt --config <flow.pretrained=false 설정>`.
+
+## 보정 영향 지표 impact.py 합류 (2026-08-24, platform-mvp 에서 이식)
+
+(원본, 보정본) 쌍에서 ① 휘도 감소(평균 + 플래시 구간 피크 p99, 선형광
+cd/m²) ② 플래시 억제(정본 심판의 전/후 이벤트·위반 초) ③ **색감 보존율**
+(CIE 1976 u'v' 이동 평균/p95 + 채도 손실률)을 잰다. cera 실측이 지표의
+얼굴: 게인 사다리 색감 보존 **99.6%**(Δu'v' 0.0034) vs BlazeBVD STE
+**78.0%**(0.0468) — 위반 제거·휘도 비용이 비슷한 두 보정을 색 축이 14배로
+가른다. 선형광 등배 곱 = 색도 보존의 실측 증명. 적대 검증: 합성 쌍 9종
+(동일쌍 0/100, 0.5배 감광 −50.1%/99.9%, 구간 피크 선택, 탈채도 변별,
+증광 부호). platform-mvp 에서는 워커가 업로드마다 계산해 videos.impact_json
+에 저장하고 /dashboard/recent_impact 로 노출한다 (E2E 테스트 포함, 66 passed).
