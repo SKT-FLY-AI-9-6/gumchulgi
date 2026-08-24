@@ -105,6 +105,13 @@ class ApiClient {
   Future<VideoReport> videoReport(int id) async =>
       VideoReport.fromJson((await _dio.get('/videos/$id/report')).data);
 
+  Future<(double?, List<SegmentSpan>)> videoSegments(int id) async {
+    final r = (await _dio.get('/videos/$id/segments')).data;
+    return ((r['duration_s'] as num?)?.toDouble(),
+        ((r['segments'] ?? []) as List)
+            .map((e) => SegmentSpan.fromJson(e)).toList());
+  }
+
   Future<List<MyVideo>> myVideos() async =>
       ((await _dio.get('/me/videos')).data['videos'] as List)
           .map((e) => MyVideo.fromJson(e)).toList();

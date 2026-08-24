@@ -20,6 +20,8 @@ class _VideoPageState extends ConsumerState<VideoPage> {
   VideoPlayerController? _c;
   bool _error = false;
   bool _swapping = false;
+  double? _segDuration;
+  List<SegmentSpan> _segments = const [];
   bool _pausedByUser = false; // 화면 탭으로 멈춘 상태
   // 교체 직후 새 플레이어가 실제 장면을 그릴 때까지 덮어 두는 옛 플레이어
   VideoPlayerController? _cover;
@@ -41,9 +43,21 @@ class _VideoPageState extends ConsumerState<VideoPage> {
       ..setLooping(true);
   }
 
+  Future<void> _loadSegments() async {
+    if (widget.video.risk == 'safe') return;
+    try {
+      final (dur, segs) =
+          await ref.read(apiProvider).videoSegments(widget.video.id);
+      if (mounted) setState(() { _segDuration = dur; _segments = segs; });
+    } catch (_) {
+      // 구간 정보를 못 받으면 마커 없이 재생한다.
+    }
+  }
+
   @override
   void initState() {
     super.initState();
+    _loadSegments();
     _c = _make(widget.video.streamUrl)
       ..initialize().then((_) {
         if (mounted) setState(() {});
@@ -145,7 +159,7 @@ class _VideoPageState extends ConsumerState<VideoPage> {
             child: Center(child: SizedBox(width: 28, height: 28,
                 child: CircularProgressIndicator(strokeWidth: 2)))),
       // 하단 스크림 (시안 A)
-      Positioned(left: 0, right: 0, bottom: 0, height: 260,
+      Positioned(left: 0, right: 0, bottom: 0, height: 200,
           child: IgnorePointer(child: DecoratedBox(
               decoration: BoxDecoration(gradient: LinearGradient(
                   begin: Alignment.topCenter, end: Alignment.bottomCenter,
@@ -153,7 +167,7 @@ class _VideoPageState extends ConsumerState<VideoPage> {
                       const Color(0xFF05050C).withValues(alpha: .92)]))))),
       // 좌상단 안전 상태 칩
       if (v.risk != 'safe')
-        Positioned(top: 96, left: 20, child: Container(
+        Positioned(top: 52, left: 20, child: Container(
             padding: const EdgeInsets.symmetric(
                 horizontal: 12, vertical: 5),
             decoration: BoxDecoration(
@@ -175,7 +189,7 @@ class _VideoPageState extends ConsumerState<VideoPage> {
                       fontWeight: FontWeight.w600)),
             ]))),
       // 하단 정보
-      Positioned(left: 20, right: 88, bottom: 96, child: Column(
+      Positioned(left: 20, right: 88, bottom: 46, child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -187,9 +201,10 @@ class _VideoPageState extends ConsumerState<VideoPage> {
                   color: Colors.white.withValues(alpha: .85))),
         ])),
       // 재생 진행바 (+ 보정 영상이면 완화 라벨)
-      Positioned(left: 20, right: 20, bottom: 40, child:
-          _ProgressBar(controller: _c, video: v)),
-      Positioned(right: 8, bottom: 88, child: ActionRail(video: v)),
+      Positioned(left: 20, right: 20, bottom: 12, child:
+          _ProgressBar(controller: _c, video: v,
+              segments: _segments, segDuration: _segDuration)),
+      Positioned(right: 8, bottom: 40, child: ActionRail(video: v)),
     ]));
   }
 }
@@ -199,7 +214,10 @@ class _VideoPageState extends ConsumerState<VideoPage> {
 class _ProgressBar extends StatelessWidget {
   final VideoPlayerController? controller;
   final FeedVideo video;
-  const _ProgressBar({required this.controller, required this.video});
+  final List<SegmentSpan> segments;
+  final double? segDuration;
+  const _ProgressBar({required this.controller, required this.video,
+      this.segments = const [], this.segDuration});
 
   @override
   Widget build(BuildContext context) {
@@ -221,11 +239,30 @@ class _ProgressBar extends StatelessWidget {
                 final dur = val.duration.inMilliseconds;
                 final pos = dur == 0 ? 0.0
                     : val.position.inMilliseconds / dur;
+                final totalS = (segDuration ?? video.durationS) ??
+                    (dur > 0 ? dur / 1000.0 : 0.0);
                 return LayoutBuilder(builder: (context, box) =>
                     Stack(alignment: Alignment.centerLeft, children: [
                   Container(height: 4, decoration: BoxDecoration(
                       color: Colors.white.withValues(alpha: .22),
                       borderRadius: BorderRadius.circular(2))),
+                  // 위험 구간 마커 (노란색)
+                  if (totalS > 0)
+                    for (final seg in segments)
+                      Positioned(
+                          left: box.maxWidth *
+                              (seg.startS / totalS).clamp(0.0, 1.0),
+                          width: (box.maxWidth *
+                                  ((seg.endS - seg.startS) / totalS))
+                              .clamp(3.0, box.maxWidth),
+                          child: Container(height: 4,
+                              decoration: BoxDecoration(
+                                  color: V1.amber,
+                                  borderRadius: BorderRadius.circular(2),
+                                  boxShadow: [BoxShadow(
+                                      color: V1.amber
+                                          .withValues(alpha: .8),
+                                      blurRadius: 5)]))),
                   Container(height: 4,
                       width: box.maxWidth * pos.clamp(0.0, 1.0),
                       decoration: BoxDecoration(color: V1.violet,

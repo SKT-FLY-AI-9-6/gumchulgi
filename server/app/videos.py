@@ -237,8 +237,14 @@ def video_report(vid: int, user=Depends(current_user),
                 for r in residual))
     filt = conn.execute(
         "SELECT SUM(CASE WHEN variant='filtered' THEN 1 ELSE 0 END) f,"
-        " COUNT(*) n FROM watch_events WHERE video_id=?", (vid,)).fetchone()
+        " COUNT(*) n, AVG(watched_s) w FROM watch_events"
+        " WHERE video_id=?", (vid,)).fetchone()
     ratio = round(100.0 * (filt["f"] or 0) / filt["n"], 1) if filt["n"] else None
+    # 평균 시청 유지율 = 시청 이벤트당 평균 시청 시간 / 영상 길이
+    avg_watch = None
+    if filt["n"] and filt["w"] and row["duration_s"]:
+        avg_watch = round(
+            min(100.0, 100.0 * filt["w"] / row["duration_s"]), 1)
     return {
         "id": vid, "title": row["title"], "status": row["status"],
         "risk": row["risk"], "duration_s": row["duration_s"],
@@ -247,4 +253,17 @@ def video_report(vid: int, user=Depends(current_user),
         "compliant_original": bool(report.get("compliant", True)),
         "segments": segments,
         "filter_on_watch_percent": ratio,
+        "avg_watch_percent": avg_watch,
     }
+
+
+@router.get("/videos/{vid}/segments")
+def video_segments(vid: int, user=Depends(current_user),
+                   conn: sqlite3.Connection = Depends(get_db)):
+    """시청자용 위험 구간 마커 — 구간 시각만 노출한다 (규칙 상세는
+    업로더 리포트에서만)."""
+    row = _video_or_404(conn, vid)
+    report = _load_json(row["report_path"]) or {}
+    return {"duration_s": row["duration_s"],
+            "segments": [{"start_s": s["start_s"], "end_s": s["end_s"]}
+                         for s in _merged_segments(report)]}

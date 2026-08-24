@@ -163,6 +163,14 @@ class ReportSegment {
       resolved: j['resolved'] == true);
 }
 
+class SegmentSpan {
+  final double startS, endS;
+  SegmentSpan({required this.startS, required this.endS});
+  factory SegmentSpan.fromJson(Map<String, dynamic> j) => SegmentSpan(
+      startS: (j['start_s'] as num).toDouble(),
+      endS: (j['end_s'] as num).toDouble());
+}
+
 class VideoReport {
   final int id;
   final String title, status;
@@ -172,10 +180,11 @@ class VideoReport {
   final bool compliantOriginal;
   final List<ReportSegment> segments;
   final double? filterOnWatchPercent;
+  final double? avgWatchPercent;
   VideoReport({required this.id, required this.title, required this.status,
       this.risk, this.filterLevel, this.durationS, required this.viewCount,
       required this.compliantOriginal, required this.segments,
-      this.filterOnWatchPercent});
+      this.filterOnWatchPercent, this.avgWatchPercent});
   factory VideoReport.fromJson(Map<String, dynamic> j) => VideoReport(
       id: j['id'], title: j['title'], status: j['status'], risk: j['risk'],
       filterLevel: j['filter_level'],
@@ -185,5 +194,6 @@ class VideoReport {
       segments: ((j['segments'] ?? []) as List)
           .map((e) => ReportSegment.fromJson(e)).toList(),
       filterOnWatchPercent:
-          (j['filter_on_watch_percent'] as num?)?.toDouble());
+          (j['filter_on_watch_percent'] as num?)?.toDouble(),
+      avgWatchPercent: (j['avg_watch_percent'] as num?)?.toDouble());
 }
