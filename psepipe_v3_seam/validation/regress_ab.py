@@ -66,6 +66,25 @@ def run_filter(src, out_path, kw, use_gpu, lossless):
     return rep
 
 
+def vmaf_score(dist, ref):
+    """ffmpeg libvmaf 지각 화질 점수 (dist 를 ref 참조로 채점).
+
+    측정 전용 — 필터 출력에는 아무 영향이 없다 (계기판). 읽는 법 주의
+    (AI 이식 로드맵 3번): 우리 필터는 원본을 의도적으로 바꾸므로 절대값이
+    아니라 base 대비 Δ 로만 읽는다. 제안 보조 관문: cand ≥ base − 3.
+    """
+    import re
+    import subprocess
+    p = subprocess.run(
+        ["ffmpeg", "-hide_banner", "-i", dist, "-i", ref,
+         "-lavfi", "libvmaf", "-f", "null", "-"],
+        capture_output=True, text=True, errors="replace")
+    m = re.search(r"VMAF score:\s*([0-9.]+)", p.stderr)
+    if not m:
+        raise RuntimeError(f"libvmaf 점수 파싱 실패 ({dist}):\n{p.stderr[-500:]}")
+    return float(m.group(1))
+
+
 def classify(before, base_after, cand_after):
     """cand 를 base 와 대조해 한 단어로: 동일 / 개선 / 악화 / 변화."""
     if cand_after == base_after:
@@ -81,6 +100,10 @@ def classify(before, base_after, cand_after):
 
 
 def main():
+    # Windows cp949 콘솔에서 — 표(—) 출력이 UnicodeEncodeError 로 죽어
+    # CSV 저장까지 잃는다 (0825 실측). 깨진 글자만 ? 로 두고 계속 간다.
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(errors="replace")
     ap = argparse.ArgumentParser()
     ap.add_argument("srcs", nargs="+")
     ap.add_argument("--base", default="", help='base 설정 (기본: Cfg() 그대로)')
@@ -89,6 +112,8 @@ def main():
     ap.add_argument("--gpu", action="store_true", help="psegpu_full 경로 사용")
     ap.add_argument("--lossless", action="store_true", help="출력 FFV1 (최종 확정용)")
     ap.add_argument("--no-ghost", action="store_true", help="이질감 3축 측정 생략(판정만)")
+    ap.add_argument("--vmaf", action="store_true",
+                    help="ffmpeg libvmaf 로 base/cand 화질 채점 (원본 참조, 열 2개 추가)")
     ap.add_argument("--csv", default=None)
     ap.add_argument("--workdir", default="_regress")
     a = ap.parse_args()
@@ -125,6 +150,8 @@ def main():
                 row[tag + "_헤일로+"] = round(max(m["halo"] - b["halo"], 0.0), 2)
                 row[tag + "_잔상"] = f"{m['ghost_lag']:.2f}/" \
                                      f"{max(m['ghost_drag']-b['ghost_drag'],0.0):.3f}"
+            if a.vmaf:
+                row[tag + "_vmaf"] = round(vmaf_score(out, src), 2)
         row["대조"] = classify(before, row["base"].split(",") if row["base"] != "적합" else [],
                              row["cand"].split(",") if row["cand"] != "적합" else [])
         if row["대조"].startswith("악화"):
