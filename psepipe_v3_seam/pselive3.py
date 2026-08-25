@@ -229,6 +229,13 @@ class Cfg:
     # 초당 6회·10회 컷 합성 클립(21/27번)에서 판정이 유지되는 것을 확인했다 —
     # 컷 리셋을 놓치면 그 지점에 잔상이 생길 뿐 위반을 만들지는 않는다.
     cut_min_gap_s: float = 0.5
+    # ---- 외부 컷 트리거 주입 (AI 이식 2번 — TransNetV2)
+    # None 이면 기존 NCC + 불응기. 프레임 번호 집합(set)이면 그 프레임에서만
+    # 컷 리셋 — NCC 판별과 불응기를 완전히 대체한다. 플래시는 컷이 아니라고
+    # 학습된 모델이 경계를 주므로 헛컷 리셋(위 실패군)과 불응기 워크어라운드가
+    # 함께 사라진다. 워커는 업로드형 배치라 사전 패스(수 초/클립)가 가능하다.
+    # 승격 전 관문: regress_ab --tn-cand 로 합성 27 + 실사 209 악화 0·퇴보 0.
+    cut_frames: object = None
     # ---- 실행
     short_side: int = 240
     strength: float = 1.0
@@ -406,12 +413,23 @@ class LiveFilter3:
         cut = False
         if self._prev_ncc is not None and not flat and not self._prev_flat:
             cut = float((gn * self._prev_ncc).mean()) < self.c.cut_thresh
+        self._prev_ncc = gn
+        self._prev_flat = flat
+        # **TN 동의 게이트** (AI 이식 2번, cut_frames = TransNetV2 경계 ±허용창).
+        # 27클립 관문 실측(0825)의 결론으로 "대체"가 아니라 "거부권"이다:
+        #   순수 교체 -> 악화 3 + 퇴보 2. TN 이 전면 색 교대를 전환으로 오인해
+        #   리셋을 만들고, 억제 중 리셋 1회는 억제->원본->억제 점프 **두 개**라
+        #   2회/s 리셋도 심판에는 4변화/s 로 보여 없던 화면전환이 생긴다.
+        #   불응기 유지 교체 -> 여전히 악화 3 + 퇴보 1 (같은 기전).
+        # 그래서 NCC 후보 중 TN 이 실제 샷 경계라고 동의한 것만 리셋한다.
+        # 플래시가 NCC 를 뚫은 헛컷(TN 은 경계 아님)만 정확히 걸러진다 —
+        # 로드맵 2번이 노린 "플래시 구간 오탐 리셋 제거" 그 자체다.
+        if cut and self.c.cut_frames is not None:
+            cut = self.n in self.c.cut_frames
         # 불응기 (Cfg.cut_min_gap_s 주석 참고)
         if cut and self._since_cut < self._cut_gap_n:
             cut = False
         self._since_cut = 0 if cut else self._since_cut + 1
-        self._prev_ncc = gn
-        self._prev_flat = flat
         return cut
 
     # ------------------------------------------------------------------ 처리
