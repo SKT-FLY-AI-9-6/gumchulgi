@@ -1,0 +1,29 @@
+# 공통 최소한만 둔다. 개인 관례는 각자 브랜치의 .gitignore 에 추가할 것.
+# (여기에 개인 규칙을 넣으면 다른 사람 파일이 조용히 빠진다 —
+#  실제로 `_*.py` 를 뒀다가 `__init__.py` 가 걸리는 걸 발견해 뺐다.)
+
+# 영상·이미지 데이터 — 용량이 크다. 수집 기록만 있으면 다시 받을 수 있다
+*.mp4
+*.mov
+*.mkv
+*.webm
+*.avi
+*.m4v
+
+# 계정 자격증명 — sessionid 는 비밀번호와 같은 급이다
+cookies.txt
+cookies*.txt
+session-*
+*.session
+.env
+
+# 파이썬
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+
+# docker compose 로컬 데이터 볼륨 (저장소 루트)
+/data/
+server/data/
