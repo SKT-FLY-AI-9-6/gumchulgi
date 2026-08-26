@@ -1,0 +1,15 @@
+﻿clip,config,judge_src,judge,vmaf,sec
+cera_khin,base,플래시,적합,38.86,0.0
+cera_khin,strong,플래시,적합,48.33,190.2
+pinkvenom,base,"플래시,화면전환",적합,25.51,146.3
+pinkvenom,strong,"플래시,화면전환",적합,25.15,193.8
+travis_fein,base,"플래시,화면전환",화면전환,75.41,215.9
+travis_fein,strong,"플래시,화면전환",적합,72.59,310.5
+12_bulbs_grid,base,플래시,적합,73.73,16.6
+12_bulbs_grid,strong,플래시,적합,74.51,20.5
+13_bulbs_large,base,적합,적합,80.52,15.5
+13_bulbs_large,strong,적합,적합,73.29,19.8
+01_flash_5hz,base,플래시,적합,97.37,7.9
+01_flash_5hz,strong,플래시,적합,97.36,11.6
+09_local_strobe,base,적합,적합,51.79,8.0
+09_local_strobe,strong,적합,적합,43.01,11.7
