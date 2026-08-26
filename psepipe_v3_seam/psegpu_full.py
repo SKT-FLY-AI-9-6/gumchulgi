@@ -440,13 +440,17 @@ class FullFilterGPU:
             ncc = (gn * self.prev_ncc).mean()
             valid = (1.0 - flat) * (1.0 - self.prev_flat)
             cut = ((ncc < c.cut_thresh).to(self.dt)) * valid
+        self.prev_ncc = gn
+        self.prev_flat = flat
+        # TN 동의 게이트 — CPU 판(pselive3._is_cut)·Cfg.cut_frames 주석 참고.
+        # NCC 후보 중 TransNetV2 가 샷 경계라고 동의한 프레임만 리셋한다.
+        if c.cut_frames is not None:
+            cut = cut * float(self.n in c.cut_frames)
         # 불응기 — 컷 직후 cut_gap_n 프레임은 컷을 인정하지 않는다.
         # (Cfg.cut_min_gap_s 주석 참고) 호스트 분기 없이 스칼라 텐서로 센다.
         allowed = (self.since_cut >= self.cut_gap_n).to(self.dt)
         cut = cut * allowed
         self.since_cut = (1.0 - cut) * (self.since_cut + 1.0)
-        self.prev_ncc = gn
-        self.prev_flat = flat
         return cut
 
     # ------------------------------------------------------------------

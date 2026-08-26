@@ -229,6 +229,14 @@ class Cfg:
     # 초당 6회·10회 컷 합성 클립(21/27번)에서 판정이 유지되는 것을 확인했다 —
     # 컷 리셋을 놓치면 그 지점에 잔상이 생길 뿐 위반을 만들지는 않는다.
     cut_min_gap_s: float = 0.5
+    # ---- 외부 컷 경계 주입 (AI 이식 2번 — TransNetV2 거부권 게이트)
+    # None 이면 기존 NCC + 불응기 그대로 (완전 opt-in — 롤백은 주입 중단).
+    # 샷 경계 프레임 집합(±허용창)이면 NCC 컷 후보 중 이 집합에 든 것만
+    # 리셋으로 인정한다. 플래시가 NCC 를 뚫은 헛컷만 걸러진다 (0825 실측:
+    # TXeDgXiytM0 헛후보 1094 -> 리셋 6, 실제 경계 6 과 일치). 승격 근거:
+    # 합성 27 + 실사 209 관문 — 동일 235 · 개선 1 · 퇴보 0 · 악화 0
+    # (detector-ghosting 브랜치 regress_27_tn_veto.csv · regress_209_tn_veto.csv).
+    cut_frames: object = None
     # ---- 실행
     short_side: int = 240
     strength: float = 1.0
@@ -411,12 +419,17 @@ class LiveFilter3:
         cut = False
         if self._prev_ncc is not None and not flat and not self._prev_flat:
             cut = float((gn * self._prev_ncc).mean()) < self.c.cut_thresh
+        self._prev_ncc = gn
+        self._prev_flat = flat
+        # **TN 동의 게이트** (Cfg.cut_frames 주석 참고) — TN 은 발의하지 않고
+        # 거부만 한다: NCC 후보 중 실제 샷 경계(±허용창)만 리셋으로 인정.
+        # 대체·발의형은 관문 기각 (억제 중 리셋 1회 = 점프 2개 기전, 0825).
+        if cut and self.c.cut_frames is not None:
+            cut = self.n in self.c.cut_frames
         # 불응기 (Cfg.cut_min_gap_s 주석 참고)
         if cut and self._since_cut < self._cut_gap_n:
             cut = False
         self._since_cut = 0 if cut else self._since_cut + 1
-        self._prev_ncc = gn
-        self._prev_flat = flat
         return cut
 
     # ------------------------------------------------------------------ 처리
