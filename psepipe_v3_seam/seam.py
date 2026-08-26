@@ -51,7 +51,7 @@
 검증(대조군 보정): 지표가 지표 노릇을 하는지 아래 4개로 확인했다 —
   copy(인코딩만) ≈ 0 / 평활 마스크 ≈ copy / 하드 시간창 ↑펌핑 / 하드 공간마스크 ↑헤일로.
 """
-import argparse, json, subprocess, sys
+import argparse, json, os, subprocess, sys
 import cv2
 import numpy as np
 
@@ -94,6 +94,37 @@ DUV_W = 160              # 색충실도 계산 폭 (평균 지표라 축소로 �
 DUV_LIT = 20.0           # 8bit 휘도, 이보다 어두운 화소는 색차 표본에서 제외
 
 
+def _source(x):
+    """경로 **또는 프레임 이터러블**을 같은 계약(프레임을 하나씩 내는 이터레이터)
+    으로 바꾼다.
+
+    왜 필요한가 — 필터 출력을 파일로 굽지 않고 그대로 재기 위해서다.
+    `pse_bt1702.analyze()` 가 이미 같은 이유로 프레임 이터러블을 받는다(폐루프
+    왕복 제거). 여기서도 인코딩을 생략하면 x264 링잉·블록이 바닥값으로 안 섞여
+    `--base` 대조군 없이 읽을 수 있다.
+
+    **주의: 그렇게 잰 값은 기존 CSV 수치와 직접 비교하면 안 된다.** 저장된
+    수치(regress_synth14_*, strength_sweep_real3 등)는 전부 *인코딩 대조군
+    초과분*이라 기준선이 다르다. 프레임 경로끼리만 비교할 것.
+    """
+    if isinstance(x, (str, os.PathLike)):
+        cap = cv2.VideoCapture(str(x))
+        if not cap.isOpened():
+            raise IOError(f"열 수 없음: {x}")
+
+        def _it():
+            try:
+                while True:
+                    ok, f = cap.read()
+                    if not ok:
+                        return
+                    yield f
+            finally:
+                cap.release()
+        return _it()
+    return iter(x)
+
+
 def _luma(f):
     return cv2.cvtColor(f, cv2.COLOR_BGR2GRAY).astype(np.float32)
 
@@ -105,9 +136,8 @@ def _grad(y):
 
 
 def measure(src, out, max_frames=None, verbose=False):
-    ca, cb = cv2.VideoCapture(src), cv2.VideoCapture(out)
-    if not ca.isOpened() or not cb.isOpened():
-        raise IOError(f"열 수 없음: {src} / {out}")
+    """src / out 은 각각 **경로 또는 BGR uint8 프레임 이터러블**. (_source 참조)"""
+    it_a, it_b = _source(src), _source(out)
     prev_s = prev_o = None
     streak = None                      # 화소별 연속 정지 프레임 수
     pump_sum = 0.0; pump_n = 0
@@ -120,8 +150,8 @@ def measure(src, out, max_frames=None, verbose=False):
     sharp_sum = 0.0; duv_sum = 0.0; duv_frames = 0
     t = 0
     while True:
-        oa, fa = ca.read(); ob, fb = cb.read()
-        if not (oa and ob):
+        fa = next(it_a, None); fb = next(it_b, None)
+        if fa is None or fb is None:
             break
         if fa.shape != fb.shape:
             fb = cv2.resize(fb, (fa.shape[1], fa.shape[0]))
@@ -181,7 +211,9 @@ def measure(src, out, max_frames=None, verbose=False):
             break
         if verbose and t % 300 == 0:
             print(f"    ... {t}", file=sys.stderr)
-    ca.release(); cb.release()
+    for _s in (it_a, it_b):            # 조기 중단 시 finally 를 태워 cap 을 푼다
+        if hasattr(_s, "close"):
+            _s.close()
     return {
         "frames": t,
         "pumping": round(pump_sum / max(pump_n, 1), 4),

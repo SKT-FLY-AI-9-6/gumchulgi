@@ -66,6 +66,28 @@ def run_filter(src, out_path, kw, use_gpu, lossless):
     return rep
 
 
+def vmaf_score(dist: str, ref: str) -> float | None:
+    """ffmpeg libvmaf 지각 화질 점수. 없거나 실패하면 None.
+
+    **읽는 법**: 필터는 원본을 의도적으로 바꾸므로 절대값이 아니라 base 대비
+    Δ 로만 읽는다. 강억제 클립의 낮은 절대 점수는 정상이고, 반대로 억제가
+    샌 클립은 "원본에 가깝다"는 이유로 점수가 높게 나온다 — VMAF 는 심판을
+    대체하지 못하는 **보조축**이다(2026-08-26 PoC 실측, docs/AI-이식-PoC-실측.md).
+    """
+    import re as _re
+    import subprocess
+    cmd = ["ffmpeg", "-hide_banner", "-nostdin", "-i", dist, "-i", ref, "-lavfi",
+           "[0:v]setpts=PTS-STARTPTS[d0];[1:v]setpts=PTS-STARTPTS[r0];"
+           "[d0][r0]scale2ref=flags=bicubic[d][r];[d][r]libvmaf=n_threads=4",
+           "-f", "null", "-"]
+    try:
+        p = subprocess.run(cmd, capture_output=True, text=True)
+    except OSError:
+        return None
+    m = _re.search(r"VMAF score:\s*([\d.]+)", p.stderr)
+    return round(float(m.group(1)), 2) if m else None
+
+
 def classify(before, base_after, cand_after):
     """cand 를 base 와 대조해 한 단어로: 동일 / 개선 / 악화 / 변화."""
     if cand_after == base_after:
@@ -89,6 +111,8 @@ def main():
     ap.add_argument("--gpu", action="store_true", help="psegpu_full 경로 사용")
     ap.add_argument("--lossless", action="store_true", help="출력 FFV1 (최종 확정용)")
     ap.add_argument("--no-ghost", action="store_true", help="이질감 3축 측정 생략(판정만)")
+    ap.add_argument("--vmaf", action="store_true",
+                    help="지각 화질(VMAF) 열 추가 — base 대비 Δ 로만 읽을 것")
     ap.add_argument("--csv", default=None)
     ap.add_argument("--workdir", default="_regress")
     a = ap.parse_args()
@@ -119,6 +143,8 @@ def main():
             row[tag] = ",".join(after) or "적합"
             row[tag + "_sec"] = round(time.time() - t0, 1)
             row[tag + "_신규위반"] = ",".join(r for r in after if r not in before)
+            if a.vmaf:
+                row[tag + "_vmaf"] = vmaf_score(out, src)
             if not a.no_ghost:
                 m = seam.measure(src, out)
                 b = seam.measure(src, ctrl)
