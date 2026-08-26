@@ -5,3 +5,6 @@ PyJWT>=2.8
 bcrypt>=4.1
 numpy>=1.26
 opencv-python-headless>=4.10
+# 선택 (torch 와 같은 관례 — 없으면 워커가 자동 폴백):
+#   torch                  GPU 필터 psegpu_full
+#   transnetv2-pytorch     컷 리셋 TN 거부권 게이트 (filter_stream.tn_cut_frames)

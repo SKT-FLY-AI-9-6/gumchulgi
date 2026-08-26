@@ -66,6 +66,28 @@ def run_filter(src, out_path, kw, use_gpu, lossless):
     return rep
 
 
+_TN_MODEL = None
+
+
+def tn_boundaries(src, tol=2):
+    """TransNetV2 사전 패스 — 샷 경계(새 샷 시작) ±tol 프레임 집합.
+
+    필터에서는 **동의 게이트**로 쓴다: NCC 컷 후보 중 이 집합에 든 프레임만
+    리셋으로 인정 (pselive3.Cfg.cut_frames 주석 참고). ±tol 은 TN 경계와
+    NCC 발화의 한 프레임 어긋남을 흡수한다. 비용: CPU 수 초/클립.
+    """
+    global _TN_MODEL
+    import torch
+    from transnetv2_pytorch import TransNetV2
+    if _TN_MODEL is None:
+        _TN_MODEL = TransNetV2()
+        _TN_MODEL.eval()
+    with torch.no_grad():
+        scenes = _TN_MODEL.detect_scenes(src, threshold=0.5)
+    starts = {int(s["start_frame"]) for s in scenes[1:]}
+    return {b + d for b in starts for d in range(-tol, tol + 1)}
+
+
 def vmaf_score(dist, ref):
     """ffmpeg libvmaf 지각 화질 점수 (dist 를 ref 참조로 채점).
 
@@ -114,6 +136,8 @@ def main():
     ap.add_argument("--no-ghost", action="store_true", help="이질감 3축 측정 생략(판정만)")
     ap.add_argument("--vmaf", action="store_true",
                     help="ffmpeg libvmaf 로 base/cand 화질 채점 (원본 참조, 열 2개 추가)")
+    ap.add_argument("--tn-cand", action="store_true",
+                    help="cand 의 컷 리셋에 TransNetV2 거부권 게이트 적용 (사전 패스)")
     ap.add_argument("--csv", default=None)
     ap.add_argument("--workdir", default="_regress")
     a = ap.parse_args()
@@ -136,9 +160,15 @@ def main():
             ctrl = os.path.join(a.workdir, name + "_ctrl.mp4")
             if not os.path.exists(ctrl):
                 seam.make_control(src, ctrl)
+        tn_frames = None
+        if a.tn_cand:
+            tn_frames = tn_boundaries(src)
+            row["TN컷"] = len(tn_frames)
         for tag, kw in (("base", base_kw), ("cand", cand_kw)):
             out = os.path.join(a.workdir, f"{name}_{tag}{ext}")
             t0 = time.time()
+            if tag == "cand" and tn_frames is not None:
+                kw = dict(kw, cut_frames=tn_frames)
             run_filter(src, out, kw, a.gpu, a.lossless)
             after = BT.analyze(out)["failed_rules"]
             row[tag] = ",".join(after) or "적합"

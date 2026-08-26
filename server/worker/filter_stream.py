@@ -1,3 +1,4 @@
+import os
 import subprocess
 import threading
 from pathlib import Path
@@ -16,11 +17,49 @@ def gpu_available() -> bool:
         return False
 
 
+_TN_MODEL = None
+_TN_LAST = (None, None)          # (경로 str, 결과) — 사다리의 strong/base 2회 호출 캐시
+
+
+def tn_cut_frames(src, tol: int = 2):
+    """TransNetV2 사전 패스 — 샷 경계(새 샷 시작) ±tol 프레임 집합.
+
+    필터 컷 리셋의 **거부권 게이트**용 (pselive3.Cfg.cut_frames 주석 참고).
+    승격 근거: 합성 27 + 실사 209 관문 — 동일 235·개선 1·퇴보 0·악화 0.
+    torch/transnetv2-pytorch 미설치 등 어떤 이유로든 실패하면 None 을 돌려
+    필터는 기존 NCC+불응기 그대로 동작한다 (GPU 자동 감지와 같은 관례).
+    롤백 스위치: 환경변수 TN_CUT_GATE=0.
+    """
+    if os.environ.get("TN_CUT_GATE", "1") != "1":
+        return None
+    global _TN_MODEL, _TN_LAST
+    key = str(src)
+    if _TN_LAST[0] == key:
+        return _TN_LAST[1]
+    frames = None
+    try:
+        import torch
+        from transnetv2_pytorch import TransNetV2
+        if _TN_MODEL is None:
+            _TN_MODEL = TransNetV2()
+            _TN_MODEL.eval()
+        with torch.no_grad():
+            scenes = _TN_MODEL.detect_scenes(key, threshold=0.5)
+        starts = {int(s["start_frame"]) for s in scenes[1:]}
+        frames = {b + d for b in starts for d in range(-tol, tol + 1)}
+    except Exception:
+        frames = None
+    _TN_LAST = (key, frames)
+    return frames
+
+
 def filter_video(src, dst, cfg: Cfg | None = None,
                  use_gpu: bool | None = None) -> int:
     """cfg 로 보정본을 만든다. CUDA 가 있으면 psegpu_full, 없으면
     pselive3 스트리밍. 반환값은 처리한 프레임 수."""
     cfg = cfg or Cfg.strong()
+    if getattr(cfg, "cut_frames", None) is None:
+        cfg.cut_frames = tn_cut_frames(src)
     if use_gpu is None:
         use_gpu = gpu_available()
     if use_gpu:
