@@ -53,6 +53,29 @@ def build_cfg(kw: dict):
     return c
 
 
+_TN_MODEL = None
+
+
+def tn_boundaries(src, tol=2):
+    """TransNetV2 사전 패스 — 샷 경계(새 샷 시작) ±tol 프레임 집합 (AI 이식 2번).
+
+    필터에서는 **동의 게이트**로 쓴다: NCC 컷 후보 중 이 집합에 든 프레임만
+    리셋으로 인정 (pselive3._is_cut 주석의 0825 관문 실측 참고). ±tol 은
+    TN 경계와 NCC 발화의 한 프레임 어긋남을 흡수한다.
+    비용: CPU 수 초/클립. 모델은 1회 로드 후 재사용.
+    """
+    global _TN_MODEL
+    import torch
+    from transnetv2_pytorch import TransNetV2
+    if _TN_MODEL is None:
+        _TN_MODEL = TransNetV2()
+        _TN_MODEL.eval()
+    with torch.no_grad():
+        scenes = _TN_MODEL.detect_scenes(src, threshold=0.5)
+    starts = {int(s["start_frame"]) for s in scenes[1:]}
+    return {b + d for b in starts for d in range(-tol, tol + 1)}
+
+
 def run_filter(src, out_path, kw, use_gpu, lossless):
     cfg = build_cfg(kw)
     if use_gpu:
@@ -66,26 +89,27 @@ def run_filter(src, out_path, kw, use_gpu, lossless):
     return rep
 
 
-def vmaf_score(dist: str, ref: str) -> float | None:
-    """ffmpeg libvmaf 지각 화질 점수. 없거나 실패하면 None.
+def vmaf_score(dist, ref):
+    """ffmpeg libvmaf 지각 화질 점수 (dist 를 ref 참조로 채점).
 
-    **읽는 법**: 필터는 원본을 의도적으로 바꾸므로 절대값이 아니라 base 대비
-    Δ 로만 읽는다. 강억제 클립의 낮은 절대 점수는 정상이고, 반대로 억제가
-    샌 클립은 "원본에 가깝다"는 이유로 점수가 높게 나온다 — VMAF 는 심판을
-    대체하지 못하는 **보조축**이다(2026-08-26 PoC 실측, docs/AI-이식-PoC-실측.md).
+    읽는 법 주의(로드맵 3번): 우리 필터는 원본을 의도적으로 바꾸므로
+    절대값이 아니라 base 대비 Δ 로만 읽는다. **관문으로 쓰지 말 것** —
+    로드맵이 제안했던 `cand ≥ base − 3` 은 2026-08-26 PoC 에서 기각됐다:
+    국소 스트로브를 제대로 억제할수록 원본에서 멀어져 점수가 떨어지고
+    (09 −8.78, 13 −7.23, 둘 다 판정 무결), travis 는 VMAF −2.82 인데
+    판정은 더 좋다(base 화면전환 위반 → strong 적합).
+    docs/AI-이식-PoC-실측.md 4절.
     """
-    import re as _re
+    import re
     import subprocess
-    cmd = ["ffmpeg", "-hide_banner", "-nostdin", "-i", dist, "-i", ref, "-lavfi",
-           "[0:v]setpts=PTS-STARTPTS[d0];[1:v]setpts=PTS-STARTPTS[r0];"
-           "[d0][r0]scale2ref=flags=bicubic[d][r];[d][r]libvmaf=n_threads=4",
-           "-f", "null", "-"]
-    try:
-        p = subprocess.run(cmd, capture_output=True, text=True)
-    except OSError:
-        return None
-    m = _re.search(r"VMAF score:\s*([\d.]+)", p.stderr)
-    return round(float(m.group(1)), 2) if m else None
+    p = subprocess.run(
+        ["ffmpeg", "-hide_banner", "-i", dist, "-i", ref,
+         "-lavfi", "libvmaf", "-f", "null", "-"],
+        capture_output=True, text=True, errors="replace")
+    m = re.search(r"VMAF score:\s*([0-9.]+)", p.stderr)
+    if not m:
+        raise RuntimeError(f"libvmaf 점수 파싱 실패 ({dist}):\n{p.stderr[-500:]}")
+    return float(m.group(1))
 
 
 def classify(before, base_after, cand_after):
@@ -103,6 +127,10 @@ def classify(before, base_after, cand_after):
 
 
 def main():
+    # Windows cp949 콘솔에서 — 표(—) 출력이 UnicodeEncodeError 로 죽어
+    # CSV 저장까지 잃는다 (0825 실측). 깨진 글자만 ? 로 두고 계속 간다.
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(errors="replace")
     ap = argparse.ArgumentParser()
     ap.add_argument("srcs", nargs="+")
     ap.add_argument("--base", default="", help='base 설정 (기본: Cfg() 그대로)')
@@ -112,7 +140,9 @@ def main():
     ap.add_argument("--lossless", action="store_true", help="출력 FFV1 (최종 확정용)")
     ap.add_argument("--no-ghost", action="store_true", help="이질감 3축 측정 생략(판정만)")
     ap.add_argument("--vmaf", action="store_true",
-                    help="지각 화질(VMAF) 열 추가 — base 대비 Δ 로만 읽을 것")
+                    help="ffmpeg libvmaf 로 base/cand 화질 채점 (원본 참조, 열 2개 추가)")
+    ap.add_argument("--tn-cand", action="store_true",
+                    help="cand 의 컷 트리거를 TransNetV2 경계로 교체 (사전 패스, AI 이식 2번)")
     ap.add_argument("--csv", default=None)
     ap.add_argument("--workdir", default="_regress")
     a = ap.parse_args()
@@ -135,9 +165,15 @@ def main():
             ctrl = os.path.join(a.workdir, name + "_ctrl.mp4")
             if not os.path.exists(ctrl):
                 seam.make_control(src, ctrl)
+        tn_frames = None
+        if a.tn_cand:
+            tn_frames = tn_boundaries(src)
+            row["TN컷"] = len(tn_frames)
         for tag, kw in (("base", base_kw), ("cand", cand_kw)):
             out = os.path.join(a.workdir, f"{name}_{tag}{ext}")
             t0 = time.time()
+            if tag == "cand" and tn_frames is not None:
+                kw = dict(kw, cut_frames=tn_frames)
             run_filter(src, out, kw, a.gpu, a.lossless)
             after = BT.analyze(out)["failed_rules"]
             row[tag] = ",".join(after) or "적합"
@@ -151,6 +187,8 @@ def main():
                 row[tag + "_헤일로+"] = round(max(m["halo"] - b["halo"], 0.0), 2)
                 row[tag + "_잔상"] = f"{m['ghost_lag']:.2f}/" \
                                      f"{max(m['ghost_drag']-b['ghost_drag'],0.0):.3f}"
+            if a.vmaf:
+                row[tag + "_vmaf"] = round(vmaf_score(out, src), 2)
         row["대조"] = classify(before, row["base"].split(",") if row["base"] != "적합" else [],
                              row["cand"].split(",") if row["cand"] != "적합" else [])
         if row["대조"].startswith("악화"):
