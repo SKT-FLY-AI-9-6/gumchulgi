@@ -1,4 +1,5 @@
-/* 검출기 스튜디오 — 프레임워크 없는 단일 SPA (해시 라우팅).
+/* SoftReel Studio — 프레임워크 없는 단일 SPA (해시 라우팅).
+   디자인: 노션 "SoftReel 리디자인 v1" 토큰 + "Reimagined v2" Studio 구조.
    서버 계약: /auth/*, /me, /videos(업로드·스트림·리포트), /studio/api/*,
    /admin/metrics. 스트림·썸네일 <video>/<img> 는 Authorization 헤더를 못
    보내므로 비운영 환경 한정의 ?token= 쿼리를 쓴다 (app/videos.py media_user). */
@@ -7,7 +8,7 @@
 const $ = (s, el = document) => el.querySelector(s);
 const state = { token: localStorage.getItem("tk"), me: null, pollTimer: null };
 
-const RISK_KO = { safe: "안전", corrected: "보정됨", uncorrected: "미보정" };
+const RISK_KO = { safe: "SAFE 인증", corrected: "보정됨 · 완화", uncorrected: "미보정 위험" };
 const RULE_KO = { "플래시": "플래시", "적색": "적색", "패턴": "패턴",
                   "화면전환": "화면전환", "5초지속": "5초지속" };
 const AXES = [["flash", "플래시"], ["red", "적색"], ["pattern", "패턴"], ["cut", "화면전환"]];
@@ -31,7 +32,7 @@ const fmtDur = (s) => { if (s == null) return "–"; s = Math.round(s); return `
 const fmtDate = (t) => t ? t.slice(0, 10) : "–";
 
 function riskBadge(v) {
-  if (v.status === "processing") return `<span class="badge b-processing">검출·보정 중</span>`;
+  if (v.status === "processing") return `<span class="badge b-processing">안전 처리 중</span>`;
   if (v.status === "failed") return `<span class="badge b-failed">실패</span>`;
   const r = v.risk || "safe";
   return `<span class="badge b-${r}">${RISK_KO[r] || r}</span>`;
@@ -108,13 +109,14 @@ async function viewDashboard() {
   const { videos } = await api("/studio/api/videos");
   const n = (f) => videos.filter(f).length;
   const views = videos.reduce((a, v) => a + (v.view_count || 0), 0);
+  const nProc = videos.filter(v => v.status === "processing").length;
   const latest = videos[0];
   $("#dash").innerHTML = `
     <div class="tiles">
-      <div class="tile"><div class="k">전체 영상</div><div class="v">${videos.length}</div></div>
-      <div class="tile"><div class="k">검출·보정 중</div><div class="v">${n(v => v.status === "processing")}</div></div>
-      <div class="tile"><div class="k">위험 검출 (보정 완료)</div><div class="v">${n(v => v.risk === "corrected")}</div></div>
-      <div class="tile"><div class="k">원본 적합</div><div class="v">${n(v => v.risk === "safe")}</div></div>
+      <div class="tile hero"><div class="k">SAFE 인증</div><div class="v">${n(v => v.risk === "safe" || v.risk === "corrected")} <small>/ ${videos.length}편</small></div></div>
+      <div class="tile"><div class="k">안전 처리 중</div><div class="v">${n(v => v.status === "processing")}</div></div>
+      <div class="tile"><div class="k">보정됨 · 완화</div><div class="v">${n(v => v.risk === "corrected")}</div></div>
+      <div class="tile"><div class="k">미보정 위험</div><div class="v">${n(v => v.risk === "uncorrected")}</div></div>
       <div class="tile"><div class="k">총 조회수</div><div class="v">${views}</div></div>
     </div>
     ${latest ? `
@@ -130,12 +132,15 @@ async function viewDashboard() {
       </div>
     </div>` : `<div class="card empty">아직 업로드한 영상이 없습니다 — 오른쪽 위 <b>업로드</b>로 시작하세요.</div>`}
     <div class="card">
-      <h2>처리 파이프라인</h2>
-      <div class="mini-note" style="margin:0">
-        업로드 → 정규화 → <b>pse_bt1702</b> 검출(ITU-R BT.1702) → 위반 시
-        <b>strong→base 사다리</b> 보정 → 재판정 → 배포. 보정본 판정은 항상
-        원본 이상임이 보장됩니다 (209편 회귀: 퇴보 0, REGRESS_0820).
+      <h2>안전 처리 파이프라인 ${nProc ? "— 지금 " + nProc + "편 처리 중" : ""}</h2>
+      <div class="pipe ${nProc ? "live" : ""}">
+        <span class="step"><span class="dot">⬆</span><span class="lbl"><b>업로드</b>정규화</span></span><span class="bar"></span>
+        <span class="step"><span class="dot">◉</span><span class="lbl"><b>검출</b>pse_bt1702</span></span><span class="bar"></span>
+        <span class="step"><span class="dot">≋</span><span class="lbl"><b>보정</b>strong→base 사다리</span></span><span class="bar"></span>
+        <span class="step"><span class="dot">✓</span><span class="lbl"><b>재판정</b>무해 보장</span></span><span class="bar"></span>
+        <span class="step"><span class="dot">▶</span><span class="lbl"><b>배포</b>SAFE 인증</span></span>
       </div>
+      <div class="mini-note">보정본 판정은 항상 원본 이상임이 보장됩니다 (실사 209편 회귀 퇴보 0 — REGRESS_0820).</div>
     </div>`;
   if (videos.some(v => v.status === "processing"))
     state.pollTimer = setInterval(viewDashboard, 4000);
@@ -199,16 +204,23 @@ async function viewDetail(id) {
   const rep = await api(`/videos/${id}/report`);
   const hasFiltered = v.has_filtered;
   const variant0 = hasFiltered ? "filtered" : "original";
+  const action = (s) => s.resolved
+    ? (rep.filter_level ? `${rep.filter_level} 필터로 완화` : "원본 적합")
+    : "잔존 — 재검토 필요";
   const segRows = rep.segments.map(s => `
     <tr><td>${RULE_KO[s.rule] || esc(s.rule)}</td>
         <td>${fmtDur(s.start_s)}–${fmtDur(s.end_s)}</td>
+        <td>${esc(action(s))}</td>
         <td>${s.resolved ? '<span class="badge b-safe">해소</span>'
                          : '<span class="badge b-uncorrected">잔존</span>'}</td></tr>`).join("");
   const segMarks = (dur) => rep.segments.map(s =>
     `<div class="seg ${s.resolved ? "ok" : ""}" style="left:${100 * s.start_s / dur}%;width:${Math.max(0.8, 100 * (s.end_s - s.start_s) / dur)}%" title="${esc(s.rule)} ${fmtDur(s.start_s)}–${fmtDur(s.end_s)}"></div>`).join("");
 
+  const certified = v.risk === "safe" ||
+    (v.risk === "corrected" && rep.segments.every(s => s.resolved));
   main.innerHTML = `<a class="back" href="#/content">← 콘텐츠</a>
-    <h1>${esc(v.title)}</h1>
+    <div class="title-row"><h1>${esc(v.title)}</h1>
+      ${certified ? '<span class="cert">✓ SAFE 인증 — 재판정 통과</span>' : ""}</div>
     <div class="detail">
       <div class="card player-card">
         <video id="player" controls playsinline
@@ -217,8 +229,8 @@ async function viewDetail(id) {
           ${hasFiltered ? `<button data-var="filtered" class="on">보정본 (배포판)</button>` : ""}
           <button data-var="original" class="${hasFiltered ? "" : "on"}">원본</button>
         </div>
-        <div class="timeline">${segMarks(rep.duration_s || v.duration_s || 1)}</div>
-        <div class="tl-cap">위반 구간 타임라인 — <span style="color:var(--safe)">■ 해소</span> · <span style="color:var(--danger)">■ 잔존</span></div>
+        <div class="heatmap">${segMarks(rep.duration_s || v.duration_s || 1)}</div>
+        <div class="tl-cap">위험 히트맵 — <span style="color:var(--safe)">■ 완화됨</span> · <span style="color:var(--danger)">■ 잔존</span></div>
       </div>
       <div>
         <div class="card">
@@ -232,7 +244,7 @@ async function viewDetail(id) {
           </div>
           ${rep.segments.length ? `
           <table class="seglist">
-            <thead><tr><th>규칙</th><th>구간</th><th>상태</th></tr></thead>
+            <thead><tr><th>규칙</th><th>구간</th><th>조치</th><th>상태</th></tr></thead>
             <tbody>${segRows}</tbody></table>` : `<p class="mini-note">위반 구간이 없습니다.</p>`}
         </div>
         <div class="card">
@@ -241,9 +253,21 @@ async function viewDetail(id) {
             <span class="k">보정본 시청 비율</span><span>${rep.filter_on_watch_percent != null ? rep.filter_on_watch_percent + "%" : "데이터 없음"}</span>
             <span class="k">평균 시청 유지율</span><span>${rep.avg_watch_percent != null ? rep.avg_watch_percent + "%" : "데이터 없음"}</span>
           </div>
+          <div class="card-actions">
+            <button class="btn" id="btn-export">안전 리포트 내보내기 (JSON)</button>
+          </div>
         </div>
       </div>
     </div>`;
+
+  $("#btn-export").addEventListener("click", () => {
+    // v2 Studio: 안전 리포트 — 검출·조치 내역을 파일로 (B2B 인증 자료의 씨앗)
+    const blob = new Blob([JSON.stringify(rep, null, 2)], { type: "application/json" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `softreel_safety_report_${id}.json`;
+    a.click(); URL.revokeObjectURL(a.href);
+  });
 
   $("#vtabs").addEventListener("click", (ev) => {
     const b = ev.target.closest("button"); if (!b) return;
