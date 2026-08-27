@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>검출기 스튜디오</title>
+<link rel="stylesheet" href="studio.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='0.9em' font-size='90'>🛡️</text></svg>">
+</head>
+<body>
+
+<!-- ── 로그인 ─────────────────────────────────────────── -->
+<div id="login-view" class="login-wrap hidden">
+  <form id="login-form" class="login-card">
+    <div class="brand"><span class="brand-mark">▶</span> 검출기 <b>스튜디오</b></div>
+    <p class="login-sub">영상을 업로드하면 광과민성 위험(BT.1702)을 검출하고<br>자동 보정본을 만들어 드립니다.</p>
+    <label>이메일 <input id="login-email" type="email" required placeholder="you@example.com"></label>
+    <label>비밀번호 <input id="login-pw" type="password" required placeholder="········"></label>
+    <button class="btn btn-primary" type="submit">로그인 / 가입</button>
+    <p id="login-msg" class="login-msg"></p>
+  </form>
+</div>
+
+<!-- ── 앱 골격 ─────────────────────────────────────────── -->
+<div id="app-view" class="hidden">
+  <header class="topbar">
+    <div class="brand"><span class="brand-mark">▶</span> 검출기 <b>스튜디오</b></div>
+    <div class="topbar-right">
+      <button id="btn-upload" class="btn btn-upload">⬆ 업로드</button>
+      <div id="avatar" class="avatar" title=""></div>
+    </div>
+  </header>
+
+  <nav class="rail">
+    <a href="#/dashboard" data-nav="dashboard"><span class="ico">▦</span>대시보드</a>
+    <a href="#/content"   data-nav="content"><span class="ico">▤</span>콘텐츠</a>
+    <a href="#/analytics" data-nav="analytics" id="nav-analytics" hidden><span class="ico">📈</span>운영 지표</a>
+    <div class="rail-foot">
+      <button id="btn-logout" class="link-btn">로그아웃</button>
+    </div>
+  </nav>
+
+  <main id="main"></main>
+</div>
+
+<!-- ── 업로드 모달 ─────────────────────────────────────── -->
+<div id="upload-modal" class="modal-back hidden">
+  <div class="modal">
+    <div class="modal-head">영상 업로드 <button class="x" id="upload-close">✕</button></div>
+    <div id="drop" class="drop">
+      <div class="drop-ico">⬆</div>
+      <p>영상 파일을 끌어다 놓거나 클릭해서 선택</p>
+      <p class="drop-sub" id="upload-limits"></p>
+      <input id="file-input" type="file" accept="video/*" hidden>
+    </div>
+    <div id="upload-form" class="upload-form hidden">
+      <div id="upload-filename" class="filename"></div>
+      <label>제목 <input id="upload-title" type="text" maxlength="80" placeholder="영상 제목"></label>
+      <div class="progress"><div id="upload-bar" class="bar"></div></div>
+      <div id="upload-state" class="upload-state"></div>
+      <div class="modal-actions">
+        <button class="btn" id="upload-cancel">취소</button>
+        <button class="btn btn-primary" id="upload-go">업로드</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="studio.js"></script>
+</body>
+</html>

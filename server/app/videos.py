@@ -182,9 +182,19 @@ def watch_event(vid: int, body: EventIn, user=Depends(current_user),
 # ── 업로더용 검출 리포트 ──────────────────────────────────────────
 
 def _merged_segments(report: dict) -> list[dict]:
-    """rule 별로 겹치거나 0.5초 이내로 이어지는 위반 구간을 병합한다."""
+    """rule 별로 겹치거나 0.5초 이내로 이어지는 위반 구간을 병합한다.
+
+    violation_segments 에는 판정과 무관한 측정 마커(예: 프레임간격)도 실려
+    온다 — 실제로 위반된 규칙(failed_rules)의 구간만 쓴다. 안 거르면
+    (1) 업로더 리포트에 위반 아닌 행이 섞이고, (2) 보정본 리포트에도 항상
+    남는 마커가 잔존 겹침 검사에 걸려 corrected 영상의 모든 구간이
+    '잔존'으로 오판된다 (2026-08-27 스튜디오 실측)."""
+    allowed = (set(report["failed_rules"])
+               if isinstance(report.get("failed_rules"), list) else None)
     by_rule: dict[str, list] = {}
     for seg in report.get("violation_segments", []):
+        if allowed is not None and str(seg.get("rule", "")) not in allowed:
+            continue
         try:
             s, e = float(seg["start_s"]), float(seg["end_s"])
         except (KeyError, TypeError, ValueError):
