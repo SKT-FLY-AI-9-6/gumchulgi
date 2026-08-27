@@ -1,118 +1,150 @@
-/* 검출기 스튜디오 — YouTube Studio 를 참조한 다크 콘솔.
-   구성: 상단바(48px) + 좌측 레일(240px) + 본문. 포인트 색은 위험 등급이 담당:
-   safe=초록 / corrected=호박 / uncorrected=빨강 / processing=회색 펄스. */
+/* SoftReel Studio — 노션 시안 이식 (2026-08-27).
+   스킨: 리디자인 v1 토큰 (bg #0B0B12 · card #171724/#28283A ·
+         violet #8B5CF6 → pink #F04B64 그라데이션 135° · IBM Plex Sans KR ·
+         라운드 카드 20 / 버튼 14).
+   구조: Reimagined v2 의 SoftReel Studio(관리자 모드) — 파이프라인 가시화,
+         위험 히트맵, SAFE 인증 뱃지, 안전 리포트 내보내기.
+   원칙(v2): 무점멸 UI — 애니메이션은 느린 페이드·시머만, 순수 흰색 금지. */
 :root {
-  --bg: #0f0f0f; --panel: #1f1f1f; --panel-2: #282828; --line: #3f3f3f;
-  --tx: #f1f1f1; --tx-2: #aaaaaa; --accent: #3ea6ff; --brand: #ff4e45;
-  --safe: #2ba640; --warn: #f2a93b; --danger: #f04438;
+  --bg: #0B0B12; --card: #171724; --card-2: #1E1E30; --line: #28283A;
+  --tx: #ECECF4; --tx-2: #9AA0AC;
+  --violet: #8B5CF6; --pink: #F04B64;
+  --grad: linear-gradient(135deg, #8B5CF6, #F04B64);
+  --safe: #34D399; --warn: #FFB020; --danger: #F04B64;
 }
 * { box-sizing: border-box; margin: 0; }
 html, body { height: 100%; }
 body {
   background: var(--bg); color: var(--tx);
-  font: 14px/1.5 "Roboto", "Noto Sans KR", system-ui, sans-serif;
+  font: 14px/1.55 "IBM Plex Sans KR", "Noto Sans KR", system-ui, sans-serif;
 }
 .hidden { display: none !important; }
 [hidden] { display: none !important; }
-a { color: var(--accent); text-decoration: none; }
+a { color: var(--violet); text-decoration: none; }
 button { font: inherit; cursor: pointer; }
 
 /* ── 로그인 ─────────────────────────────── */
-.login-wrap { min-height: 100%; display: flex; align-items: center; justify-content: center; }
+.login-wrap { min-height: 100%; display: flex; align-items: center; justify-content: center;
+  background: radial-gradient(60% 50% at 50% 0%, rgba(139,92,246,.14), transparent 70%), var(--bg); }
 .login-card {
-  width: 360px; background: var(--panel); border: 1px solid var(--line);
-  border-radius: 12px; padding: 32px 28px; display: flex; flex-direction: column; gap: 14px;
+  width: 380px; background: var(--card); border: 1px solid var(--line);
+  border-radius: 20px; padding: 34px 30px; display: flex; flex-direction: column; gap: 15px;
 }
 .login-sub { color: var(--tx-2); font-size: 13px; }
 .login-card label { display: flex; flex-direction: column; gap: 6px; font-size: 13px; color: var(--tx-2); }
 .login-card input {
-  background: var(--bg); border: 1px solid var(--line); border-radius: 6px;
-  color: var(--tx); padding: 10px 12px; font-size: 14px;
+  background: var(--bg); border: 1px solid var(--line); border-radius: 14px;
+  color: var(--tx); padding: 11px 14px; font-size: 14px;
 }
-.login-card input:focus { outline: none; border-color: var(--accent); }
+.login-card input:focus { outline: none; border-color: var(--violet); }
 .login-msg { color: var(--danger); font-size: 13px; min-height: 1em; }
 
 /* ── 상단바 / 레일 ───────────────────────── */
 .topbar {
-  position: fixed; inset: 0 0 auto 0; height: 48px; z-index: 20;
-  background: var(--panel); border-bottom: 1px solid var(--line);
-  display: flex; align-items: center; justify-content: space-between; padding: 0 16px;
+  position: fixed; inset: 0 0 auto 0; height: 54px; z-index: 20;
+  background: rgba(23,23,36,.92); backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--line);
+  display: flex; align-items: center; justify-content: space-between; padding: 0 18px;
 }
-.brand { font-size: 17px; letter-spacing: .2px; display: flex; align-items: center; gap: 8px; }
-.brand b { font-weight: 700; }
+.brand { font-size: 17px; letter-spacing: .2px; display: flex; align-items: center; gap: 9px; }
+.brand b { font-weight: 700; background: var(--grad); -webkit-background-clip: text;
+  background-clip: text; color: transparent; }
 .brand-mark {
-  width: 26px; height: 26px; border-radius: 6px; background: var(--brand);
+  width: 27px; height: 27px; border-radius: 9px; background: var(--grad);
   display: inline-flex; align-items: center; justify-content: center;
   font-size: 12px; color: #fff;
 }
 .topbar-right { display: flex; align-items: center; gap: 14px; }
 .btn {
-  background: var(--panel-2); color: var(--tx); border: 1px solid var(--line);
-  border-radius: 18px; padding: 7px 16px;
+  background: var(--card-2); color: var(--tx); border: 1px solid var(--line);
+  border-radius: 14px; padding: 8px 17px;
 }
-.btn:hover { background: #333; }
-.btn-primary { background: var(--accent); border-color: var(--accent); color: #04121f; font-weight: 700; }
-.btn-primary:hover { background: #64b8ff; }
-.btn-upload { border-color: var(--brand); color: #fff; background: var(--brand); font-weight: 700; }
-.btn-upload:hover { background: #ff6a62; }
+.btn:hover { border-color: var(--violet); }
+.btn-primary { background: var(--violet); border-color: var(--violet); color: #fff; font-weight: 700; }
+.btn-primary:hover { filter: brightness(1.12); }
+.btn-upload { background: var(--grad); border: none; color: #fff; font-weight: 700; padding: 9px 18px; }
+.btn-upload:hover { filter: brightness(1.1); }
 .avatar {
-  width: 32px; height: 32px; border-radius: 50%; background: #7a4dd8; color: #fff;
-  display: flex; align-items: center; justify-content: center; font-weight: 700;
+  width: 33px; height: 33px; border-radius: 50%; color: #fff; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--card-2); border: 2px solid transparent;
+  background: linear-gradient(var(--card-2), var(--card-2)) padding-box, var(--grad) border-box;
 }
 .rail {
-  position: fixed; top: 48px; bottom: 0; left: 0; width: 220px;
-  background: var(--panel); border-right: 1px solid var(--line);
-  padding: 10px 0; display: flex; flex-direction: column;
+  position: fixed; top: 54px; bottom: 0; left: 0; width: 224px;
+  background: var(--card); border-right: 1px solid var(--line);
+  padding: 12px 10px; display: flex; flex-direction: column; gap: 2px;
 }
 .rail a {
-  display: flex; align-items: center; gap: 14px; color: var(--tx);
-  padding: 11px 22px; font-size: 14px;
+  display: flex; align-items: center; gap: 13px; color: var(--tx);
+  padding: 11px 16px; font-size: 14px; border-radius: 14px;
 }
 .rail a .ico { width: 20px; text-align: center; color: var(--tx-2); }
-.rail a:hover { background: var(--panel-2); }
-.rail a.on { background: var(--panel-2); box-shadow: inset 3px 0 0 var(--brand); font-weight: 700; }
-.rail a.on .ico { color: var(--brand); }
-.rail-foot { margin-top: auto; padding: 14px 22px; border-top: 1px solid var(--line); }
+.rail a:hover { background: var(--card-2); }
+.rail a.on { background: linear-gradient(135deg, rgba(139,92,246,.18), rgba(240,75,100,.12));
+  font-weight: 700; }
+.rail a.on .ico { color: var(--violet); }
+.rail-foot { margin-top: auto; padding: 14px 16px; border-top: 1px solid var(--line); }
 .link-btn { background: none; border: none; color: var(--tx-2); padding: 0; }
 .link-btn:hover { color: var(--tx); }
 
-main { padding: 72px 32px 48px 252px; max-width: 1280px; }
-h1 { font-size: 22px; margin-bottom: 18px; }
-h2 { font-size: 15px; color: var(--tx-2); font-weight: 500; margin-bottom: 10px; }
+main { padding: 80px 34px 48px 258px; max-width: 1280px; }
+h1 { font-size: 22px; margin-bottom: 18px; font-weight: 700; }
+h2 { font-size: 14px; color: var(--tx-2); font-weight: 500; margin-bottom: 12px; }
 
 /* ── 카드/타일 ───────────────────────────── */
-.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 14px; margin-bottom: 26px; }
-.tile { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 16px 18px; }
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 14px; margin-bottom: 24px; }
+.tile { background: var(--card); border: 1px solid var(--line); border-radius: 20px; padding: 17px 19px; }
 .tile .k { color: var(--tx-2); font-size: 12.5px; }
-.tile .v { font-size: 26px; font-weight: 700; margin-top: 4px; }
+.tile .v { font-size: 27px; font-weight: 700; margin-top: 4px; }
 .tile .v small { font-size: 13px; color: var(--tx-2); font-weight: 400; }
-.card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 18px 20px; margin-bottom: 20px; }
+.tile.hero { background: linear-gradient(135deg, rgba(139,92,246,.16), rgba(240,75,100,.10)), var(--card); }
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 20px; padding: 20px 22px; margin-bottom: 20px; }
+
+/* ── 파이프라인 스테퍼 (v2 Studio: 처리 과정 가시화) ── */
+.pipe { display: flex; align-items: center; gap: 0; flex-wrap: wrap; margin-top: 6px; }
+.pipe .step { display: flex; align-items: center; gap: 9px; }
+.pipe .dot {
+  width: 30px; height: 30px; border-radius: 50%; flex: none;
+  display: flex; align-items: center; justify-content: center; font-size: 13px;
+  background: var(--card-2); border: 1px solid var(--line); color: var(--tx-2);
+}
+.pipe .lbl { font-size: 12.5px; color: var(--tx-2); }
+.pipe .lbl b { display: block; color: var(--tx); font-size: 13px; font-weight: 600; }
+.pipe .bar { height: 2px; width: 34px; margin: 0 12px; background: var(--line); border-radius: 1px; flex: none; }
+.pipe.live .dot { border-color: rgba(139,92,246,.6); color: var(--violet); }
+.pipe.live .bar {
+  background: linear-gradient(90deg, var(--line), var(--violet), var(--line));
+  background-size: 200% 100%; animation: flow 2.6s linear infinite;
+}
+@keyframes flow { to { background-position: -200% 0; } }
 
 /* ── 뱃지 ────────────────────────────────── */
-.badge { display: inline-flex; align-items: center; gap: 6px; border-radius: 12px; padding: 2px 10px; font-size: 12px; font-weight: 600; }
+.badge { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; border-radius: 12px; padding: 2.5px 11px; font-size: 12px; font-weight: 600; }
 .badge::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
-.b-safe { color: var(--safe); background: rgba(43,166,64,.13); }
-.b-corrected { color: var(--warn); background: rgba(242,169,59,.13); }
-.b-uncorrected { color: var(--danger); background: rgba(240,68,56,.13); }
-.b-processing { color: var(--tx-2); background: rgba(170,170,170,.12); }
-.b-processing::before { animation: pulse 1.2s infinite; }
-.b-failed { color: var(--danger); background: none; border: 1px solid var(--danger); }
-@keyframes pulse { 50% { opacity: .25; } }
-.chip { display: inline-block; background: var(--panel-2); border: 1px solid var(--line); border-radius: 10px; padding: 1px 8px; font-size: 11.5px; color: var(--tx-2); margin-right: 4px; }
-.chip.hot { color: var(--warn); border-color: rgba(242,169,59,.5); }
+.b-safe { color: var(--safe); background: rgba(52,211,153,.13); }
+.b-safe::before { content: "✓"; width: auto; height: auto; background: none; font-size: 11px; }
+.b-corrected { color: #A78BFA; background: rgba(139,92,246,.15); }
+.b-uncorrected { color: var(--pink); background: rgba(240,75,100,.14); }
+.b-processing { color: var(--tx-2); background: rgba(154,160,172,.12); }
+.b-processing::before { animation: soft 2.4s ease-in-out infinite; }
+.b-failed { color: var(--pink); background: none; border: 1px solid var(--pink); }
+@keyframes soft { 50% { opacity: .35; } }  /* 무점멸 원칙 — 느린 페이드만 */
+.chip { display: inline-block; background: var(--card-2); border: 1px solid var(--line); border-radius: 10px; padding: 1.5px 9px; font-size: 11.5px; color: var(--tx-2); margin-right: 4px; }
+.chip.hot { color: var(--warn); border-color: rgba(255,176,32,.45); }
 
 /* ── 콘텐츠 표 ───────────────────────────── */
 table.vids { width: 100%; border-collapse: collapse; }
 .vids th {
   text-align: left; font-size: 12px; color: var(--tx-2); font-weight: 500;
-  border-bottom: 1px solid var(--line); padding: 8px 10px; white-space: nowrap;
+  border-bottom: 1px solid var(--line); padding: 9px 12px; white-space: nowrap;
 }
-.vids td { padding: 10px; border-bottom: 1px solid #2a2a2a; vertical-align: middle; }
-.vids tr:hover td { background: #191919; }
+.vids td { padding: 11px 12px; border-bottom: 1px solid #1F1F30; vertical-align: middle; }
+.vids tr:hover td { background: #1B1B2B; }
 .vids tr { cursor: pointer; }
-.vcell { display: flex; gap: 12px; align-items: center; min-width: 260px; }
+.vcell { display: flex; gap: 13px; align-items: center; min-width: 260px; }
 .vthumb {
-  width: 106px; height: 60px; border-radius: 6px; background: #000 center/cover no-repeat;
+  width: 106px; height: 60px; border-radius: 12px; background: #000 center/cover no-repeat;
   flex: none; display: flex; align-items: center; justify-content: center;
   color: var(--tx-2); font-size: 11px; border: 1px solid var(--line);
 }
@@ -124,44 +156,61 @@ tr:hover .rowdel { visibility: visible; }
 .rowdel:hover { color: var(--danger); }
 .empty { color: var(--tx-2); text-align: center; padding: 48px 0; }
 
-/* ── 상세 ────────────────────────────────── */
+/* ── 상세 / 위험 히트맵 ───────────────────── */
 .back { display: inline-block; margin-bottom: 14px; color: var(--tx-2); }
+.title-row { display: flex; align-items: center; gap: 12px; margin-bottom: 18px; flex-wrap: wrap; }
+.title-row h1 { margin: 0; }
+.cert {
+  display: inline-flex; align-items: center; gap: 7px; font-size: 12.5px; font-weight: 700;
+  color: var(--safe); border: 1px solid rgba(52,211,153,.5); border-radius: 12px;
+  padding: 3px 12px; background: rgba(52,211,153,.08);
+}
 .detail { display: grid; grid-template-columns: minmax(0, 3fr) minmax(280px, 2fr); gap: 22px; align-items: start; }
-.player-card video { width: 100%; max-height: 480px; background: #000; border-radius: 8px; }
-.variant-tabs { display: flex; gap: 8px; margin: 12px 0 4px; }
-.variant-tabs button { background: var(--panel-2); border: 1px solid var(--line); color: var(--tx-2); border-radius: 16px; padding: 5px 14px; }
-.variant-tabs button.on { background: var(--tx); color: #000; font-weight: 700; border-color: var(--tx); }
-.timeline { position: relative; height: 14px; background: var(--panel-2); border-radius: 7px; margin: 10px 0 4px; overflow: hidden; }
-.timeline .seg { position: absolute; top: 0; bottom: 0; background: var(--danger); opacity: .85; }
-.timeline .seg.ok { background: var(--safe); }
+.player-card video { width: 100%; max-height: 480px; background: #000; border-radius: 14px; }
+.variant-tabs { display: flex; gap: 8px; margin: 14px 0 6px; }
+.variant-tabs button { background: var(--card-2); border: 1px solid var(--line); color: var(--tx-2); border-radius: 14px; padding: 6px 15px; }
+.variant-tabs button.on { background: var(--grad); color: #fff; font-weight: 700; border-color: transparent; }
+/* 위험 히트맵 (v2 Studio) — 구간을 글로우 스트립으로 */
+.heatmap { position: relative; height: 22px; background: var(--card-2); border-radius: 11px; margin: 12px 0 4px; overflow: hidden; }
+.heatmap .seg {
+  position: absolute; top: 0; bottom: 0; border-radius: 6px;
+  background: linear-gradient(180deg, rgba(240,75,100,.95), rgba(240,75,100,.45));
+  box-shadow: 0 0 12px rgba(240,75,100,.55);
+}
+.heatmap .seg.ok {
+  background: linear-gradient(180deg, rgba(52,211,153,.9), rgba(52,211,153,.4));
+  box-shadow: 0 0 12px rgba(52,211,153,.45);
+}
 .tl-cap { font-size: 12px; color: var(--tx-2); margin-bottom: 8px; }
-.kv { display: grid; grid-template-columns: auto 1fr; gap: 6px 16px; font-size: 13.5px; }
+.kv { display: grid; grid-template-columns: auto 1fr; gap: 7px 16px; font-size: 13.5px; }
 .kv .k { color: var(--tx-2); white-space: nowrap; }
-.seglist { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 6px; }
-.seglist th { text-align: left; color: var(--tx-2); font-weight: 500; font-size: 12px; padding: 4px 8px; border-bottom: 1px solid var(--line); }
-.seglist td { padding: 5px 8px; border-bottom: 1px solid #2a2a2a; }
+.seglist { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 8px; }
+.seglist th { text-align: left; color: var(--tx-2); font-weight: 500; font-size: 12px; padding: 5px 8px; border-bottom: 1px solid var(--line); }
+.seglist td { padding: 6px 8px; border-bottom: 1px solid #1F1F30; }
+.seglist td:first-child, .seglist td:nth-child(2), .seglist td:last-child { white-space: nowrap; }
 .mini-note { color: var(--tx-2); font-size: 12px; margin-top: 10px; }
+.card-actions { display: flex; gap: 10px; margin-top: 14px; }
 
 /* ── 업로드 모달 ─────────────────────────── */
-.modal-back { position: fixed; inset: 0; background: rgba(0,0,0,.6); z-index: 40; display: flex; align-items: center; justify-content: center; }
-.modal { width: min(560px, 92vw); background: var(--panel); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
-.modal-head { display: flex; justify-content: space-between; align-items: center; padding: 14px 20px; border-bottom: 1px solid var(--line); font-weight: 700; }
+.modal-back { position: fixed; inset: 0; background: rgba(6,6,12,.66); z-index: 40; display: flex; align-items: center; justify-content: center; }
+.modal { width: min(560px, 92vw); background: var(--card); border: 1px solid var(--line); border-radius: 20px; overflow: hidden; }
+.modal-head { display: flex; justify-content: space-between; align-items: center; padding: 15px 22px; border-bottom: 1px solid var(--line); font-weight: 700; }
 .modal .x { background: none; border: none; color: var(--tx-2); font-size: 16px; }
-.drop { margin: 22px; border: 2px dashed var(--line); border-radius: 10px; padding: 44px 20px; text-align: center; color: var(--tx-2); cursor: pointer; }
-.drop.over { border-color: var(--accent); color: var(--tx); background: rgba(62,166,255,.06); }
-.drop-ico { font-size: 34px; margin-bottom: 8px; }
+.drop { margin: 22px; border: 2px dashed var(--line); border-radius: 16px; padding: 46px 20px; text-align: center; color: var(--tx-2); cursor: pointer; }
+.drop.over { border-color: var(--violet); color: var(--tx); background: rgba(139,92,246,.07); }
+.drop-ico { font-size: 34px; margin-bottom: 8px; background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent; }
 .drop-sub { font-size: 12px; margin-top: 6px; }
 .upload-form { padding: 0 22px 22px; display: flex; flex-direction: column; gap: 12px; }
 .upload-form label { display: flex; flex-direction: column; gap: 6px; font-size: 13px; color: var(--tx-2); }
-.upload-form input[type=text] { background: var(--bg); border: 1px solid var(--line); border-radius: 6px; color: var(--tx); padding: 9px 12px; }
+.upload-form input[type=text] { background: var(--bg); border: 1px solid var(--line); border-radius: 14px; color: var(--tx); padding: 10px 13px; }
 .filename { font-size: 13px; color: var(--tx-2); }
-.progress { height: 6px; background: var(--panel-2); border-radius: 3px; overflow: hidden; }
-.progress .bar { height: 100%; width: 0; background: var(--accent); transition: width .15s; }
+.progress { height: 6px; background: var(--card-2); border-radius: 3px; overflow: hidden; }
+.progress .bar { height: 100%; width: 0; background: var(--grad); transition: width .15s; }
 .upload-state { font-size: 13px; color: var(--tx-2); min-height: 1.2em; }
 .modal-actions { display: flex; justify-content: flex-end; gap: 10px; }
 
 @media (max-width: 900px) {
   .rail { display: none; }
-  main { padding-left: 24px; }
+  main { padding-left: 26px; }
   .detail { grid-template-columns: 1fr; }
 }
