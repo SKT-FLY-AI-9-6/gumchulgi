@@ -23,6 +23,10 @@ CHUNK = 1 << 20  # 1MB
 def upload(file: UploadFile, title: str = Form(...),
            user=Depends(current_user),
            conn: sqlite3.Connection = Depends(get_db)):
+    limit = settings.MAX_UPLOAD_MB * (1 << 20)
+    # Starlette가 알려주는 크기가 있으면 DB 행과 파일을 만들기 전에 거절한다.
+    if file.size is not None and file.size > limit:
+        raise HTTPException(413, f"{settings.MAX_UPLOAD_MB}MB 초과")
     cur = conn.execute(
         "INSERT INTO videos(uploader_id, title) VALUES(?,?)",
         (user["id"], title.strip() or "무제"))
@@ -30,7 +34,6 @@ def upload(file: UploadFile, title: str = Form(...),
     suffix = Path(file.filename or "v.mp4").suffix or ".mp4"
     dst = storage.upload_path(vid, suffix)
 
-    limit = settings.MAX_UPLOAD_MB * (1 << 20)
     written = 0
     with open(dst, "wb") as out:
         while chunk := file.file.read(CHUNK):
@@ -145,8 +148,13 @@ def stream(vid: int, request: Request,
                 left -= len(chunk)
                 yield chunk
 
-    headers = {"Accept-Ranges": "bytes",
-               "Content-Length": str(end - start + 1)}
+    headers = {
+        "Accept-Ranges": "bytes",
+        "Content-Length": str(end - start + 1),
+        # 사용자별 토큰 URL은 공유 캐시에 두지 않고 브라우저에서만 짧게
+        # 재사용한다. 앞/뒤 스와이프 때 같은 구간을 다시 받는 비용을 줄인다.
+        "Cache-Control": "private, max-age=300",
+    }
     if status == 206:
         headers["Content-Range"] = f"bytes {start}-{end}/{size}"
     return StreamingResponse(_iter(), status_code=status, headers=headers,

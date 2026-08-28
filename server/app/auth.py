@@ -105,26 +105,28 @@ def signup(body: SignupIn, conn: sqlite3.Connection = Depends(get_db)):
         if len(body.password.encode('utf-8')) > 72:
             raise HTTPException(422, "비밀번호는 72바이트 이하")
     try:
-        row = _create_user(conn, body.email.lower(), body.password,
+        email = body.email.strip().lower()
+        row = _create_user(conn, email, body.password,
                            body.nickname)
     except sqlite3.IntegrityError:
         if not settings.AUTH_OPEN:
             raise HTTPException(409, "이미 가입된 이메일입니다")
         # 개방 인증: 이미 있으면 그 계정으로 그냥 들여보낸다
         row = conn.execute("SELECT * FROM users WHERE email=?",
-                           (body.email.lower(),)).fetchone()
+                           (email,)).fetchone()
     return {"token": make_token(row["id"]), "user": _user_out(row)}
 
 
 @router.post("/auth/login")
 def login(body: LoginIn, conn: sqlite3.Connection = Depends(get_db)):
+    email = body.email.strip().lower()
     row = conn.execute("SELECT * FROM users WHERE email=?",
-                       (body.email.lower(),)).fetchone()
+                       (email,)).fetchone()
     if settings.AUTH_OPEN:
         # 개방 인증: 비밀번호 검증 생략, 없는 계정은 자동 생성 (시연 전용)
         if row is None:
-            nickname = body.email.split("@")[0] or "게스트"
-            row = _create_user(conn, body.email.lower(), body.password,
+            nickname = email.split("@")[0] or "게스트"
+            row = _create_user(conn, email, body.password,
                                nickname)
         return {"token": make_token(row["id"]), "user": _user_out(row)}
     if row is None:

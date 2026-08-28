@@ -11,6 +11,8 @@ x-app: &app
   environment:
     APP_ENV: production
     DATA_DIR: /data
+    # 제품 정책값. 기존 VM의 .env에 남아 있는 200MB 값을 덮어쓴다.
+    MAX_UPLOAD_MB: "500"
     TZ: Asia/Seoul
   volumes:
     - softreel-data:/data
