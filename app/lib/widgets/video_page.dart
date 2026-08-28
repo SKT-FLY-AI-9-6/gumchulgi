@@ -492,7 +492,7 @@ class _VideoPageState extends ConsumerState<VideoPage> {
             ),
           ),
         ),
-        // 재생 진행바 (+ 보정 영상이면 완화 라벨)
+        // 재생 진행바
         Positioned(
           left: 0,
           right: 0,
@@ -566,25 +566,10 @@ class _ProgressBarState extends State<_ProgressBar> {
   @override
   Widget build(BuildContext context) {
     final c = widget.controller;
-    final mitigated =
-        widget.video.risk == 'corrected' && widget.video.variant == 'filtered';
-    final nStim = widget.video.stimulus.values.fold(0, (a, b) => a + b);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        if (mitigated && nStim > 0)
-          Padding(
-            padding: const EdgeInsets.only(left: 20, bottom: 6),
-            child: Text(
-              '위험 자극 $nStim건 완화됨',
-              style: const TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w600,
-                color: V1.lavender,
-              ),
-            ),
-          ),
         c == null
             ? const SizedBox(height: 18)
             : ValueListenableBuilder(
