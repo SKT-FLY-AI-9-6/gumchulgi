@@ -20,6 +20,7 @@ def test_stream_supports_range(client, auth_headers, small_mp4):
     r = client.get(f"/videos/{vid}/stream?variant=original", headers=h)
     assert r.status_code == 200
     assert r.headers["accept-ranges"] == "bytes"
+    assert r.headers["cache-control"] == "private, max-age=300"
 
     r = client.get(f"/videos/{vid}/stream?variant=original",
                    headers={**h, "Range": "bytes=0-99"})

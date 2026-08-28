@@ -324,7 +324,7 @@ $("#btn-upload").addEventListener("click", () => {
   $("#upload-bar").style.width = "0";
   $("#upload-state").textContent = "";
   $("#upload-title").value = "";
-  $("#upload-limits").textContent = "최대 200MB · 180초 (서버 설정에 따름)";
+  $("#upload-limits").textContent = "최대 500MB · 180초 (서버 설정에 따름)";
   modal.classList.remove("hidden");
 });
 $("#upload-close").addEventListener("click", () => modal.classList.add("hidden"));

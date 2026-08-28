@@ -11,8 +11,8 @@ class AuthController extends AsyncNotifier<User?> {
   @override
   Future<User?> build() async {
     final api = ref.read(apiProvider);
-    api.onUnauthorized = () {
-      api.clearToken();
+    api.onUnauthorized = () async {
+      await api.clearToken();
       state = const AsyncData(null);
     };
     final t = await api.loadToken();
@@ -33,17 +33,23 @@ class AuthController extends AsyncNotifier<User?> {
     ref.invalidate(exposureProvider);
   }
 
+  void clearFailure() {
+    if (state.hasError) state = const AsyncData(null);
+  }
+
   Future<void> login(String email, String pw) async {
     state = const AsyncLoading();
     state = await AsyncValue.guard(
-        () => ref.read(apiProvider).login(email, pw));
+      () => ref.read(apiProvider).login(email, pw),
+    );
     if (!state.hasError) _invalidateUserState();
   }
 
   Future<void> signup(String email, String pw, String nickname) async {
     state = const AsyncLoading();
     state = await AsyncValue.guard(
-        () => ref.read(apiProvider).signup(email, pw, nickname));
+      () => ref.read(apiProvider).signup(email, pw, nickname),
+    );
     if (!state.hasError) _invalidateUserState();
   }
 
@@ -55,4 +61,5 @@ class AuthController extends AsyncNotifier<User?> {
 }
 
 final authProvider = AsyncNotifierProvider<AuthController, User?>(
-    AuthController.new);
+  AuthController.new,
+);
