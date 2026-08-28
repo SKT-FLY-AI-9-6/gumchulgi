@@ -1,0 +1,110 @@
+name: Deploy Azure VM
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: softreel-azure-production
+  cancel-in-progress: false
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: server/requirements-dev.txt
+
+      - name: Install FFmpeg and Python dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+          python -m pip install -r server/requirements-dev.txt
+
+      - name: Run server tests
+        run: python -m pytest server/tests -q
+
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Configure SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.AZURE_VM_SSH_KEY }}
+          SSH_KNOWN_HOSTS: ${{ secrets.AZURE_VM_KNOWN_HOSTS }}
+        run: |
+          test -n "$SSH_PRIVATE_KEY"
+          test -n "$SSH_KNOWN_HOSTS"
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/softreel_deploy
+          chmod 600 ~/.ssh/softreel_deploy
+          printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+
+      - name: Deploy and verify
+        env:
+          SSH_HOST: ${{ secrets.AZURE_VM_HOST }}
+          SSH_USER: ${{ secrets.AZURE_VM_USER }}
+          DEPLOY_SHA: ${{ github.sha }}
+        run: |
+          test -n "$SSH_HOST"
+          test -n "$SSH_USER"
+          ssh -i ~/.ssh/softreel_deploy \
+            -o BatchMode=yes \
+            -o ConnectTimeout=15 \
+            "$SSH_USER@$SSH_HOST" \
+            "DEPLOY_SHA=$DEPLOY_SHA bash -se" <<'REMOTE'
+          set -Eeuo pipefail
+          cd "$HOME/gumchulgi"
+
+          test -f deploy/azure/.env
+          test -z "$(git status --porcelain --untracked-files=no)" || {
+            echo "Deployment checkout has uncommitted tracked changes."
+            git status --short
+            exit 1
+          }
+
+          git fetch --prune origin main
+          git switch main
+          git pull --ff-only origin main
+          test "$(git rev-parse HEAD)" = "$DEPLOY_SHA"
+
+          sudo -n docker compose \
+            -f deploy/azure/docker-compose.yml \
+            --env-file deploy/azure/.env \
+            up -d --build --remove-orphans
+
+          for attempt in $(seq 1 30); do
+            if sudo -n docker compose \
+              -f deploy/azure/docker-compose.yml \
+              --env-file deploy/azure/.env \
+              exec -T api python -c \
+              "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3)"; then
+              sudo -n docker compose \
+                -f deploy/azure/docker-compose.yml \
+                --env-file deploy/azure/.env ps
+              exit 0
+            fi
+            sleep 2
+          done
+
+          sudo -n docker compose \
+            -f deploy/azure/docker-compose.yml \
+            --env-file deploy/azure/.env logs --tail=150 api worker caddy
+          exit 1
+          REMOTE
