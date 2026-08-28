@@ -2,11 +2,12 @@
    디자인: 노션 "SoftReel 리디자인 v1" 토큰 + "Reimagined v2" Studio 구조.
    서버 계약: /auth/*, /me, /videos(업로드·스트림·리포트), /studio/api/*,
    /admin/metrics. 스트림·썸네일 <video>/<img> 는 Authorization 헤더를 못
-   보내므로 비운영 환경 한정의 ?token= 쿼리를 쓴다 (app/videos.py media_user). */
+   보내므로 API 권한이 없는 단기 media token을 쿼리로 쓴다. */
 "use strict";
 
 const $ = (s, el = document) => el.querySelector(s);
-const state = { token: localStorage.getItem("tk"), me: null, pollTimer: null };
+const state = { token: localStorage.getItem("tk"), mediaToken: null,
+                me: null, pollTimer: null };
 
 const RISK_KO = { safe: "SAFE 인증", corrected: "보정됨 · 완화", uncorrected: "미보정 위험" };
 const RULE_KO = { "플래시": "플래시", "적색": "적색", "패턴": "패턴",
@@ -26,7 +27,12 @@ async function api(path, opt = {}) {
   return r.json();
 }
 
-const mediaUrl = (u) => u + (u.includes("?") ? "&" : "?") + "token=" + encodeURIComponent(state.token);
+async function refreshMediaToken() {
+  const d = await api("/auth/media-token", { method: "POST" });
+  state.mediaToken = d.token;
+}
+
+const mediaUrl = (u) => u + (u.includes("?") ? "&" : "?") + "token=" + encodeURIComponent(state.mediaToken);
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const fmtDur = (s) => { if (s == null) return "–"; s = Math.round(s); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`; };
 const fmtDate = (t) => t ? t.slice(0, 10) : "–";
@@ -48,7 +54,11 @@ function axisChips(st) {
 /* ── 인증 ─────────────────────────────────────────────── */
 async function boot() {
   if (state.token) {
-    try { state.me = await api("/me"); return showApp(); }
+    try {
+      state.me = await api("/me");
+      await refreshMediaToken();
+      return showApp();
+    }
     catch (e) { /* 토큰 만료 → 로그인으로 */ }
   }
   $("#login-view").classList.remove("hidden");
@@ -56,7 +66,7 @@ async function boot() {
 
 function logout() {
   localStorage.removeItem("tk");
-  state.token = state.me = null;
+  state.token = state.mediaToken = state.me = null;
   location.hash = ""; location.reload();
 }
 
@@ -72,6 +82,7 @@ $("#login-form").addEventListener("submit", async (ev) => {
     const d = await r.json();
     state.token = d.token; state.me = d.user;
     localStorage.setItem("tk", d.token);
+    await refreshMediaToken();
     $("#login-view").classList.add("hidden");
     showApp();
   } catch (e) { $("#login-msg").textContent = e.message; }

@@ -6,13 +6,18 @@ import 'package:image_picker/image_picker.dart';
 
 import 'models.dart';
 
-const apiBase = String.fromEnvironment('API_BASE',
+const _configuredApiBase = String.fromEnvironment('API_BASE',
     defaultValue: 'http://10.0.2.2:8000');
+final apiBase = kIsWeb && _configuredApiBase.isEmpty
+    ? Uri.base.origin
+    : _configuredApiBase;
 
 class ApiClient {
   final Dio _dio;
   final _storage = const FlutterSecureStorage();
   String? _token;
+  String? _mediaToken;
+  DateTime? _mediaTokenRefreshAt;
   void Function()? onUnauthorized;
 
   ApiClient() : _dio = Dio(BaseOptions(baseUrl: apiBase)) {
@@ -29,24 +34,43 @@ class ApiClient {
   Map<String, String> get authHeaders => {'Authorization': 'Bearer $_token'};
   String absoluteUrl(String path) {
     var url = '$apiBase$path';
-    // 웹의 <video>/<img>는 인증 헤더를 못 보내므로 토큰을 쿼리로 전달
-    // (서버는 운영 환경이 아닐 때만 허용).
-    if (kIsWeb && _token != null) {
-      url += url.contains('?') ? '&token=$_token' : '?token=$_token';
+    // 웹의 <video>/<img>는 인증 헤더를 못 보내므로 API 권한이 없는
+    // 단기 media token만 쿼리로 전달한다.
+    if (kIsWeb && _mediaToken != null) {
+      url += url.contains('?')
+          ? '&token=${Uri.encodeQueryComponent(_mediaToken!)}'
+          : '?token=${Uri.encodeQueryComponent(_mediaToken!)}';
     }
     return url;
   }
 
-  Future<String?> loadToken() async =>
-      _token = await _storage.read(key: 'jwt');
+  Future<void> _refreshMediaToken({bool force = false}) async {
+    if (!kIsWeb || _token == null) return;
+    final now = DateTime.now();
+    if (!force && _mediaToken != null && _mediaTokenRefreshAt != null &&
+        now.isBefore(_mediaTokenRefreshAt!)) return;
+    final r = await _dio.post('/auth/media-token');
+    _mediaToken = r.data['token'] as String;
+    final ttl = (r.data['expires_in'] as num?)?.toInt() ?? 3600;
+    _mediaTokenRefreshAt = now.add(Duration(seconds: (ttl * 0.8).round()));
+  }
+
+  Future<String?> loadToken() async {
+    _token = await _storage.read(key: 'jwt');
+    if (_token != null) await _refreshMediaToken(force: true);
+    return _token;
+  }
 
   Future<void> _saveToken(String t) async {
     _token = t;
     await _storage.write(key: 'jwt', value: t);
+    await _refreshMediaToken(force: true);
   }
 
   Future<void> clearToken() async {
     _token = null;
+    _mediaToken = null;
+    _mediaTokenRefreshAt = null;
     await _storage.delete(key: 'jwt');
   }
 
@@ -73,6 +97,7 @@ class ApiClient {
       (await _dio.put('/me/settings', data: s.toJson())).data);
 
   Future<(List<FeedVideo>, int?)> feed({int? cursor, int limit = 10}) async {
+    await _refreshMediaToken();
     final r = await _dio.get('/feed', queryParameters: {
       'cursor': ?cursor, 'limit': limit});
     final vids = (r.data['videos'] as List)

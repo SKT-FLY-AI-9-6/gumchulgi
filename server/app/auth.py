@@ -24,20 +24,45 @@ def check_pw(p: str, h: str) -> bool:
 
 def make_token(user_id: int) -> str:
     exp = dt.datetime.now(dt.timezone.utc) + dt.timedelta(days=settings.TOKEN_DAYS)
-    return jwt.encode({"sub": str(user_id), "exp": exp},
+    return jwt.encode({"sub": str(user_id), "typ": "access", "exp": exp},
                       settings.JWT_SECRET, algorithm="HS256")
 
 
-def user_from_token(conn: sqlite3.Connection, token: str) -> sqlite3.Row:
+def make_media_token(user_id: int) -> str:
+    """브라우저 <video>/<img> 전용 단기 토큰.
+
+    브라우저 미디어 태그는 Authorization 헤더를 안정적으로 붙일 수 없으므로
+    전체 API 권한이 없는 별도 토큰만 URL 쿼리에 사용한다.
+    """
+    exp = (dt.datetime.now(dt.timezone.utc)
+           + dt.timedelta(minutes=settings.MEDIA_TOKEN_MINUTES))
+    return jwt.encode({"sub": str(user_id), "typ": "media", "exp": exp},
+                      settings.JWT_SECRET, algorithm="HS256")
+
+
+def _user_from_token(conn: sqlite3.Connection, token: str,
+                     expected_type: str) -> sqlite3.Row:
     try:
         payload = jwt.decode(token, settings.JWT_SECRET, algorithms=["HS256"])
     except jwt.PyJWTError:
         raise HTTPException(401, "토큰이 유효하지 않습니다")
+    # 기존 개발 토큰에는 typ가 없을 수 있어 access로만 하위 호환한다.
+    token_type = payload.get("typ", "access")
+    if token_type != expected_type:
+        raise HTTPException(401, "토큰 용도가 올바르지 않습니다")
     row = conn.execute("SELECT * FROM users WHERE id=?",
                        (int(payload["sub"]),)).fetchone()
     if row is None:
         raise HTTPException(401, "사용자가 없습니다")
     return row
+
+
+def user_from_token(conn: sqlite3.Connection, token: str) -> sqlite3.Row:
+    return _user_from_token(conn, token, "access")
+
+
+def user_from_media_token(conn: sqlite3.Connection, token: str) -> sqlite3.Row:
+    return _user_from_token(conn, token, "media")
 
 
 def current_user(cred: HTTPAuthorizationCredentials = Depends(bearer),
@@ -117,3 +142,9 @@ def login(body: LoginIn, conn: sqlite3.Connection = Depends(get_db)):
 @router.get("/me")
 def me(user: sqlite3.Row = Depends(current_user)):
     return _user_out(user)
+
+
+@router.post("/auth/media-token")
+def media_token(user: sqlite3.Row = Depends(current_user)):
+    return {"token": make_media_token(user["id"]),
+            "expires_in": settings.MEDIA_TOKEN_MINUTES * 60}

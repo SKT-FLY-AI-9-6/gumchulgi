@@ -9,7 +9,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel
 
 from app import storage
-from app.auth import current_user, user_from_token
+from app.auth import current_user, user_from_media_token, user_from_token
 from app.config import settings
 from app.db import get_db
 from app.dashboard import exposure_today
@@ -94,11 +94,11 @@ def media_user(cred: HTTPAuthorizationCredentials | None = Depends(_bearer_opt),
                token: str | None = None,
                conn: sqlite3.Connection = Depends(get_db)):
     """스트림·썸네일용 인증. 웹 <video>/<img>는 헤더를 못 보내므로
-    운영 환경이 아닐 때만 ?token= 쿼리를 허용한다."""
+    API 권한이 없는 단기 media token만 ?token= 쿼리로 허용한다."""
     if cred is not None:
         return user_from_token(conn, cred.credentials)
-    if token and settings.APP_ENV != "production":
-        return user_from_token(conn, token)
+    if token:
+        return user_from_media_token(conn, token)
     raise HTTPException(401, "인증이 필요합니다")
 
 
