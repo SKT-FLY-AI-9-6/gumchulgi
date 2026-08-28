@@ -1,15 +1,13 @@
-# Flutter revision recorded in app/.metadata. Pinning it keeps the web build
-# reproducible instead of silently following the moving stable branch.
+# Pin an official Flutter release tag so the SDK reports a valid version and
+# dependency resolution stays reproducible.
 FROM debian:bookworm-slim AS flutter-build
-ARG FLUTTER_REVISION=6655482ec06e547f90abf8ae7590466f4415978d
+ARG FLUTTER_VERSION=3.47.2
 ARG API_BASE=
 RUN apt-get update && apt-get install -y --no-install-recommends \
       ca-certificates curl git unzip xz-utils zip libglu1-mesa \
     && rm -rf /var/lib/apt/lists/*
-RUN git init /opt/flutter \
-    && git -C /opt/flutter remote add origin https://github.com/flutter/flutter.git \
-    && git -C /opt/flutter fetch --depth 1 origin ${FLUTTER_REVISION} \
-    && git -C /opt/flutter checkout --detach FETCH_HEAD
+RUN git clone --depth 1 --branch ${FLUTTER_VERSION} \
+    https://github.com/flutter/flutter.git /opt/flutter
 ENV PATH=/opt/flutter/bin:/opt/flutter/bin/cache/dart-sdk/bin:${PATH}
 WORKDIR /src/app
 COPY app/pubspec.yaml app/pubspec.lock ./
