@@ -48,6 +48,22 @@ def test_stream_accepts_scoped_media_query_token(
     assert denied.status_code == 401
 
 
+def test_thumbnail_is_browser_cacheable(client, auth_headers, small_mp4):
+    h = auth_headers()
+    vid = _ready_video(client, small_mp4)
+    thumb = storage.thumb_path(vid)
+    thumb.write_bytes(b"fake-jpeg")
+    conn = db.connect()
+    conn.execute("UPDATE videos SET thumb_path=? WHERE id=?", (str(thumb), vid))
+    conn.commit()
+    conn.close()
+
+    r = client.get(f"/videos/{vid}/thumb", headers=h)
+    assert r.status_code == 200
+    assert r.headers["cache-control"] == "private, max-age=300"
+    assert r.content == b"fake-jpeg"
+
+
 def test_events_accumulate_exposure(client, auth_headers, small_mp4, monkeypatch):
     from app.config import settings
     monkeypatch.setattr(settings, "DAILY_BUDGET_S", 100)

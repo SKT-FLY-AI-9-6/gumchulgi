@@ -167,7 +167,9 @@ def thumb(vid: int, user=Depends(media_user),
     row = _video_or_404(conn, vid)
     if not row["thumb_path"] or not os.path.exists(row["thumb_path"]):
         raise HTTPException(404, "썸네일이 없습니다")
-    return FileResponse(row["thumb_path"], media_type="image/jpeg")
+    return FileResponse(
+        row["thumb_path"], media_type="image/jpeg",
+        headers={"Cache-Control": "private, max-age=300"})
 
 
 class EventIn(BaseModel):

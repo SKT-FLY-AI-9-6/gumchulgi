@@ -21,6 +21,7 @@ class _FeedState extends ConsumerState<FeedScreen> with WidgetsBindingObserver {
   final _page = PageController();
   final _watch = Stopwatch();
   int _current = 0;
+  bool _currentReady = false;
 
   @override
   void initState() {
@@ -50,6 +51,19 @@ class _FeedState extends ConsumerState<FeedScreen> with WidgetsBindingObserver {
         .sendEvent(v.id, s.clamp(0, 600), v.variant)
         .then((e) => exposure.update(e))
         .catchError((_) {});
+  }
+
+  /// 현재 영상이 실제 재생 가능한 상태가 된 뒤에만 다음 영상을 준비한다.
+  /// 첫 진입부터 두 MP4가 동시에 대역폭을 나눠 쓰는 일을 막는다.
+  void _markCurrentReady(int index, int videoId) {
+    if (!mounted || _currentReady || index != _current) return;
+    final videos = ref.read(feedProvider).value;
+    if (videos == null ||
+        index >= videos.length ||
+        videos[index].id != videoId) {
+      return;
+    }
+    setState(() => _currentReady = true);
   }
 
   @override
@@ -95,9 +109,16 @@ class _FeedState extends ConsumerState<FeedScreen> with WidgetsBindingObserver {
       _watch
         ..reset()
         ..start();
+      if (filterChanged) {
+        // 활성 스트림 교체가 끝날 때까지 다음 영상의 네트워크 요청을 멈춘다.
+        setState(() => _currentReady = false);
+      }
       if (skipChanged) {
         // 피드가 재조회되므로 처음으로
-        setState(() => _current = 0);
+        setState(() {
+          _current = 0;
+          _currentReady = false;
+        });
         if (_page.hasClients) _page.jumpToPage(0);
       }
       // 필터 ON/OFF 만 바뀐 경우는 보던 자리에서 스트림만 교체된다.
@@ -166,11 +187,13 @@ class _FeedState extends ConsumerState<FeedScreen> with WidgetsBindingObserver {
                 : PageView.builder(
                     controller: _page,
                     scrollDirection: Axis.vertical,
-                    allowImplicitScrolling: true,
                     itemCount: vids.length,
                     onPageChanged: (i) {
                       _sendEvent(vids[_current]);
-                      setState(() => _current = i);
+                      setState(() {
+                        _current = i;
+                        _currentReady = false;
+                      });
                       if (i >= vids.length - 2) {
                         ref.read(feedProvider.notifier).loadMore();
                       }
@@ -181,9 +204,11 @@ class _FeedState extends ConsumerState<FeedScreen> with WidgetsBindingObserver {
                       key: ValueKey(vids[i].id),
                       video: vids[i],
                       active: i == _current,
-                      // 현재 영상과 바로 다음 영상만 연결한다. 지나간 영상은
-                      // 즉시 dispose해 대역폭을 계속 점유하지 않게 한다.
-                      preload: i == _current || i == _current + 1,
+                      // 첫 영상이 재생 가능한 상태가 된 뒤에 다음 한 편만
+                      // 준비한다. 지나간 영상은 즉시 dispose한다.
+                      preload:
+                          i == _current || (_currentReady && i == _current + 1),
+                      onReady: () => _markCurrentReady(i, vids[i].id),
                     ),
                   ),
           ),
