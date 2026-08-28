@@ -40,10 +40,13 @@ class _FeedState extends ConsumerState<FeedScreen> with WidgetsBindingObserver {
 
   void _sendEvent(FeedVideo v) {
     final s = _watch.elapsed.inMilliseconds / 1000.0;
-    _watch..reset()..start();
+    _watch
+      ..reset()
+      ..start();
     if (s < 0.5) return; // 스쳐 지나간 페이지는 무시
     final exposure = ref.read(exposureProvider.notifier);
-    ref.read(apiProvider)
+    ref
+        .read(apiProvider)
         .sendEvent(v.id, s.clamp(0, 600), v.variant)
         .then((e) => exposure.update(e))
         .catchError((_) {});
@@ -63,7 +66,9 @@ class _FeedState extends ConsumerState<FeedScreen> with WidgetsBindingObserver {
       if (vids != null && _current < vids.length) _sendEvent(vids[_current]);
       _watch.stop();
     } else if (state == AppLifecycleState.resumed) {
-      _watch..reset()..start();
+      _watch
+        ..reset()
+        ..start();
     }
   }
 
@@ -87,7 +92,9 @@ class _FeedState extends ConsumerState<FeedScreen> with WidgetsBindingObserver {
       // 이전 variant 의 시청 시간을 먼저 마감한다 (원본 시청만 노출 집계).
       final vids = ref.read(feedProvider).value;
       if (vids != null && _current < vids.length) _sendEvent(vids[_current]);
-      _watch..reset()..start();
+      _watch
+        ..reset()
+        ..start();
       if (skipChanged) {
         // 피드가 재조회되므로 처음으로
         setState(() => _current = 0);
@@ -98,63 +105,106 @@ class _FeedState extends ConsumerState<FeedScreen> with WidgetsBindingObserver {
     final filterOn = ref.watch(settingsProvider).value?.filterOn ?? true;
     final topPad = MediaQuery.paddingOf(context).top;
     final feed = ref.watch(feedProvider);
-    return Container(color: Colors.black,
-        padding: EdgeInsets.only(top: topPad),
-        child: Stack(children: [
-      feed.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Column(
-            mainAxisSize: MainAxisSize.min, children: [
-          const Text('피드를 불러오지 못했습니다'),
-          TextButton(
-              onPressed: () => ref.read(feedProvider.notifier).refreshAll(),
-              child: const Text('다시 시도')),
-        ])),
-        data: (vids) => vids.isEmpty
-            ? RefreshIndicator(
-                onRefresh: () => ref.read(feedProvider.notifier).refreshAll(),
-                child: ListView(children: [
-                  SizedBox(
-                    height: MediaQuery.sizeOf(context).height * .7,
-                    child: Center(child: Column(
-                        mainAxisSize: MainAxisSize.min, children: [
-                      const Text('아직 영상이 없습니다',
-                          style: TextStyle(color: AppColors.sub)),
-                      const SizedBox(height: 4),
-                      const Text('업로드한 영상은 검출·보정이 끝나면 표시됩니다',
-                          style: TextStyle(color: AppColors.sub, fontSize: 12)),
-                      TextButton.icon(
-                          onPressed: () =>
-                              ref.read(feedProvider.notifier).refreshAll(),
-                          icon: const Icon(Icons.refresh),
-                          label: const Text('새로고침')),
-                    ])),
+    return Container(
+      color: Colors.black,
+      padding: EdgeInsets.only(top: topPad),
+      child: Stack(
+        children: [
+          feed.when(
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (e, _) => Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text('피드를 불러오지 못했습니다'),
+                  TextButton(
+                    onPressed: () =>
+                        ref.read(feedProvider.notifier).refreshAll(),
+                    child: const Text('다시 시도'),
                   ),
-                ]))
-            : PageView.builder(
-                controller: _page, scrollDirection: Axis.vertical,
-                allowImplicitScrolling: true,
-                itemCount: vids.length,
-                onPageChanged: (i) {
-                  _sendEvent(vids[_current]);
-                  setState(() => _current = i);
-                  if (i >= vids.length - 2) {
-                    ref.read(feedProvider.notifier).loadMore();
-                  }
-                },
-                // 키를 id 로만 잡아 variant 전환 시 페이지가 재생성되지
-                // 않고 VideoPage 내부에서 컨트롤러만 교체되게 한다.
-                itemBuilder: (_, i) => VideoPage(
-                    key: ValueKey(vids[i].id),
-                    video: vids[i], active: i == _current))),
-      // 우상단 필터 버튼 (목업 ①)
-      Positioned(top: 8, right: 12, child: IconButton(
-          tooltip: filterOn ? '보호 필터 ON' : '보호 필터 OFF',
-          icon: Icon(filterOn ? Icons.filter_alt : Icons.filter_alt_outlined,
-              size: 28, color: filterOn ? AppColors.blue : AppColors.amber),
-          onPressed: () => showSettingsSheet(context))),
-      // 경고 배너 (목업 ④)
-      const WarningBanner(),
-    ]));
+                ],
+              ),
+            ),
+            data: (vids) => vids.isEmpty
+                ? RefreshIndicator(
+                    onRefresh: () =>
+                        ref.read(feedProvider.notifier).refreshAll(),
+                    child: ListView(
+                      children: [
+                        SizedBox(
+                          height: MediaQuery.sizeOf(context).height * .7,
+                          child: Center(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Text(
+                                  '아직 영상이 없습니다',
+                                  style: TextStyle(color: AppColors.sub),
+                                ),
+                                const SizedBox(height: 4),
+                                const Text(
+                                  '업로드한 영상은 검출·보정이 끝나면 표시됩니다',
+                                  style: TextStyle(
+                                    color: AppColors.sub,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                                TextButton.icon(
+                                  onPressed: () => ref
+                                      .read(feedProvider.notifier)
+                                      .refreshAll(),
+                                  icon: const Icon(Icons.refresh),
+                                  label: const Text('새로고침'),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                : PageView.builder(
+                    controller: _page,
+                    scrollDirection: Axis.vertical,
+                    allowImplicitScrolling: true,
+                    itemCount: vids.length,
+                    onPageChanged: (i) {
+                      _sendEvent(vids[_current]);
+                      setState(() => _current = i);
+                      if (i >= vids.length - 2) {
+                        ref.read(feedProvider.notifier).loadMore();
+                      }
+                    },
+                    // 키를 id 로만 잡아 variant 전환 시 페이지가 재생성되지
+                    // 않고 VideoPage 내부에서 컨트롤러만 교체되게 한다.
+                    itemBuilder: (_, i) => VideoPage(
+                      key: ValueKey(vids[i].id),
+                      video: vids[i],
+                      active: i == _current,
+                      // 현재 영상과 바로 다음 영상만 연결한다. 지나간 영상은
+                      // 즉시 dispose해 대역폭을 계속 점유하지 않게 한다.
+                      preload: i == _current || i == _current + 1,
+                    ),
+                  ),
+          ),
+          // 우상단 필터 버튼 (목업 ①)
+          Positioned(
+            top: 8,
+            right: 12,
+            child: IconButton(
+              tooltip: filterOn ? '보호 필터 ON' : '보호 필터 OFF',
+              icon: Icon(
+                filterOn ? Icons.filter_alt : Icons.filter_alt_outlined,
+                size: 28,
+                color: filterOn ? AppColors.blue : AppColors.amber,
+              ),
+              onPressed: () => showSettingsSheet(context),
+            ),
+          ),
+          // 경고 배너 (목업 ④)
+          const WarningBanner(),
+        ],
+      ),
+    );
   }
 }

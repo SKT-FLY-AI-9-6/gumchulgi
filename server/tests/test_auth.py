@@ -20,6 +20,17 @@ def test_signup_login_me(client):
     assert client.get("/me").status_code in (401, 403)
 
 
+def test_login_normalizes_email_whitespace(client):
+    r = client.post("/auth/signup", json={
+        "email": "User@Example.com", "password": "pw123456",
+        "nickname": "사용자"})
+    assert r.status_code == 201
+    r = client.post("/auth/login", json={
+        "email": "  USER@example.COM  ", "password": "pw123456"})
+    assert r.status_code == 200
+    assert r.json()["user"]["email"] == "user@example.com"
+
+
 def test_media_token_is_scoped(client, auth_headers):
     headers = auth_headers()
     r = client.post("/auth/media-token", headers=headers)
