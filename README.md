@@ -1,4 +1,4 @@
-# SoftReel — 광과민성(PSE) 보호 숏폼 플랫폼 MVP (`platform-mvp_cpu`)
+# SoftReel — 광과민성(PSE) 보호 숏폼 플랫폼 MVP (`platform-mvp`)
 
 영상을 올리면 서버가 광과민성 발작 유발 자극(플래시·적색·패턴·컷)을 검출하고
 보정본을 만든다. 앱은 세로 스와이프 피드에서 원본/보정본을 재생하며,
@@ -75,6 +75,7 @@ cd app;    flutter analyze; flutter test
 - `docs/노트북-서버-실행.md` — GPU 노트북 실행 상세
 - `docs/아키텍처-개요.md`, `docs/검출기-통합.md` — 구조와 검출기 통합 경위
 - `server/README.md` — Docker / EC2 배포(CPU 경로)
+- `deploy/azure/README.md` — Azure VM + Flutter 웹 HTTPS 배포(CPU 경로)
 
 ## 브랜치 규칙 (저장소 공통)
 `main` 은 비워 둔다. 작업은 자기 이름/기능 브랜치에서 하고 push 한다.

@@ -37,14 +37,18 @@ def _migrate(conn):
 
 def _seed_admin(conn):
     """운영 대시보드용 관리자 계정. 이미 있으면 관리자 플래그만 보장한다."""
+    email = settings.ADMIN_EMAIL
+    password = settings.ADMIN_PASSWORD
+    if not email or not password:
+        return
     row = conn.execute("SELECT id FROM users WHERE email=?",
-                       ("admin@gumchulgi.app",)).fetchone()
+                       (email,)).fetchone()
     if row is None:
         import bcrypt
-        h = bcrypt.hashpw(b"admin1234", bcrypt.gensalt()).decode()
+        h = bcrypt.hashpw(password.encode()[:72], bcrypt.gensalt()).decode()
         cur = conn.execute(
             "INSERT INTO users(email, password_hash, nickname, is_admin)"
-            " VALUES(?,?,?,1)", ("admin@gumchulgi.app", h, "관리자"))
+            " VALUES(?,?,?,1)", (email, h, "관리자"))
         conn.execute("INSERT INTO user_settings(user_id) VALUES(?)",
                      (cur.lastrowid,))
     else:

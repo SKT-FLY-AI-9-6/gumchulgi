@@ -26,7 +26,29 @@ def test_validate_production_allows_real_secret(monkeypatch):
     from app.config import settings, validate_production
     monkeypatch.setattr(settings, "APP_ENV", "production")
     monkeypatch.setattr(settings, "JWT_SECRET", "실제-운영-비밀값-123")
+    monkeypatch.setattr(settings, "AUTH_OPEN", False)
+    monkeypatch.setattr(settings, "ADMIN_EMAIL", "admin@example.com")
+    monkeypatch.setattr(settings, "ADMIN_PASSWORD", "실제-관리자-비밀번호-123")
     validate_production()  # 예외 없이 통과해야 함
+
+
+def test_validate_production_rejects_demo_auth(monkeypatch):
+    from app.config import settings, validate_production
+    monkeypatch.setattr(settings, "APP_ENV", "production")
+    monkeypatch.setattr(settings, "JWT_SECRET", "실제-운영-비밀값-123")
+    monkeypatch.setattr(settings, "AUTH_OPEN", True)
+    with pytest.raises(RuntimeError):
+        validate_production()
+
+
+def test_validate_production_rejects_default_admin_password(monkeypatch):
+    from app.config import settings, validate_production
+    monkeypatch.setattr(settings, "APP_ENV", "production")
+    monkeypatch.setattr(settings, "JWT_SECRET", "실제-운영-비밀값-123")
+    monkeypatch.setattr(settings, "AUTH_OPEN", False)
+    monkeypatch.setattr(settings, "ADMIN_PASSWORD", "admin1234")
+    with pytest.raises(RuntimeError):
+        validate_production()
 
 
 def test_validate_production_ignores_dev_env(monkeypatch):

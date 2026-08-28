@@ -1,0 +1,31 @@
+# Flutter revision recorded in app/.metadata. Pinning it keeps the web build
+# reproducible instead of silently following the moving stable branch.
+FROM debian:bookworm-slim AS flutter-build
+ARG FLUTTER_REVISION=6655482ec06e547f90abf8ae7590466f4415978d
+ARG API_BASE=
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      ca-certificates curl git unzip xz-utils zip libglu1-mesa \
+    && rm -rf /var/lib/apt/lists/*
+RUN git init /opt/flutter \
+    && git -C /opt/flutter remote add origin https://github.com/flutter/flutter.git \
+    && git -C /opt/flutter fetch --depth 1 origin ${FLUTTER_REVISION} \
+    && git -C /opt/flutter checkout --detach FETCH_HEAD
+ENV PATH=/opt/flutter/bin:/opt/flutter/bin/cache/dart-sdk/bin:${PATH}
+WORKDIR /src/app
+COPY app/pubspec.yaml app/pubspec.lock ./
+RUN flutter pub get
+COPY app/ ./
+RUN flutter build web --release --dart-define=API_BASE=${API_BASE}
+
+FROM python:3.12-slim
+RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg \
+    && rm -rf /var/lib/apt/lists/*
+WORKDIR /repo
+COPY psepipe_v3_seam/ psepipe_v3_seam/
+COPY server/requirements.txt server/requirements.txt
+RUN pip install --no-cache-dir -r server/requirements.txt
+COPY server/ server/
+COPY --from=flutter-build /src/app/build/web app/build/web/
+ENV PYTHONPATH=/repo/server:/repo/psepipe_v3_seam \
+    PYTHONUNBUFFERED=1
+WORKDIR /repo/server

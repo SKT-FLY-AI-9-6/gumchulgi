@@ -28,6 +28,25 @@ def test_stream_supports_range(client, auth_headers, small_mp4):
     assert r.headers["content-range"].startswith("bytes 0-99/")
 
 
+def test_stream_accepts_scoped_media_query_token(
+        client, auth_headers, small_mp4):
+    h = auth_headers()
+    vid = _ready_video(client, small_mp4)
+    media = client.post("/auth/media-token", headers=h).json()["token"]
+
+    r = client.get(
+        f"/videos/{vid}/stream?variant=original&token={media}",
+        headers={"Range": "bytes=0-99"})
+    assert r.status_code == 206
+    assert len(r.content) == 100
+
+    # 전체 access token을 쿼리에 넣는 이전 방식은 거부한다.
+    access = h["Authorization"].split(" ", 1)[1]
+    denied = client.get(
+        f"/videos/{vid}/stream?variant=original&token={access}")
+    assert denied.status_code == 401
+
+
 def test_events_accumulate_exposure(client, auth_headers, small_mp4, monkeypatch):
     from app.config import settings
     monkeypatch.setattr(settings, "DAILY_BUDGET_S", 100)

@@ -2,6 +2,7 @@ import time
 import traceback
 
 from app import db
+from app.config import validate_production
 from worker import pipeline
 
 STALE_MIN = 30   # CPU 폴백 사다리(보정 2회)는 3분 영상에서 10분을 넘길 수 있다
@@ -45,6 +46,7 @@ def run_once(conn) -> bool:
 
 
 def main():
+    validate_production()
     conn = db.connect()
     requeue_stale(conn)
     print("워커 시작 — 큐 폴링 중")
