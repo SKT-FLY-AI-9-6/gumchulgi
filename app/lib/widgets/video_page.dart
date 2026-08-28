@@ -13,12 +13,14 @@ import 'action_rail.dart';
 class VideoPage extends ConsumerStatefulWidget {
   final FeedVideo video;
   final bool active; // 현재 페이지일 때만 재생
-  final bool preload; // 현재 영상과 바로 다음 영상만 미리 준비
+  final bool preload; // 현재 영상 또는 준비 허용된 다음 영상
+  final VoidCallback? onReady; // 활성 영상이 초기화되면 다음 선로딩 허용
   const VideoPage({
     super.key,
     required this.video,
     required this.active,
     required this.preload,
+    this.onReady,
   });
   @override
   ConsumerState<VideoPage> createState() => _VideoPageState();
@@ -35,6 +37,7 @@ class _VideoPageState extends ConsumerState<VideoPage> {
   VideoPlayerController? _cover;
   bool _loading = false;
   int _loadGeneration = 0;
+  bool _readyReported = false;
 
   Future<void> _togglePlay() async {
     if (!widget.active) return;
@@ -55,6 +58,27 @@ class _VideoPageState extends ConsumerState<VideoPage> {
       Uri.parse(api.absoluteUrl(streamUrl)),
       httpHeaders: api.authHeaders,
     )..setLooping(true);
+  }
+
+  void _notifyReadyIfActive(VideoPlayerController controller) {
+    if (_readyReported ||
+        !widget.active ||
+        !identical(_c, controller) ||
+        !controller.value.isInitialized) {
+      return;
+    }
+    _readyReported = true;
+    // 부모 build 도중 setState가 호출되지 않도록 다음 프레임에 알린다.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted ||
+          !widget.active ||
+          !identical(_c, controller) ||
+          !controller.value.isInitialized) {
+        _readyReported = false;
+        return;
+      }
+      widget.onReady?.call();
+    });
   }
 
   Future<void> _loadSegments() async {
@@ -107,6 +131,7 @@ class _VideoPageState extends ConsumerState<VideoPage> {
       if (widget.active && !_pausedByUser) {
         await next.play();
       }
+      _notifyReadyIfActive(next);
       return next;
     } catch (_) {
       await next.dispose();
@@ -148,6 +173,7 @@ class _VideoPageState extends ConsumerState<VideoPage> {
       return;
     }
     final generation = ++_loadGeneration;
+    _readyReported = false;
     final pos = old.value.isInitialized ? old.value.position : Duration.zero;
     final wasPlaying = old.value.isPlaying;
     await old.pause();
@@ -175,6 +201,7 @@ class _VideoPageState extends ConsumerState<VideoPage> {
         _loading = false;
       });
       if (wasPlaying && widget.active && !_pausedByUser) await next.play();
+      _notifyReadyIfActive(next);
       if (cover != null) {
         _uncoverWhenRendered(next, pos, cover);
       } else {
@@ -224,6 +251,7 @@ class _VideoPageState extends ConsumerState<VideoPage> {
   void didUpdateWidget(VideoPage old) {
     super.didUpdateWidget(old);
     if (widget.video.streamUrl != old.video.streamUrl) {
+      _readyReported = false;
       if (widget.preload) {
         unawaited(_swap(widget.video.streamUrl));
       } else {
@@ -240,15 +268,18 @@ class _VideoPageState extends ConsumerState<VideoPage> {
     }
     if (widget.active && !old.active) {
       _pausedByUser = false;
+      _readyReported = false;
       unawaited(
         _ensureController().then((c) async {
           if (mounted && widget.active && !_pausedByUser) await c?.play();
+          if (c != null) _notifyReadyIfActive(c);
         }),
       );
     }
     if (!widget.active && old.active) {
       unawaited(_c?.pause() ?? Future.value());
       _pausedByUser = false;
+      _readyReported = false;
     }
   }
 
@@ -281,76 +312,109 @@ class _VideoPageState extends ConsumerState<VideoPage> {
     );
   }
 
+  /// 비디오 메타데이터와 첫 프레임을 기다리는 동안 즉시 보여 주는 poster.
+  /// 다음 페이지가 만들어질 때 작은 JPEG만 받아 두므로 MP4와 대역폭 경쟁이
+  /// 거의 없고, 사용자는 빈 검은 화면 대신 콘텐츠를 바로 확인할 수 있다.
+  Widget _poster() {
+    final api = ref.read(apiProvider);
+    return ColoredBox(
+      color: Colors.black,
+      child: Image.network(
+        api.absoluteUrl(widget.video.thumbUrl),
+        fit: BoxFit.cover,
+        gaplessPlayback: true,
+        errorBuilder: (_, _, _) => const SizedBox.expand(),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final v = widget.video;
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: _togglePlay,
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          if (_error)
-            const Center(
-              child: Text(
-                '재생 실패 — 스와이프해서 다음 영상으로',
-                style: TextStyle(color: AppColors.sub),
-              ),
-            )
-          else if (_c != null && _c!.value.isInitialized)
-            _player(_c!)
-          else if (_loading)
-            const Center(child: CircularProgressIndicator())
-          else
-            const SizedBox.shrink(),
-          if (_cover != null && _cover!.value.isInitialized) _player(_cover!),
-          if (_pausedByUser)
-            const Center(
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        if (_c != null && _c!.value.isInitialized) _player(_c!) else _poster(),
+        if (_error)
+          const Center(
+            child: Text(
+              '재생 실패 — 스와이프해서 다음 영상으로',
+              style: TextStyle(color: AppColors.sub),
+            ),
+          )
+        else if (_loading && _c == null)
+          const Center(
+            child: SizedBox(
+              width: 30,
+              height: 30,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
+          ),
+        if (_cover != null && _cover!.value.isInitialized) _player(_cover!),
+        // Web의 <video> 요소 위에서도 탭을 안정적으로 받는 전용 레이어.
+        // 액션 버튼과 진행바는 이 레이어보다 뒤에 그려져 각 제스처를 유지한다.
+        Positioned.fill(
+          child: Semantics(
+            button: true,
+            label: _pausedByUser ? '영상 재생' : '영상 일시정지',
+            child: GestureDetector(
+              key: ValueKey('video-playback-toggle-${v.id}'),
+              behavior: HitTestBehavior.opaque,
+              onTap: _togglePlay,
+              child: const SizedBox.expand(),
+            ),
+          ),
+        ),
+        if (_pausedByUser)
+          const IgnorePointer(
+            child: Center(
               child: Icon(
                 Icons.play_arrow_rounded,
                 size: 84,
                 color: Colors.white70,
               ),
             ),
-          if (_swapping)
-            const Positioned(
-              top: 100,
-              left: 0,
-              right: 0,
-              child: Center(
-                child: SizedBox(
-                  width: 28,
-                  height: 28,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                ),
-              ),
-            ),
-          // 하단 스크림 (시안 A)
-          Positioned(
+          ),
+        if (_swapping)
+          const Positioned(
+            top: 100,
             left: 0,
             right: 0,
-            bottom: 0,
-            height: 200,
-            child: IgnorePointer(
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [
-                      Colors.transparent,
-                      const Color(0xFF05050C).withValues(alpha: .92),
-                    ],
-                  ),
+            child: Center(
+              child: SizedBox(
+                width: 28,
+                height: 28,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+            ),
+          ),
+        // 하단 스크림 (시안 A)
+        Positioned(
+          left: 0,
+          right: 0,
+          bottom: 0,
+          height: 200,
+          child: IgnorePointer(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.transparent,
+                    const Color(0xFF05050C).withValues(alpha: .92),
+                  ],
                 ),
               ),
             ),
           ),
-          // 좌상단 안전 상태 칩
-          if (v.risk != 'safe')
-            Positioned(
-              top: 12,
-              left: 20,
+        ),
+        // 좌상단 안전 상태 칩
+        if (v.risk != 'safe')
+          Positioned(
+            top: 12,
+            left: 20,
+            child: IgnorePointer(
               child: Container(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 12,
@@ -396,11 +460,13 @@ class _VideoPageState extends ConsumerState<VideoPage> {
                 ),
               ),
             ),
-          // 하단 정보
-          Positioned(
-            left: 20,
-            right: 88,
-            bottom: 46,
+          ),
+        // 하단 정보
+        Positioned(
+          left: 20,
+          right: 88,
+          bottom: 46,
+          child: IgnorePointer(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
@@ -425,21 +491,21 @@ class _VideoPageState extends ConsumerState<VideoPage> {
               ],
             ),
           ),
-          // 재생 진행바 (+ 보정 영상이면 완화 라벨)
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: _ProgressBar(
-              controller: _c,
-              video: v,
-              segments: _segments,
-              segDuration: _segDuration,
-            ),
+        ),
+        // 재생 진행바 (+ 보정 영상이면 완화 라벨)
+        Positioned(
+          left: 0,
+          right: 0,
+          bottom: 0,
+          child: _ProgressBar(
+            controller: _c,
+            video: v,
+            segments: _segments,
+            segDuration: _segDuration,
           ),
-          Positioned(right: 8, bottom: 40, child: ActionRail(video: v)),
-        ],
-      ),
+        ),
+        Positioned(right: 8, bottom: 40, child: ActionRail(video: v)),
+      ],
     );
   }
 }
@@ -529,9 +595,11 @@ class _ProgressBarState extends State<_ProgressBar> {
                       ? 0.0
                       : val.position.inMilliseconds / dur;
                   final pos = _dragPos ?? playPos;
-                  final totalS =
-                      (widget.segDuration ?? widget.video.durationS) ??
-                      (dur > 0 ? dur / 1000.0 : 0.0);
+                  // 지금 재생 중인 파일의 duration을 최우선으로 사용해야
+                  // 4~8초 같은 마커가 실제 클릭/재생 위치와 정확히 일치한다.
+                  final totalS = dur > 0
+                      ? dur / 1000.0
+                      : (widget.segDuration ?? widget.video.durationS ?? 0.0);
                   return LayoutBuilder(
                     builder: (context, box) => MouseRegion(
                       cursor: SystemMouseCursors.click,
