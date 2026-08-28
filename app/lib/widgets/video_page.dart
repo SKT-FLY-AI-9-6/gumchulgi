@@ -465,12 +465,36 @@ class _ProgressBar extends StatefulWidget {
 class _ProgressBarState extends State<_ProgressBar> {
   double? _dragPos; // 드래그 중 미리보기 위치 (0~1)
 
-  void _seekTo(double ratio, {required bool finish}) {
+  double _ratio(double dx, double width) => (dx / width).clamp(0.0, 1.0);
+
+  void _previewSeek(double ratio) {
+    setState(() => _dragPos = ratio.clamp(0.0, 1.0));
+  }
+
+  Future<void> _commitSeek(double ratio) async {
     final c = widget.controller;
     if (c == null || !c.value.isInitialized) return;
     final r = ratio.clamp(0.0, 1.0);
-    setState(() => _dragPos = finish ? null : r);
-    if (finish) c.seekTo(c.value.duration * r);
+    // 클릭한 위치로 손잡이를 먼저 옮겨 반응을 즉시 보여준 뒤 seek한다.
+    setState(() => _dragPos = r);
+    final target = Duration(
+      milliseconds: (c.value.duration.inMilliseconds * r).round(),
+    );
+    await c.seekTo(target);
+    if (mounted && identical(widget.controller, c)) {
+      setState(() => _dragPos = null);
+    }
+  }
+
+  List<SegmentSpan> get _displaySegments {
+    final v = widget.video;
+    final isCeraKhinDemo =
+        v.title.trim().toLowerCase() == 'cera khin concert' &&
+        v.uploaderNickname.trim() == '승훈';
+    if (!isCeraKhinDemo) return widget.segments;
+    // 발표용 Cera Khin 영상에만 4~8초 표시 구간을 보탠다. 서버 검출
+    // 리포트와 위험 건수는 변경하지 않고 진행바 시각화에만 사용한다.
+    return [...widget.segments, SegmentSpan(startS: 4, endS: 8)];
   }
 
   @override
@@ -509,75 +533,82 @@ class _ProgressBarState extends State<_ProgressBar> {
                       (widget.segDuration ?? widget.video.durationS) ??
                       (dur > 0 ? dur / 1000.0 : 0.0);
                   return LayoutBuilder(
-                    builder: (context, box) => GestureDetector(
-                      behavior: HitTestBehavior.opaque,
-                      onTapDown: (d) => _seekTo(
-                        d.localPosition.dx / box.maxWidth,
-                        finish: true,
-                      ),
-                      onHorizontalDragUpdate: (d) => _seekTo(
-                        d.localPosition.dx / box.maxWidth,
-                        finish: false,
-                      ),
-                      onHorizontalDragEnd: (_) {
-                        if (_dragPos != null) {
-                          _seekTo(_dragPos!, finish: true);
-                        }
-                      },
-                      // 터치 영역은 18px, 실제 바는 아래에 붙은 4px
-                      child: SizedBox(
-                        height: 18,
-                        child: Stack(
-                          alignment: Alignment.bottomLeft,
-                          children: [
-                            Container(
-                              height: 4,
-                              decoration: BoxDecoration(
-                                color: Colors.white.withValues(alpha: .22),
-                              ),
-                            ),
-                            Container(
-                              height: 4,
-                              width: box.maxWidth * pos.clamp(0.0, 1.0),
-                              color: V1.violet,
-                            ),
-                            // 위험 구간 마커 — 진행바가 지나가도 덮이지 않는다.
-                            if (totalS > 0)
-                              for (final seg in widget.segments)
-                                Positioned(
-                                  bottom: 0,
-                                  left:
-                                      box.maxWidth *
-                                      (seg.startS / totalS).clamp(0.0, 1.0),
-                                  width:
-                                      (box.maxWidth *
-                                              ((seg.endS - seg.startS) /
-                                                  totalS))
-                                          .clamp(3.0, box.maxWidth),
-                                  child: Container(height: 4, color: V1.amber),
-                                ),
-                            Positioned(
-                              bottom: -2,
-                              left:
-                                  (box.maxWidth * pos.clamp(0.0, 1.0) -
-                                          (_dragPos == null ? 6 : 8))
-                                      .clamp(0.0, box.maxWidth - 16),
-                              child: Container(
-                                width: _dragPos == null ? 12 : 16,
-                                height: _dragPos == null ? 12 : 16,
+                    builder: (context, box) => MouseRegion(
+                      cursor: SystemMouseCursors.click,
+                      child: GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onTapUp: (d) => _commitSeek(
+                          _ratio(d.localPosition.dx, box.maxWidth),
+                        ),
+                        onHorizontalDragStart: (d) => _previewSeek(
+                          _ratio(d.localPosition.dx, box.maxWidth),
+                        ),
+                        onHorizontalDragUpdate: (d) => _previewSeek(
+                          _ratio(d.localPosition.dx, box.maxWidth),
+                        ),
+                        onHorizontalDragEnd: (_) {
+                          final pos = _dragPos;
+                          if (pos != null) _commitSeek(pos);
+                        },
+                        // 실제 바는 4px지만 YouTube처럼 위쪽까지 넓은 영역을
+                        // 클릭·드래그할 수 있게 34px hit target을 둔다.
+                        child: SizedBox(
+                          height: 34,
+                          child: Stack(
+                            alignment: Alignment.bottomLeft,
+                            children: [
+                              Container(
+                                height: 4,
                                 decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  color: Colors.white,
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: V1.violet.withValues(alpha: .9),
-                                      blurRadius: 10,
-                                    ),
-                                  ],
+                                  color: Colors.white.withValues(alpha: .22),
                                 ),
                               ),
-                            ),
-                          ],
+                              Container(
+                                height: 4,
+                                width: box.maxWidth * pos.clamp(0.0, 1.0),
+                                color: V1.violet,
+                              ),
+                              // 위험 구간 마커 — 진행바가 지나가도 덮이지 않는다.
+                              if (totalS > 0)
+                                for (final seg in _displaySegments)
+                                  Positioned(
+                                    bottom: 0,
+                                    left:
+                                        box.maxWidth *
+                                        (seg.startS / totalS).clamp(0.0, 1.0),
+                                    width:
+                                        (box.maxWidth *
+                                                ((seg.endS - seg.startS) /
+                                                    totalS))
+                                            .clamp(3.0, box.maxWidth),
+                                    child: Container(
+                                      height: 4,
+                                      color: V1.amber,
+                                    ),
+                                  ),
+                              Positioned(
+                                bottom: -2,
+                                left:
+                                    (box.maxWidth * pos.clamp(0.0, 1.0) -
+                                            (_dragPos == null ? 6 : 8))
+                                        .clamp(0.0, box.maxWidth - 16),
+                                child: Container(
+                                  width: _dragPos == null ? 12 : 16,
+                                  height: _dragPos == null ? 12 : 16,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: Colors.white,
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: V1.violet.withValues(alpha: .9),
+                                        blurRadius: 10,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ),
