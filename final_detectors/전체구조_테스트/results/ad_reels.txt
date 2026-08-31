@@ -1,0 +1,11 @@
+── c:/Users/PJ07/Desktop/pse_gpu/최종!/anime.mp4
+── c:/Users/PJ07/Desktop/pse_gpu/최종!/cera_khin.mp4
+── c:/Users/PJ07/Desktop/pse_gpu/최종!/travis_fein.mp4
+
+clip | 전(위반) | A후 | A펌핑+ | A헤일로+ | A초 | D후 | D펌핑+ | D헤일로+ | D초 | 승자
+--- | --- | --- | --- | --- | --- | --- | --- | --- | --- | ---
+anime | 플래시,화면전환 | 화면전환 | 0.0 | 0.0 | 120.9 | 화면전환 | 0.146 | 19.385 | 94.0 | A
+cera_khin | 플래시 | 적합 | 0.0 | 1.427 | 70.6 | 적합 | 0.072 | 20.209 | 54.4 | A
+travis_fein | 플래시,화면전환 | 화면전환 | 0.0 | 0.939 | 78.6 | 화면전환 | 0.726 | 14.601 | 106.1 | A
+
+CSV -> validation/ad_reels.csv

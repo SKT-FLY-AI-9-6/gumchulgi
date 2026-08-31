@@ -1,0 +1,6 @@
+원본 위반초: {'01_lum_strobe_5hz.mp4': 6.4, '03_isolum_redgreen_8hz.mp4': 7.0, '04_isolum_blueyellow_8hz.mp4': 7.0, '06_cardinal_LM_8hz.mp4': 3.53, '07_cardinal_S_8hz.mp4': 3.5, '08_red_black_5hz.mp4': 9.6, '09_red_gray_isolum_5hz.mp4': 6.4, '10_red_depth_6hz.mp4': 6.66, '12_porygon_redblue_12hz.mp4': 14.04, '20_bright_indoor_5hz.mp4': 5.1, '22_game_hud_7hz.mp4': 6.8, '23_letterbox_5hz.mp4': 6.4, '24_film24_5hz.mp4': 6.34, '27_anime_cuts_10ps.mp4': 3.2, 'seg6.mp4': 6.21}
+
+    페더     알파보정     악화수      남은위반초     제거율   악화클립
+   1.5    False       0       0.16    100%   -
+   1.0    False       1       1.06     99%   14_stripes_d(0.00->0.94)
+   0.5    False       1       1.20     99%   14_stripes_d(0.00->1.20)
