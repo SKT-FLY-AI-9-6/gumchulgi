@@ -25,24 +25,36 @@
 
 <!-- ── 앱 골격 ─────────────────────────────────────────── -->
 <div id="app-view" class="hidden">
-  <header class="topbar">
-    <div class="brand"><span class="brand-mark">◐</span> SoftReel <b>Studio</b></div>
-    <div class="topbar-right">
-      <button id="btn-upload" class="btn btn-upload">⬆ 업로드</button>
-      <div id="avatar" class="avatar" title=""></div>
-    </div>
-  </header>
-
-  <nav class="rail">
-    <a href="#/dashboard" data-nav="dashboard"><span class="ico">◧</span>대시보드</a>
-    <a href="#/content"   data-nav="content"><span class="ico">▶</span>콘텐츠</a>
-    <a href="#/analytics" data-nav="analytics" id="nav-analytics" hidden><span class="ico">◎</span>운영 지표</a>
+  <aside class="rail">
+    <div class="brand"><span class="brand-mark">◐</span> SoftReel <span class="brand-chip">STUDIO</span></div>
+    <nav class="rail-nav">
+      <a href="#/dashboard" data-nav="dashboard">대시보드</a>
+      <a href="#/content"   data-nav="content">콘텐츠</a>
+      <a href="#/safety"    data-nav="safety">안전 리포트</a>
+      <a href="#/viewers"   data-nav="viewers">시청자</a>
+      <a href="#/revenue"   data-nav="revenue">수익</a>
+      <a href="#/settings"  data-nav="settings">설정</a>
+    </nav>
     <div class="rail-foot">
+      <div id="chan-name" class="chan-name"></div>
+      <div id="chan-sub" class="chan-sub"></div>
       <button id="btn-logout" class="link-btn">로그아웃</button>
     </div>
-  </nav>
+  </aside>
 
-  <main id="main"></main>
+  <div class="page">
+    <header class="page-head">
+      <div class="page-title-wrap">
+        <h1 id="page-title">채널 대시보드</h1>
+        <span id="page-sub" class="page-sub"></span>
+      </div>
+      <div class="page-actions">
+        <button id="btn-upload" class="btn btn-upload">새 릴 업로드</button>
+        <div id="avatar" class="avatar" title=""></div>
+      </div>
+    </header>
+    <main id="main"></main>
+  </div>
 </div>
 
 <!-- ── 업로드 모달 ─────────────────────────────────────── -->
