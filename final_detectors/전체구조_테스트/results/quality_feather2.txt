@@ -1,0 +1,21 @@
+클립                              페더     알파      선명도      펌핑+      헤일로+
+01_lum_strobe_5hz.mp4          5.0  False      80%    0.000     0.000
+01_lum_strobe_5hz.mp4          2.0   True      46%    0.000     0.000
+01_lum_strobe_5hz.mp4          1.0  False      80%    0.000     0.000
+01_lum_strobe_5hz.mp4          3.0   True      46%    0.000     0.000
+
+22_game_hud_7hz.mp4            5.0  False      94%    0.178    13.047
+22_game_hud_7hz.mp4            2.0   True      92%    0.148    13.672
+22_game_hud_7hz.mp4            1.0  False      94%    0.155    15.191
+22_game_hud_7hz.mp4            3.0   True      92%    0.154    13.542
+
+seg6.mp4                       5.0  False     101%    0.000    43.181
+seg6.mp4                       2.0   True     100%    0.000    45.876
+seg6.mp4                       1.0  False     101%    0.000    46.627
+seg6.mp4                       3.0   True     100%    0.000    45.298
+
+14_stripes_drift_10pairs.m     5.0  False      84%   12.552   103.600
+14_stripes_drift_10pairs.m     2.0   True      67%    6.239   103.900
+14_stripes_drift_10pairs.m     1.0  False      84%   11.164   107.867
+14_stripes_drift_10pairs.m     3.0   True      67%    6.764   104.133
+

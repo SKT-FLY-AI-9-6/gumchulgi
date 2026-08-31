@@ -1,0 +1,19 @@
+=== 대역 에너지 검증 (pse_spectrum) ===
+판정만 좋아지고 대역 에너지가 그대로면 지표 게이밍이다 — 루트 README
+
+-- Db2D03pxZjy (플래시 위반) --
+  C:/Users/dltmd/Downloads/pse_detectors final/pse_detectors/data/s1_flagged/Db2D03pxZjy.mp4  30.0fps  3~30Hz  23008.98  10~20Hz   5828.53
+  out_rebased/Db2D03pxZjy_기준.mp4      30.0fps  3~30Hz   3955.21  10~20Hz    609.81   (원본 대비  17.2% /  10.5%)
+  out_rebased/Db2D03pxZjy_순방향.mp4     30.0fps  3~30Hz   4087.26  10~20Hz    640.99   (원본 대비  17.8% /  11.0%)
+
+-- cera_640 (플래시 위반) --
+  C:/Users/dltmd/Downloads/cera_640.mp4  30.0fps  3~30Hz   8024.58  10~20Hz   2723.53
+  _test_gpu.mp4                       30.0fps  3~30Hz   2186.92  10~20Hz    459.15   (원본 대비  27.3% /  16.9%)
+
+-- DZ3fRSEvFoi (원본 적합 — 기준이 악화시킨 클립) --
+  C:/Users/dltmd/Downloads/psepipe_v3_seam/gumchulgi-fix-ste-report-consistency/gumchulgi-fix-ste-report-consistency/data/explore_100/DZ3fRSEvFoi.mp4  30.0fps  3~30Hz    423.88  10~20Hz      4.71
+  out_rebased/DZ3fRSEvFoi_기준.mp4      30.0fps  3~30Hz    122.82  10~20Hz      1.81   (원본 대비  29.0% /  38.6%)
+  out_rebased/DZ3fRSEvFoi_순방향.mp4     30.0fps  3~30Hz    425.93  10~20Hz      4.67   (원본 대비 100.5% /  99.3%)
+
+기준은 원본에 없던 위험을 없애려 에너지를 71% 깎았다(29.0%).
+순방향은 100.5% — 안전한 원본을 그대로 통과시킨다.

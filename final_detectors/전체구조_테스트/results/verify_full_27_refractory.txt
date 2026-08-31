@@ -1,0 +1,34 @@
+torch 2.11.0+cu128  NVIDIA GeForce RTX 4090 Laptop GPU
+
+클립                                 원본    CPU   GPU전체     선명도  CPU ms  GPU ms  판정
+01_lum_strobe_5hz.mp4            6.40   0.00    0.00     80%    28.4     7.5  PASS
+02_lum_safe_2.5hz.mp4            0.00   0.00    0.00     94%    26.4     6.5  PASS
+03_isolum_redgreen_8hz.mp4       7.00   0.00    0.00     28%    27.7     7.4  PASS
+04_isolum_blueyellow_8hz.mp4     7.00   0.00    0.00    168%    26.9     7.7  PASS
+05_static.mp4                    0.00   0.00    0.00    100%    20.2     7.9  PASS
+06_cardinal_LM_8hz.mp4           3.53   0.00    0.00    255%    27.4     7.1  PASS
+07_cardinal_S_8hz.mp4            3.50   0.00    0.00     61%    27.2     7.3  PASS
+08_red_black_5hz.mp4             9.60   0.00    0.00     17%    27.3     7.0  PASS
+09_red_gray_isolum_5hz.mp4       6.40   0.00    0.00     98%    27.6     7.2  PASS
+10_red_depth_6hz.mp4             6.66   0.00    0.00 384649%    27.4     7.3  PASS
+11_red_safe_2.5hz.mp4            0.00   0.00    0.00     27%    26.6     7.6  PASS
+12_porygon_redblue_12hz.mp4     14.04   0.00    0.00    194%    28.1     7.7  PASS
+13_stripes_static_10pairs.mp4    0.00   0.00    0.00    100%    20.4     7.4  PASS
+14_stripes_drift_10pairs.mp4     0.00   0.00    0.00     81%    27.2     7.5  PASS
+15_stripes_3pairs_safe.mp4       0.00   0.00    0.00    100%    20.6     7.5  PASS
+16_stripes_lowcontrast_safe.mp4   0.00   0.00    0.00    100%    20.0     7.2  PASS
+17_stripes_smallarea_safe.mp4    0.00   0.00    0.00    100%    20.1     7.7  PASS
+20_bright_indoor_5hz.mp4         5.10   0.00    0.00    100%    28.6     8.0  PASS
+21_anime_cuts_6ps.mp4            0.00   0.00    0.00     96%    27.0     7.6  PASS
+22_game_hud_7hz.mp4              6.80   0.00    0.00     96%    34.8     8.0  PASS
+23_letterbox_5hz.mp4             6.40   0.00    0.00     96%    28.0     7.8  PASS
+24_film24_5hz.mp4                6.34   0.00    0.00    106%    28.0     7.0  PASS
+25_safe_slow.mp4                 0.00   0.00    0.00    100%    22.7     6.9  PASS
+26_safe_shaky.mp4                0.00   0.00    0.00     97%    22.4     7.5  PASS
+27_anime_cuts_10ps.mp4           3.20   0.00    0.00    110%    27.3     7.2  PASS
+28_blue_strobe_5hz.mp4           3.20   0.00    0.00  17484%    27.7     7.3  PASS
+seg6.mp4                         6.21   0.00    0.00    102%    22.1     7.8  PASS
+
+CPU와 판정 일치 27 / 불일치 0 / 악화 0
+악화 0 이 절대 조건입니다. 불일치는 검출 구현 차이라 허용될 수 있지만,
+안전한 원본을 위반으로 만드는 건(악화) 어떤 이유로도 안 됩니다.

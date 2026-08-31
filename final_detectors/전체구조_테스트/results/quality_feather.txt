@@ -1,0 +1,31 @@
+클립                              페더     알파      선명도      펌핑+      헤일로+
+14_stripes_drift_10pairs.m     5.0  False      84%   12.552   103.600
+14_stripes_drift_10pairs.m     5.0   True      67%    6.927   104.167
+14_stripes_drift_10pairs.m     0.0  False      85%   11.252   102.500
+14_stripes_drift_10pairs.m     2.0  False      84%   12.102   109.033
+
+01_lum_strobe_5hz.mp4          5.0  False      80%    0.000     0.000
+01_lum_strobe_5hz.mp4          5.0   True      46%    0.000     0.000
+01_lum_strobe_5hz.mp4          0.0  False      80%    0.000     0.000
+01_lum_strobe_5hz.mp4          2.0  False      80%    0.000     0.000
+
+08_red_black_5hz.mp4           5.0  False      17%    0.000     0.000
+08_red_black_5hz.mp4           5.0   True     220%    0.000     0.000
+08_red_black_5hz.mp4           0.0  False      17%    0.000     0.000
+08_red_black_5hz.mp4           2.0  False      17%    0.000     0.000
+
+12_porygon_redblue_12hz.mp     5.0  False     194%    0.000     0.000
+12_porygon_redblue_12hz.mp     5.0   True     166%    0.000     0.000
+12_porygon_redblue_12hz.mp     0.0  False     194%    0.000     0.000
+12_porygon_redblue_12hz.mp     2.0  False     194%    0.000     0.000
+
+22_game_hud_7hz.mp4            5.0  False      94%    0.178    13.047
+22_game_hud_7hz.mp4            5.0   True      92%    0.161    13.483
+22_game_hud_7hz.mp4            0.0  False      96%    0.169    17.520
+22_game_hud_7hz.mp4            2.0  False      94%    0.164    14.028
+
+seg6.mp4                       5.0  False     101%    0.000    43.181
+seg6.mp4                       5.0   True     100%    0.000    45.140
+seg6.mp4                       0.0  False     102%    0.000    47.583
+seg6.mp4                       2.0  False     101%    0.000    45.296
+

@@ -1,0 +1,58 @@
+ste:
+  bins: 256
+  window_radius: 2
+  gaussian_scale: 3.0
+  moving_average_radius: 2
+  dark_threshold: 0.05
+
+  bright_threshold: 0.86
+  bright_compression_ratio: 0.10
+
+  temporal_flash_suppression: true
+  temporal_radius: 2
+  flash_contrast_threshold: 0.15
+  max_temporal_deviation: 0.15
+  flash_suppression_strength: 0.6
+
+correction:
+  flash:
+    enabled: false
+
+    block_duration_seconds: 0.10
+    minimum_block_frames: 3
+
+    analysis_size: 128
+
+    contrast_threshold: 0.07
+    transition_width: 0.03
+    strength: 0.85
+
+    minimum_gain: 0.40
+    maximum_gain: 1.50
+
+    scene_cut_threshold: 1.0
+
+  red:
+    enabled: true
+    red_ratio_threshold: 0.75
+    red_ratio_transition_width: 0.10
+    minimum_saturation: 0.35
+    saturation_transition_width: 0.10
+    strength: 0.75
+    mask_blur_radius: 3
+
+model:
+  gfrm_output_mode: residual
+  nonlocal_max_positions: 1024
+  tcm_transformer_blocks: 8
+  tcm_window_size: 8
+  tcm_heads: 4
+
+flow:
+  backend: raft_small     # raft_small | farneback | zero
+  pretrained: true
+
+inference:
+  clip_length: 16
+  overlap: 4
+  device: auto
