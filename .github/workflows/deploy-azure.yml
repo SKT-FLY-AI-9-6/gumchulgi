@@ -81,7 +81,10 @@ jobs:
 
           git fetch --prune origin main
           git switch main
-          git pull --ff-only origin main
+          # main 이 force push 로 재작성되면 --ff-only 가 거부하고 배포가
+          # 멈춘다. 배포 체크아웃은 origin/main 을 그대로 비추기만 하면
+          # 되므로 강제로 일치시킨다 (위에서 로컬 수정이 없음을 이미 확인).
+          git reset --hard origin/main
           test "$(git rev-parse HEAD)" = "$DEPLOY_SHA"
 
           sudo -n docker compose \
