@@ -1,0 +1,18 @@
+DaApQXqOeMU   원본위반     close 1.02   지속 0.73  s 쌍 5.1   면적 60.7 % 구간 1
+Db0guCQDwsq   원본위반     close 1.128  지속 0.83  s 쌍 8.0   면적 95.2 % 구간 1
+DY6fMXQlsQR   원본위반     close 1.4    지속 1.07  s 쌍 7.0   면적 72.7 % 구간 2
+Dbb66EWP3Ec   원본위반     close 1.02   지속 3.2   s 쌍 5.1   면적 87.6 % 구간 3
+DaklkiWwdu3   원본위반     close 2.4    지속 0.7   s 쌍 12.0  면적 99.2 % 구간 1
+DagzZaLg2Lc   원본위반     close 1.414  지속 0.67  s 쌍 7.07  면적 82.6 % 구간 1
+Db1mNoVxtjm   원본위반     close 1.671  지속 33.6  s 쌍 11.05 면적 73.0 % 구간 10
+Db0J4VDv7IR   원본위반     close 1.0    지속 0.8   s 쌍 5.1   면적 94.4 % 구간 1
+DbRaxpFSjwC   원본위반     close 1.02   지속 1.17  s 쌍 7.62  면적 98.6 % 구간 1
+Dbz9U7uhBzp   원본위반     close 1.0    지속 0.57  s 쌍 6.0   면적 98.8 % 구간 1
+DbhPStxi7eE   악화-A     close 1.343  지속 1.1   s 쌍 7.0   면적 71.9 % 구간 1
+DbRUdbsTu9w   악화-AD    close 1.625  지속 1.0   s 쌍 13.0  면적 70.4 % 구간 1
+Dbs05gpxSuY   악화-A     close 1.02   지속 0.73  s 쌍 5.1   면적 60.7 % 구간 1
+DZ3fRSEvFoi   악화-A     close 1.0    지속 1.57  s 쌍 5.0   면적 92.2 % 구간 1
+DbvE_Zohmv6   악화-A     close 2.423  지속 0.63  s 쌍 15.03 면적 99.1 % 구간 1
+
+closseness 1.0~1.2 (경계): 8 / 15
+위반 지속 1초 미만: 8 / 15
